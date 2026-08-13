@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="$(MSBuildProjectDirectory)\..\AdapterVersion.props" />
+  <Import Project="$(MSBuildProjectDirectory)\..\references\ActiveVersion.props" Condition="Exists('$(MSBuildProjectDirectory)\..\references\ActiveVersion.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>AnyCPU</Platforms>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- Outputs compiled assembly under the standard open name SE2Adapter.dll -->
+    <AssemblyName>Kontrol.Adapters.SpaceEngineers2</AssemblyName>
+    <Version>$(AdapterVersion)</Version>
+    <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(AdapterAssemblyVersion)</FileVersion>
+    <InformationalVersion>$(AdapterVersion)</InformationalVersion>
+    <SpaceEngineers2ReferenceVersion Condition="'$(SpaceEngineers2ReferenceVersion)' == ''">2.3.0.2798</SpaceEngineers2ReferenceVersion>
+    <SpaceEngineers2ReferencesDirectory>$(MSBuildProjectDirectory)\..\references\$(SpaceEngineers2ReferenceVersion)</SpaceEngineers2ReferencesDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Kontrol.Sdk/Kontrol.Sdk.csproj" />
+    <None Include="adapter.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VRage.Core">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VRage.Core.Game">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.Core.Game.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VRage.Library">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.Library.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Game2.Client">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\Game2.Client.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Game2.Simulation">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\Game2.Simulation.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VRage.DCS">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.DCS.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VRage.Physics">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.Physics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

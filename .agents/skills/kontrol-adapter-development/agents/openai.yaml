@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kontrol Adapter Development"
+  short_description: "Create, debug, and maintain Kontrol adapters"
+  default_prompt: "Use $kontrol-adapter-development to implement and validate a change to a Kontrol adapter."

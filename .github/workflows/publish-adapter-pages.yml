@@ -1,0 +1,117 @@
+name: Sign and publish adapter distribution
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: adapter-pages-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: startsWith(github.event.release.tag_name, 'adapters/')
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+      PUBLIC_BASE_URL: https://komandio-labs.github.io/kontrol-adapters
+      SIGNING_PRIVATE_KEY: ${{ secrets.KONTROL_SIGNING_PRIVATE_KEY }}
+      SIGNING_PUBLIC_KEY: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhI24Bm7Lmc6eBMc17hlZu6T/TXzNnJfq/t7enTqihtr3Vw6gSSiltl+5GZ29klmSkY5E1NMuX4A5qhBGl18cQ==
+      GH_TOKEN: ${{ github.token }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Validate release identity and signing configuration
+        id: release
+        shell: bash
+        run: |
+          test -n "$SIGNING_PRIVATE_KEY" || { echo "KONTROL_SIGNING_PRIVATE_KEY is not configured." >&2; exit 1; }
+          IFS=/ read -r scope slug version <<< "$TAG"
+          test "$scope" = "adapters"
+          test -n "$slug" && test -n "$version"
+          version="${version#v}"
+          case "$slug" in
+            spaceengineers2) adapter_folder=SpaceEngineers2 ;;
+            dummyadapter) adapter_folder=DummyAdapter ;;
+            *) echo "Unsupported adapter slug: $slug" >&2; exit 1 ;;
+          esac
+          manifest="src/Adapters/$adapter_folder/package.json"
+          test -f "$manifest"
+          manifest_version="$(jq -r '.adapterVersion' "$manifest")"
+          test "$manifest_version" = "$version"
+          channel=stable
+          [[ "$version" == *-* ]] && channel=beta
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "package=kontrol-adapter-$slug-$version-win-x64.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Download locally validated release package
+        run: gh release download "$TAG" --pattern "${{ steps.release.outputs.package }}" --dir release-input
+
+      - name: Restore publication tool
+        run: dotnet restore tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj
+
+      - name: Sign official adapter package
+        shell: bash
+        run: |
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- sign-package \
+            --package "release-input/${{ steps.release.outputs.package }}" --private-key "$SIGNING_PRIVATE_KEY"
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- verify-package \
+            --package "release-input/${{ steps.release.outputs.package }}" --require-signature true --public-key "$SIGNING_PUBLIC_KEY"
+
+      - name: Load existing public Pages content
+        shell: bash
+        run: |
+          if git ls-remote --exit-code origin gh-pages; then
+            git clone --depth 1 --branch gh-pages "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pages
+          else
+            mkdir pages
+            git -C pages init
+            git -C pages checkout --orphan gh-pages
+            git -C pages config user.name "github-actions[bot]"
+            git -C pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
+
+      - name: Create signed descriptor and catalog
+        shell: bash
+        run: |
+          slug="${{ steps.release.outputs.slug }}"
+          version="${{ steps.release.outputs.version }}"
+          package="${{ steps.release.outputs.package }}"
+          commit="$(git rev-parse HEAD)"
+          mkdir -p "pages/packages/$slug/$version" "pages/releases" "pages/catalog/v1"
+          cp "release-input/$package" "pages/packages/$slug/$version/$package"
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release create \
+            --adapter "$slug" --package "release-input/$package" \
+            --package-url "$PUBLIC_BASE_URL/packages/$slug/$version/$package" \
+            --tag "$TAG" --commit "$commit" --channel "${{ steps.release.outputs.channel }}" \
+            --output "pages/releases/$slug-$version.json"
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release sign \
+            --descriptor "pages/releases/$slug-$version.json" --private-key "$SIGNING_PRIVATE_KEY"
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog build \
+            --releases pages/releases --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --output pages/catalog/v1/catalog.json
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog sign \
+            --catalog pages/catalog/v1/catalog.json --private-key "$SIGNING_PRIVATE_KEY"
+
+      - name: Commit and publish public Pages content
+        shell: bash
+        run: |
+          git -C pages config user.name "github-actions[bot]"
+          git -C pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C pages add packages releases catalog
+          git -C pages commit -m "publish(${{ steps.release.outputs.slug }}): v${{ steps.release.outputs.version }} (${{ steps.release.outputs.channel }})"
+          git -C pages push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

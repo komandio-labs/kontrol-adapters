@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://komandio-labs.github.io/kontrol-adapters/schemas/compatibility-record-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "adapterId", "adapterVersion", "game", "validation"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "adapterId": { "type": "string", "minLength": 1 },
+    "adapterVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "game": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "productVersion", "steamBuildId", "relevantAssemblies"],
+      "properties": {
+        "product": { "type": "string", "minLength": 1 },
+        "productVersion": { "type": "string", "minLength": 1 },
+        "steamBuildId": { "type": ["string", "null"] },
+        "relevantAssemblies": { "type": "object", "minProperties": 1 }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "result", "automatedTests", "manualChecklist", "limitations"],
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "result": { "enum": ["tested", "untested", "known-incompatible"] },
+        "automatedTests": { "enum": ["passed", "pending", "failed", "not-run"] },
+        "manualChecklist": { "enum": ["passed", "pending", "failed", "not-run"] },
+        "limitations": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

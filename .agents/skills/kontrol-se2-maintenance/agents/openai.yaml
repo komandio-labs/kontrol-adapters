@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kontrol SE2 Maintenance"
+  short_description: "Diagnose and maintain the SE2 adapter"
+  default_prompt: "Use $kontrol-se2-maintenance to diagnose and maintain the Space Engineers 2 adapter."

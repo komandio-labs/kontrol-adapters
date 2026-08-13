@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kontrol Adapter Release"
+  short_description: "Version, package, and publish adapters safely"
+  default_prompt: "Use $kontrol-adapter-release to prepare a validated Kontrol adapter release."

@@ -1,0 +1,14 @@
+{
+  "id": "DummyAdapter",
+  "displayName": "Kontrol Sandbox",
+  "slug": "DummyAdapter",
+  "exeName": "Kontrol.Sandbox.Game.exe",
+  "relativeBinPath": "",
+  "pluginDll": "Kontrol.Adapters.DummyAdapter.dll",
+  "steamAppId": "0",
+  "requiresHarmony": false,
+  "requiresCore": false,
+  "supportedMethods": [ "ProcessInjection" ],
+  "defaultDeploymentMethod": "ProcessInjection",
+  "image": "icon.png"
+}

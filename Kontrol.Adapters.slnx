@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/Sdk/">
+    <Project Path="src/Kontrol.Sdk/Kontrol.Sdk.csproj" />
+  </Folder>
+  <Folder Name="/Tooling/">
+    <Project Path="tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj" />
+    <Project Path="tools/Kontrol.AdapterTool.Tests/Kontrol.AdapterTool.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Adapters/">
+    <Project Path="src/Adapters/DummyAdapter/Kontrol.Adapters.DummyAdapter/Kontrol.Adapters.DummyAdapter.csproj" />
+    <Project Path="src/Adapters/DummyAdapter/Kontrol.Adapters.DummyAdapter.Tests/Kontrol.Adapters.DummyAdapter.Tests.csproj" />
+    <Project Path="src/Adapters/SpaceEngineers2/Kontrol.Adapters.SpaceEngineers2/Kontrol.Adapters.SpaceEngineers2.csproj" />
+    <Project Path="src/Adapters/SpaceEngineers2/Kontrol.Adapters.SpaceEngineers2.Tests/Kontrol.Adapters.SpaceEngineers2.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Sandbox/">
+    <Project Path="src/Kontrol.Sandbox.Game/Kontrol.Sandbox.Game.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/komandio-labs/kontrol-adapters/security
+    about: Use private vulnerability reporting; do not disclose security details in an issue.
+  - name: Support guidance
+    url: https://github.com/komandio-labs/kontrol-adapters/blob/main/SUPPORT.md
+    about: Read support guidance before opening an issue.

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://komandio-labs.github.io/kontrol-adapters/schemas/release-descriptor-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["descriptorVersion", "adapterId", "slug", "adapterVersion", "sdkVersion", "channel", "source", "package"],
+  "properties": {
+    "descriptorVersion": { "const": 1 },
+    "adapterId": { "type": "string", "minLength": 1 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "adapterVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "sdkVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "channel": { "enum": ["stable", "beta"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tag", "commit"],
+      "properties": {
+        "tag": { "type": "string", "pattern": "^adapters/[a-z0-9][a-z0-9-]*/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+        "commit": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fileName", "sha256", "url", "architecture"],
+      "properties": {
+        "fileName": { "type": "string", "pattern": "^kontrol-adapter-[a-z0-9][a-z0-9-]*-[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?-win-x64\\.zip$" },
+        "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+        "url": { "type": "string", "format": "uri" },
+        "architecture": { "const": "x64" }
+      }
+    },
+    "signature": { "type": "string", "pattern": "^[A-Za-z0-9+/=]{80,100}$" }
+  }
+}

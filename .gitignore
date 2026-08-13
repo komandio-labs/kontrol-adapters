@@ -1,0 +1,57 @@
+## Ignore Visual Studio & Rider temporary files
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+## Ignore build output folders
+bin/
+obj/
+artifacts/
+publish/
+.build-output/
+.test-output/
+*.obj
+*.bin
+
+## Never commit compiled runtime output, even if it appears outside a build folder
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.msCoverageSourceRootsMapping_*
+
+## Game-owned reference assemblies are prepared locally and must never be committed.
+/src/Adapters/*/references/
+
+## Ignore NuGet packages generated on build
+*.nupkg
+*.snupkg
+
+## Ignore log files
+*.log
+*.dmp
+
+## Ignore test and coverage output
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+## Ignore package restore artifacts
+project.lock.json
+project.assets.json
+
+## Ignore operating-system metadata
+.DS_Store
+Thumbs.db
+
+## Python tooling cache
+__pycache__/
+*.pyc

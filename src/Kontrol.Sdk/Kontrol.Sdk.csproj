@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>$(KontrolSdkVersion)</Version>
+    <AssemblyVersion>$(KontrolSdkAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(KontrolSdkVersion)</FileVersion>
+    <InformationalVersion>$(KontrolSdkVersion)</InformationalVersion>
+    <Authors>Tomer</Authors>
+    <Description>Shared SDK contracts and interfaces for Kontrol game adapters.</Description>
+  </PropertyGroup>
+
+</Project>

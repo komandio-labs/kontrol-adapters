@@ -1,0 +1,15 @@
+{
+  "id": "SE2",
+  "displayName": "Space Engineers 2",
+  "slug": "SpaceEngineers2",
+  "exeName": "SpaceEngineers2.exe",
+  "relativeBinPath": "Game2",
+  "pluginDll": "Kontrol.Adapters.SpaceEngineers2.dll",
+  "steamAppId": "1133870",
+  "requiresHarmony": true,
+  "requiresCore": true,
+  "supportedMethods": [ "NativePluginParameter", "ProcessInjection" ],
+  "defaultDeploymentMethod": "NativePluginParameter",
+  "image": "icon.png",
+  "version": "0.1.0-beta.1"
+}

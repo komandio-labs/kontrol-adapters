@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="$(MSBuildProjectDirectory)\..\AdapterVersion.props" />
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Kontrol.Adapters.DummyAdapter</AssemblyName>
+    <RootNamespace>Kontrol.Adapters.DummyAdapter</RootNamespace>
+    <Version>$(AdapterVersion)</Version>
+    <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(AdapterVersion)</FileVersion>
+    <InformationalVersion>$(AdapterVersion)</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Kontrol.Sdk\Kontrol.Sdk.csproj" />
+    <None Include="adapter.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,75 @@
+name: Publish Kontrol SDK to GitHub Packages
+
+on:
+  push:
+    tags:
+      - "sdk/v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Build, validate, and publish SDK
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      NUGET_XMLDOC_MODE: skip
+      SDK_PROJECT: src/Kontrol.Sdk/Kontrol.Sdk.csproj
+      PACKAGE_OUTPUT: artifacts/nuget
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Read and validate SDK version
+        id: version
+        shell: bash
+        run: |
+          version="$(dotnet msbuild "$SDK_PROJECT" -nologo -getProperty:Version | tail -n 1 | tr -d '\r')"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag_version="${GITHUB_REF_NAME#sdk/v}"
+            test "$tag_version" = "$version" || {
+              echo "Tag $GITHUB_REF_NAME does not match SDK version $version." >&2
+              exit 1
+            }
+          fi
+
+      - name: Restore SDK and validation tests
+        run: |
+          dotnet restore "$SDK_PROJECT"
+          dotnet restore tools/Kontrol.AdapterTool.Tests/Kontrol.AdapterTool.Tests.csproj
+
+      - name: Build SDK
+        run: dotnet build "$SDK_PROJECT" --configuration Release --no-restore -p:GeneratePackageOnBuild=false
+
+      - name: Run portable validation tests
+        run: dotnet test tools/Kontrol.AdapterTool.Tests/Kontrol.AdapterTool.Tests.csproj --configuration Release --no-restore
+
+      - name: Pack SDK
+        run: |
+          dotnet pack "$SDK_PROJECT" --configuration Release --no-build --no-restore \
+            -p:GeneratePackageOnBuild=false \
+            --output "$PACKAGE_OUTPUT"
+
+      - name: Publish package to GitHub Packages
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget push "$PACKAGE_OUTPUT/Kontrol.Sdk.$PACKAGE_VERSION.nupkg" \
+            --api-key "$GITHUB_TOKEN" \
+            --source "https://nuget.pkg.github.com/komandio-labs/index.json" \
+            --skip-duplicate

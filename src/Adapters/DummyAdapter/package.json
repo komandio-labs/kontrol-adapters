@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../schemas/adapter-manifest-v1.schema.json",
+  "manifestVersion": 1,
+  "adapterId": "DummyAdapter",
+  "slug": "dummyadapter",
+  "displayName": "Kontrol Sandbox",
+  "adapterVersion": "1.0.0",
+  "sdkVersion": "1.0.0",
+  "entryAssembly": "Kontrol.Adapters.DummyAdapter.dll",
+  "inputSchemaVersion": 1,
+  "targetFramework": "net9.0",
+  "architectures": ["x64"],
+  "package": {
+    "include": [
+      "Kontrol.Adapters.DummyAdapter.dll",
+      "Kontrol.Sdk.dll",
+      "LICENSE"
+    ]
+  }
+}
