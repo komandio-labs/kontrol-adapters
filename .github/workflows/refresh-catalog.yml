@@ -1,0 +1,74 @@
+name: Refresh signed adapter catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why the catalog is being republished (metadata only)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: adapter-pages-publication
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Rebuild and sign catalog only
+    runs-on: ubuntu-latest
+    env:
+      SIGNING_PRIVATE_KEY: ${{ secrets.KONTROL_SIGNING_PRIVATE_KEY }}
+      GH_TOKEN: ${{ github.token }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Verify signing configuration
+        shell: bash
+        run: |
+          test -n "$SIGNING_PRIVATE_KEY" || { echo "KONTROL_SIGNING_PRIVATE_KEY is not configured." >&2; exit 1; }
+
+      - name: Restore catalog tool
+        run: dotnet restore tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj
+
+      - name: Load current public release descriptors
+        shell: bash
+        run: |
+          git clone --depth 1 --branch gh-pages "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pages
+          test -d pages/releases
+          test -n "$(find pages/releases -maxdepth 1 -type f -name '*.json' -print -quit)"
+
+      - name: Rebuild and sign catalog
+        shell: bash
+        run: |
+          mkdir -p pages/catalog/v1
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog build \
+            --releases pages/releases --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --output pages/catalog/v1/catalog.json
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog sign \
+            --catalog pages/catalog/v1/catalog.json --private-key "$SIGNING_PRIVATE_KEY"
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog validate \
+            --catalog pages/catalog/v1/catalog.json
+
+      - name: Publish catalog only
+        shell: bash
+        run: |
+          git -C pages config user.name "github-actions[bot]"
+          git -C pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C pages add catalog/v1/catalog.json
+          if git -C pages diff --cached --quiet; then
+            echo "Catalog contents are already current."
+            exit 0
+          fi
+          git -C pages commit -m "chore: refresh signed catalog"
+          git -C pages push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

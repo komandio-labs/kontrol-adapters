@@ -119,6 +119,7 @@ public class AdapterToolTests
                     {
                         ["adapterId"] = "DummyAdapter",
                         ["slug"] = "dummyadapter",
+                        ["displayName"] = "Kontrol Sandbox",
                         ["currentVersion"] = "1.1.0",
                         ["releases"] = new JsonArray(currentRelease, oldRelease)
                     }
@@ -130,6 +131,31 @@ public class AdapterToolTests
         finally
         {
             if (File.Exists(temporary)) File.Delete(temporary);
+        }
+    }
+
+    [Test]
+    public void CatalogBuild_CopiesTheCanonicalAdapterDisplayName()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string temporaryDirectory = Path.Combine(Path.GetTempPath(), $"kontrol-catalog-{Guid.NewGuid():N}");
+        string releasesDirectory = Path.Combine(temporaryDirectory, "releases");
+        string catalogPath = Path.Combine(temporaryDirectory, "catalog.json");
+        Directory.CreateDirectory(releasesDirectory);
+
+        try
+        {
+            File.WriteAllText(Path.Combine(releasesDirectory, "dummyadapter-1.0.0.json"), Descriptor("1.0.0").ToJsonString());
+
+            AdapterCatalog.Build(root, releasesDirectory, "1970-01-01T00:00:00.0000000+00:00", catalogPath);
+
+            JsonObject catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!.AsObject();
+            JsonObject adapter = catalog["adapters"]!.AsArray()[0]!.AsObject();
+            adapter["displayName"]!.GetValue<string>().ShouldBe("Kontrol Sandbox");
+        }
+        finally
+        {
+            if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true);
         }
     }
 
@@ -178,6 +204,7 @@ public class AdapterToolTests
                     {
                         ["adapterId"] = "DummyAdapter",
                         ["slug"] = "dummyadapter",
+                        ["displayName"] = "Kontrol Sandbox",
                         ["currentVersion"] = "1.1.0",
                         ["releases"] = new JsonArray(beta, stable)
                     }

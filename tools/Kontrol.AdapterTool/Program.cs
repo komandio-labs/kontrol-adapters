@@ -187,6 +187,7 @@ public sealed record AdapterManifest(
     string Path,
     string AdapterId,
     string Slug,
+    string DisplayName,
     string AdapterVersion,
     string SdkVersion,
     string EntryAssembly,
@@ -334,13 +335,14 @@ public static class AdapterRepository
             ?? throw new InvalidOperationException($"Manifest '{path}' is missing package.include.");
         var architectures = document["architectures"]?.AsArray().Select(node => node?.GetValue<string>() ?? throw new InvalidOperationException($"Manifest '{path}' has an invalid architecture.")).ToArray()
             ?? throw new InvalidOperationException($"Manifest '{path}' is missing architectures.");
-        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include);
+        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include);
     }
 
     private static void ValidateManifest(string root, AdapterManifest manifest)
     {
         if (!SemVersion.IsMatch(manifest.AdapterVersion) || !SemVersion.IsMatch(manifest.SdkVersion)) throw new InvalidOperationException($"Manifest '{manifest.Path}' contains an invalid semantic version.");
         if (!Regex.IsMatch(manifest.Slug, "^[a-z0-9][a-z0-9-]*$")) throw new InvalidOperationException($"Manifest '{manifest.Path}' has an invalid slug.");
+        if (string.IsNullOrWhiteSpace(manifest.DisplayName)) throw new InvalidOperationException($"Manifest '{manifest.Path}' has an empty displayName.");
         if (!manifest.EntryAssembly.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException($"Manifest '{manifest.Path}' entryAssembly must be a DLL.");
         if (manifest.InputSchemaVersion < 1 || manifest.Architectures.Count == 0) throw new InvalidOperationException($"Manifest '{manifest.Path}' has invalid schema or architecture metadata.");
         if (!manifest.PackageFiles.Contains(manifest.EntryAssembly, StringComparer.OrdinalIgnoreCase)) throw new InvalidOperationException($"Manifest '{manifest.Path}' package must include its entry assembly.");
@@ -650,9 +652,12 @@ public static class AdapterCatalog
         var descriptors = Directory.EnumerateFiles(releasesDirectory, "*.json", SearchOption.TopDirectoryOnly)
             .Select(path => AdapterRelease.ReadAndValidate(path)).ToArray();
         if (descriptors.Length == 0) throw new InvalidOperationException("A catalog requires at least one release descriptor.");
+        var manifestsBySlug = AdapterRepository.GetManifests(root).ToDictionary(manifest => manifest.Slug, StringComparer.OrdinalIgnoreCase);
         var adapters = new JsonArray();
         foreach (var group in descriptors.GroupBy(item => item["slug"]!.GetValue<string>(), StringComparer.Ordinal).OrderBy(item => item.Key, StringComparer.Ordinal))
         {
+            if (!manifestsBySlug.TryGetValue(group.Key, out AdapterManifest? manifest))
+                throw new InvalidOperationException($"Catalog release descriptors reference unknown adapter '{group.Key}'.");
             var ordered = group.OrderByDescending(item => Version.Parse(item["adapterVersion"]!.GetValue<string>().Split('-')[0]))
                 .ThenByDescending(item => item["channel"]?.GetValue<string>() == "stable")
                 .ToArray();
@@ -668,6 +673,7 @@ public static class AdapterCatalog
             {
                 ["adapterId"] = current["adapterId"]!.GetValue<string>(),
                 ["slug"] = group.Key,
+                ["displayName"] = manifest.DisplayName,
                 ["currentVersion"] = current["adapterVersion"]!.GetValue<string>(),
                 ["releases"] = releases
             });

@@ -13,10 +13,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["adapterId", "slug", "currentVersion", "releases"],
+        "required": ["adapterId", "slug", "displayName", "currentVersion", "releases"],
         "properties": {
           "adapterId": { "type": "string", "minLength": 1 },
           "slug": { "type": "string", "minLength": 1 },
+          "displayName": { "type": "string", "minLength": 1 },
           "currentVersion": { "type": "string", "minLength": 1 },
           "releases": {
             "type": "array",
