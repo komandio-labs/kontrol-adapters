@@ -7,7 +7,7 @@
 5. Publish telemetry and logs through the SDK rather than writing normal adapter logs directly to disk.
 6. Add unit tests for schema compatibility and input translation.
 7. Document supported game versions, prerequisites, setup, diagnostics, and upgrade checks in the adapter README.
-8. Keep the manifest limited to package identity, SDK contract, assembly, schema, platform, and package allowlist. Loading entry points remain in adapter code and tests.
+8. Declare target game build metadata in `package.json`: specify `gameProductVersion` (the verified game build) and `relevantAssemblies` (the engine/core game DLLs to inspect and fingerprint on disk). Keep the manifest limited to package identity, SDK contract, assembly, schema, platform, target game metadata, and package allowlist. Loading entry points remain in adapter code and tests.
 9. Validate manifests and build a local package with the generic adapter tool before requesting a release.
 
 When a target requires proprietary reference assemblies, provide a checked-in setup script that creates ignored local references. Do not commit or distribute game binaries.

@@ -10,6 +10,12 @@
   "inputSchemaVersion": 5,
   "targetFramework": "net9.0",
   "architectures": ["x64"],
+  "gameProductVersion": "2.3.0.2798",
+  "relevantAssemblies": [
+    "Game2.Client.dll",
+    "VRage.Core.dll",
+    "VRage.Library.dll"
+  ],
   "package": {
     "include": [
       "Kontrol.Adapters.SpaceEngineers2.dll",

@@ -10,6 +10,8 @@
   "inputSchemaVersion": 1,
   "targetFramework": "net9.0",
   "architectures": ["x64"],
+  "gameProductVersion": "1.0.0",
+  "relevantAssemblies": ["Kontrol.Sandbox.Game.exe"],
   "package": {
     "include": [
       "Kontrol.Adapters.DummyAdapter.dll",
