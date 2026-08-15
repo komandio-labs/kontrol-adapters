@@ -99,7 +99,7 @@ jobs:
             --adapter "$slug" --package "release-input/$package" \
             --package-url "$PUBLIC_BASE_URL/packages/$slug/$version/$package" \
             --tag "$TAG" --commit "$commit" --channel "${{ steps.release.outputs.channel }}" \
-            --output "pages/releases/$slug-$version.json"
+            --output "pages/releases/$slug-$version.json" --overwrite true
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release sign \
             --descriptor "pages/releases/$slug-$version.json" --private-key "$SIGNING_PRIVATE_KEY"
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog build \

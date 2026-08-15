@@ -142,8 +142,9 @@ public static class AdapterToolProgram
         switch (args[1].ToLowerInvariant())
         {
             case "create":
+                bool overwrite = string.Equals(options.Get("overwrite"), "true", StringComparison.OrdinalIgnoreCase);
                 AdapterRelease.Create(root, options.Required("adapter"), options.Required("package"),
-                    options.Required("package-url"), options.Required("tag"), options.Required("commit"), options.Required("output"), options.Get("channel") ?? "stable");
+                    options.Required("package-url"), options.Required("tag"), options.Required("commit"), options.Required("output"), options.Get("channel") ?? "stable", overwrite);
                 Console.WriteLine(Path.GetFullPath(options.Required("output")));
                 return 0;
             case "validate":
@@ -572,7 +573,7 @@ public static class AdapterRelease
 {
     private static readonly Regex Sha256 = new("^[A-Fa-f0-9]{64}$", RegexOptions.Compiled);
 
-    public static void Create(string root, string slug, string packagePath, string packageUrl, string tag, string commit, string outputPath, string channel)
+    public static void Create(string root, string slug, string packagePath, string packageUrl, string tag, string commit, string outputPath, string channel, bool overwrite = false)
     {
         AdapterManifest manifest = AdapterRepository.GetManifest(root, slug);
         AdapterPackage.Verify(packagePath);
@@ -640,7 +641,7 @@ public static class AdapterRelease
             }
         }
 
-        WriteJson(outputPath, descriptor);
+        WriteJson(outputPath, descriptor, overwrite);
         Validate(outputPath, packagePath);
     }
 
@@ -678,11 +679,11 @@ public static class AdapterRelease
         Validate(descriptorPath);
     }
 
-    private static void WriteJson(string outputPath, JsonObject document)
+    private static void WriteJson(string outputPath, JsonObject document, bool overwrite = false)
     {
         string fullPath = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("Output path is invalid."));
-        if (File.Exists(fullPath)) throw new IOException($"Release descriptor destination already exists: {fullPath}.");
+        if (!overwrite && File.Exists(fullPath)) throw new IOException($"Release descriptor destination already exists: {fullPath}.");
         File.WriteAllText(fullPath, document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
     }
 
