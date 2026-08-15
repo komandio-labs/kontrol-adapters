@@ -143,8 +143,9 @@ public static class AdapterToolProgram
         {
             case "create":
                 bool overwrite = string.Equals(options.Get("overwrite"), "true", StringComparison.OrdinalIgnoreCase);
+                string? publishedAt = options.Get("published-at");
                 AdapterRelease.Create(root, options.Required("adapter"), options.Required("package"),
-                    options.Required("package-url"), options.Required("tag"), options.Required("commit"), options.Required("output"), options.Get("channel") ?? "stable", overwrite);
+                    options.Required("package-url"), options.Required("tag"), options.Required("commit"), options.Required("output"), options.Get("channel") ?? "stable", overwrite, publishedAt);
                 Console.WriteLine(Path.GetFullPath(options.Required("output")));
                 return 0;
             case "validate":
@@ -573,7 +574,7 @@ public static class AdapterRelease
 {
     private static readonly Regex Sha256 = new("^[A-Fa-f0-9]{64}$", RegexOptions.Compiled);
 
-    public static void Create(string root, string slug, string packagePath, string packageUrl, string tag, string commit, string outputPath, string channel, bool overwrite = false)
+    public static void Create(string root, string slug, string packagePath, string packageUrl, string tag, string commit, string outputPath, string channel, bool overwrite = false, string? publishedAtUtc = null)
     {
         AdapterManifest manifest = AdapterRepository.GetManifest(root, slug);
         AdapterPackage.Verify(packagePath);
@@ -586,6 +587,18 @@ public static class AdapterRelease
             throw new InvalidOperationException($"Package filename must be '{expectedFileName}'.");
         ValidateChannel(channel, manifest.AdapterVersion);
 
+        string timestamp;
+        if (!string.IsNullOrWhiteSpace(publishedAtUtc))
+        {
+            if (!DateTimeOffset.TryParse(publishedAtUtc, out var parsed))
+                throw new InvalidOperationException("Release published-at must be an ISO-8601 timestamp.");
+            timestamp = parsed.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
+        else
+        {
+            timestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
+
         var descriptor = new JsonObject
         {
             ["descriptorVersion"] = 1,
@@ -594,6 +607,7 @@ public static class AdapterRelease
             ["adapterVersion"] = manifest.AdapterVersion,
             ["sdkVersion"] = manifest.SdkVersion,
             ["channel"] = channel,
+            ["publishedAtUtc"] = timestamp,
             ["source"] = new JsonObject { ["tag"] = tag, ["commit"] = commit.ToLowerInvariant() },
             ["package"] = new JsonObject
             {
@@ -659,6 +673,8 @@ public static class AdapterRelease
         string slug = Required("slug"), version = Required("adapterVersion"), channel = Required("channel");
         if (!Regex.IsMatch(slug, "^[a-z0-9][a-z0-9-]*$") || !Regex.IsMatch(version, "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")) throw new InvalidOperationException("Release descriptor has an invalid adapter identity.");
         ValidateChannel(channel, version);
+        if (descriptor["publishedAtUtc"]?.GetValue<string>() is { } pub && !DateTimeOffset.TryParse(pub, out _))
+            throw new InvalidOperationException("Release descriptor publishedAtUtc is invalid.");
         var source = descriptor["source"]?.AsObject() ?? throw new InvalidOperationException("Release descriptor is missing source metadata.");
         if (!string.Equals(source["tag"]?.GetValue<string>(), $"adapters/{slug}/v{version}", StringComparison.Ordinal) || !Regex.IsMatch(source["commit"]?.GetValue<string>() ?? string.Empty, "^[0-9a-fA-F]{7,64}$")) throw new InvalidOperationException("Release descriptor source metadata is invalid.");
         var package = descriptor["package"]?.AsObject() ?? throw new InvalidOperationException("Release descriptor is missing package metadata.");
