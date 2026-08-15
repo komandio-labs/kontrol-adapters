@@ -194,7 +194,9 @@ public sealed record AdapterManifest(
     int InputSchemaVersion,
     string TargetFramework,
     IReadOnlyList<string> Architectures,
-    IReadOnlyList<string> PackageFiles);
+    IReadOnlyList<string> PackageFiles,
+    string? GameProductVersion = null,
+    IReadOnlyList<string>? RelevantAssemblies = null);
 
 public enum CompatibilityClassification
 {
@@ -335,7 +337,9 @@ public static class AdapterRepository
             ?? throw new InvalidOperationException($"Manifest '{path}' is missing package.include.");
         var architectures = document["architectures"]?.AsArray().Select(node => node?.GetValue<string>() ?? throw new InvalidOperationException($"Manifest '{path}' has an invalid architecture.")).ToArray()
             ?? throw new InvalidOperationException($"Manifest '{path}' is missing architectures.");
-        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include);
+        string? gameProductVersion = document["gameProductVersion"]?.GetValue<string>();
+        var relevantAssemblies = document["relevantAssemblies"]?.AsArray().Select(node => node?.GetValue<string>() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToArray();
+        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include, gameProductVersion, relevantAssemblies);
     }
 
     private static void ValidateManifest(string root, AdapterManifest manifest)
@@ -362,6 +366,17 @@ public static class AdapterRepository
         if (!string.Equals(adapterVersion, manifest.AdapterVersion, StringComparison.Ordinal)) throw new InvalidOperationException($"Manifest version and AdapterVersion.props disagree for '{manifest.Slug}'.");
         string sdkVersion = XDocument.Load(Path.Combine(root, "src", "Kontrol.Sdk", "Versions.props")).Descendants("KontrolSdkVersion").SingleOrDefault()?.Value ?? throw new InvalidOperationException("src/Kontrol.Sdk/Versions.props is invalid.");
         if (!string.Equals(sdkVersion, manifest.SdkVersion, StringComparison.Ordinal)) throw new InvalidOperationException($"Manifest SDK version and src/Kontrol.Sdk/Versions.props disagree for '{manifest.Slug}'.");
+
+        string? projectManifest = Directory.EnumerateFiles(AdapterRoot(manifest), "adapter.manifest.json", SearchOption.AllDirectories).FirstOrDefault();
+        if (projectManifest != null)
+        {
+            var pDoc = JsonNode.Parse(File.ReadAllText(projectManifest))?.AsObject();
+            string? pVer = pDoc?["version"]?.GetValue<string>();
+            if (!string.IsNullOrEmpty(pVer) && !string.Equals(pVer, manifest.AdapterVersion, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"adapter.manifest.json version '{pVer}' does not match package.json version '{manifest.AdapterVersion}' for '{manifest.Slug}'.");
+            }
+        }
         _ = projectPath;
     }
 
@@ -587,6 +602,44 @@ public static class AdapterRelease
                 ["architecture"] = "x64"
             }
         };
+
+        if (!string.IsNullOrWhiteSpace(manifest.GameProductVersion))
+        {
+            descriptor["gameProductVersion"] = manifest.GameProductVersion;
+        }
+
+        string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
+        if (Directory.Exists(compatibilityRoot))
+        {
+            foreach (string recordPath in Directory.EnumerateFiles(compatibilityRoot, "*.json"))
+            {
+                var record = JsonNode.Parse(File.ReadAllText(recordPath))?.AsObject();
+                if (record is null || !string.Equals(record["adapterVersion"]?.GetValue<string>(), manifest.AdapterVersion, StringComparison.Ordinal)) continue;
+                var game = record["game"]?.AsObject();
+                if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0)
+                {
+                    var assembliesNode = new JsonObject();
+                    foreach ((string name, JsonNode? val) in assembliesObj)
+                    {
+                        if (val is JsonObject entryObj)
+                        {
+                            assembliesNode[name] = new JsonObject
+                            {
+                                ["sha256"] = entryObj["sha256"]?.GetValue<string>() ?? "",
+                                ["fileVersion"] = entryObj["fileVersion"]?.GetValue<string>() ?? ""
+                            };
+                        }
+                    }
+                    descriptor["assemblies"] = assembliesNode;
+                    if (descriptor["gameProductVersion"] is null && game?["productVersion"]?.GetValue<string>() is { } gpv)
+                    {
+                        descriptor["gameProductVersion"] = gpv;
+                    }
+                    break;
+                }
+            }
+        }
+
         WriteJson(outputPath, descriptor);
         Validate(outputPath, packagePath);
     }
