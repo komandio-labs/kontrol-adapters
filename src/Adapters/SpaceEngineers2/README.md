@@ -1,6 +1,6 @@
 # Space Engineers 2 adapter
 
-> **Status:** experimental integration against Space Engineers 2 private runtime APIs. Adapter `0.1.0-beta.1` is an untested beta. Historical baseline validation against SE2 `2.3.0.2798` was recorded on 2026-07-31, but the exact beta package must be validated before it can be presented as Tested.
+> **Status:** experimental integration against Space Engineers 2 private runtime APIs. Adapter `0.1.0-beta.2` is a tested beta against SE2 `2.3.0.2798` (Steam build `24225481`). Revalidate after every game update.
 
 ## Disclaimer
 
@@ -67,7 +67,7 @@ The code remains the source of truth. This document records why the current
 symbols are used, their expected signatures and behavior, and what must be
 verified before declaring a newer SE2 build compatible.
 
-## Historical baseline awaiting release validation
+## Validated compatibility baseline
 
 | Item | Validated value |
 | --- | --- |
@@ -76,7 +76,7 @@ verified before declaring a newer SE2 build compatible.
 | Steam application ID | `1133870` |
 | Steam build ID | `24225481` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.1.0-beta.1` (untested beta) |
+| Adapter version | `0.1.0-beta.2` (tested beta) |
 | SDK contract version | `1.0.0` |
 | Adapter input schema | Version `5` |
 | Adapter target framework | `net9.0` |

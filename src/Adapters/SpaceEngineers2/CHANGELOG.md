@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.0-beta.2 — validated beta
+
+- Validated the exact adapter package against Space Engineers 2 `2.3.0.2798`.
+- Automated adapter validation passed (29 tests) and the complete manual game checklist passed.
+- Retains Native Plugin Parameter as the default deployment method and Process Injection as an alternate method.
+
 ## 0.1.0-beta.1 — first public beta
 
 This beta is initially published as **Untested** until the exact package has

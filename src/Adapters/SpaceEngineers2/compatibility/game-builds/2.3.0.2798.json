@@ -2,7 +2,7 @@
   "$schema": "../../../../../schemas/compatibility-record-v1.schema.json",
   "schemaVersion": 1,
   "adapterId": "SE2",
-  "adapterVersion": "0.1.0-beta.1",
+  "adapterVersion": "0.1.0-beta.2",
   "game": {
     "product": "Space Engineers 2",
     "productVersion": "2.3.0.2798",
@@ -26,12 +26,12 @@
     }
   },
   "validation": {
-    "date": "2026-07-31",
-    "result": "untested",
-    "automatedTests": "pending",
-    "manualChecklist": "pending",
+    "date": "2026-08-15",
+    "result": "tested",
+    "automatedTests": "passed",
+    "manualChecklist": "passed",
     "limitations": [
-      "Experimental integration against Space Engineers 2 private runtime APIs. Historical validation was performed for the pre-release baseline; validate this exact beta package before declaring it tested. Revalidate after every game update."
+      "Experimental integration against Space Engineers 2 private runtime APIs. Revalidate after every game update."
     ]
   }
 }
