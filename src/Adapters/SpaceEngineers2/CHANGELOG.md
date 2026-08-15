@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.0-beta.3 — validated beta
+
+- Added target game build (`2.3.0.2798`) and verified core engine assemblies metadata directly to the adapter package manifest for automated local build verification in Kontrol.
+- Validated the exact adapter package against Space Engineers 2 `2.3.0.2798`.
+- Automated adapter validation passed (29 tests) and compatibility verification confirmed.
+- Retains Native Plugin Parameter as the default deployment method and Process Injection as an alternate method.
+
 ## 0.1.0-beta.2 — validated beta
 
 - Validated the exact adapter package against Space Engineers 2 `2.3.0.2798`.
