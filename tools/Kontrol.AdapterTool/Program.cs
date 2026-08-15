@@ -660,6 +660,7 @@ public static class AdapterCatalog
                 throw new InvalidOperationException($"Catalog release descriptors reference unknown adapter '{group.Key}'.");
             var ordered = group.OrderByDescending(item => Version.Parse(item["adapterVersion"]!.GetValue<string>().Split('-')[0]))
                 .ThenByDescending(item => item["channel"]?.GetValue<string>() == "stable")
+                .ThenByDescending(PrereleaseNumber)
                 .ToArray();
             var current = ordered.FirstOrDefault(item => item["channel"]?.GetValue<string>() == "stable") ?? ordered[0];
             var releases = new JsonArray();
@@ -683,6 +684,13 @@ public static class AdapterCatalog
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("Catalog output path is invalid."));
         File.WriteAllText(fullPath, catalog.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
         Validate(fullPath);
+    }
+
+    private static int PrereleaseNumber(JsonNode item)
+    {
+        string version = item["adapterVersion"]!.GetValue<string>();
+        Match match = Regex.Match(version, @"(?:^|\.)(\d+)$");
+        return match.Success ? int.Parse(match.Groups[1].Value) : 0;
     }
 
     public static void Validate(string catalogPath)

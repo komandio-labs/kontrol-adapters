@@ -160,6 +160,37 @@ public class AdapterToolTests
     }
 
     [Test]
+    public void CatalogBuild_SelectsNewestBetaWhenNoStableReleaseExists()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string temporaryDirectory = Path.Combine(Path.GetTempPath(), $"kontrol-catalog-{Guid.NewGuid():N}");
+        string releasesDirectory = Path.Combine(temporaryDirectory, "releases");
+        string catalogPath = Path.Combine(temporaryDirectory, "catalog.json");
+        Directory.CreateDirectory(releasesDirectory);
+
+        try
+        {
+            var beta1 = Descriptor("0.1.0-beta.1");
+            beta1["channel"] = "beta";
+            var beta2 = Descriptor("0.1.0-beta.2");
+            beta2["channel"] = "beta";
+            File.WriteAllText(Path.Combine(releasesDirectory, "dummyadapter-0.1.0-beta.1.json"), beta1.ToJsonString());
+            File.WriteAllText(Path.Combine(releasesDirectory, "dummyadapter-0.1.0-beta.2.json"), beta2.ToJsonString());
+
+            AdapterCatalog.Build(root, releasesDirectory, "1970-01-01T00:00:00.0000000+00:00", catalogPath);
+
+            JsonObject catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!.AsObject();
+            JsonObject adapter = catalog["adapters"]!.AsArray()[0]!.AsObject();
+            adapter["currentVersion"]!.GetValue<string>().ShouldBe("0.1.0-beta.2");
+            adapter["releases"]!.AsArray().Single(item => item!["adapterVersion"]!.GetValue<string>() == "0.1.0-beta.2")["status"]!.GetValue<string>().ShouldBe("current");
+        }
+        finally
+        {
+            if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true);
+        }
+    }
+
+    [Test]
     public void PackageSigning_CreatesAndVerifiesAnOfficialPackageSignature()
     {
         string temporary = Path.Combine(Path.GetTempPath(), $"kontrol-package-{Guid.NewGuid():N}.zip");
