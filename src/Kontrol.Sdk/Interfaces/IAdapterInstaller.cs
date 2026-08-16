@@ -15,7 +15,11 @@ public interface IAdapterInstaller
     void Uninstall(string gameDirectory, GameLaunchMethod method);
     bool CheckIsInstalled(string gameDirectory, GameLaunchMethod method);
     void Launch(string gameDirectory, GameLaunchMethod method, string sourceDllPath);
+    void Launch(string gameDirectory, GameLaunchMethod method, string sourceDllPath, string? customLaunchArguments) =>
+        Launch(gameDirectory, method, sourceDllPath);
     void CreateShortcut(string gameDirectory, GameLaunchMethod method, string sourceDllPath);
+    void CreateShortcut(string gameDirectory, GameLaunchMethod method, string sourceDllPath, string? customLaunchArguments) =>
+        CreateShortcut(gameDirectory, method, sourceDllPath);
 }
 
 /// <summary>

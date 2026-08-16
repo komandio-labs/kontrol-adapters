@@ -30,8 +30,8 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     ]);
     public DeploymentMethodInformation GetDeploymentInformation(GameLaunchMethod method) => method switch
     {
-        GameLaunchMethod.ProcessInjection => new("Process injection", "Launches SE2 through Steam, then loads the Kontrol adapter into Steam's actual game process without changing SE2 installation files.", "Changes: no SE2 files are copied, modified, or backed up. Note: security software may block remote process loading; Kontrol reports a launch error if attachment fails."),
-        GameLaunchMethod.NativePluginParameter => new("SE2 native plugin loader", "Copies the adapter and Harmony beside the SE2 executable, then launches SE2 through Steam with its -plugins parameter.", "Changes: adapter dependencies and steam_appid.txt are added to Game2. No original SE2 assembly is changed."),
+        GameLaunchMethod.ProcessInjection => new("Process injection", "Kontrol launches Space Engineers 2 through Steam, validates Steam's actual game process, then loads the Kontrol bootstrap and adapter into that process.", "No Space Engineers 2 files are copied, modified, or backed up."),
+        GameLaunchMethod.NativePluginParameter => new("SE2 native plugin loader", "Kontrol copies the adapter and its required dependencies beside the Space Engineers 2 executable, then launches the game through Steam with its -plugins parameter.", "The adapter, its dependencies, and steam_appid.txt are added to Game2. No original Space Engineers 2 assembly is changed."),
         _ => DeploymentMethodInformation.Generic(method)
     };
     private const string HarmonyDllName = "0Harmony.dll";
@@ -172,7 +172,10 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         }
     }
 
-    public void Launch(string gameDirectory, GameLaunchMethod method, string sourceDllPath)
+    public void Launch(string gameDirectory, GameLaunchMethod method, string sourceDllPath) =>
+        Launch(gameDirectory, method, sourceDllPath, null);
+
+    public void Launch(string gameDirectory, GameLaunchMethod method, string sourceDllPath, string? customLaunchArguments)
     {
         string subDir = GetGameExeDir(gameDirectory);
         string gameExePath = Path.Combine(subDir, ExeName);
@@ -200,10 +203,20 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         startInfo.ArgumentList.Add("-applaunch");
         startInfo.ArgumentList.Add(SteamAppId);
         startInfo.ArgumentList.Add(BuildNativePluginArgument(Path.GetFullPath(Path.Combine(subDir, PluginDllName))));
+        if (!string.IsNullOrWhiteSpace(customLaunchArguments))
+        {
+            foreach (var arg in customLaunchArguments.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                startInfo.ArgumentList.Add(arg);
+            }
+        }
         Process.Start(startInfo);
     }
 
-    public void CreateShortcut(string gameDirectory, GameLaunchMethod method, string sourceDllPath)
+    public void CreateShortcut(string gameDirectory, GameLaunchMethod method, string sourceDllPath) =>
+        CreateShortcut(gameDirectory, method, sourceDllPath, null);
+
+    public void CreateShortcut(string gameDirectory, GameLaunchMethod method, string sourceDllPath, string? customLaunchArguments)
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("SE2 launch shortcuts are supported on Windows only.");
@@ -219,7 +232,12 @@ public class SpaceEngineers2Installer : IAdapterInstaller
                 ?? throw new InvalidOperationException("Windows Script Host could not be started.");
             dynamic shortcut = shell.CreateShortcut(Path.Combine(desktopPath, "Space Engineers 2 (VRAGE3) Deployed.lnk"));
             shortcut.TargetPath = steamExecutable;
-            shortcut.Arguments = $"-applaunch {SteamAppId} {BuildNativePluginArgument(pluginPath)}";
+            string arguments = $"-applaunch {SteamAppId} {BuildNativePluginArgument(pluginPath)}";
+            if (!string.IsNullOrWhiteSpace(customLaunchArguments))
+            {
+                arguments += $" {customLaunchArguments.Trim()}";
+            }
+            shortcut.Arguments = arguments;
             shortcut.WorkingDirectory = Path.GetDirectoryName(steamExecutable);
             shortcut.Save();
             return;
