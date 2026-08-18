@@ -31,6 +31,15 @@
         "architecture": { "const": "x64" }
       }
     },
-    "signature": { "type": "string", "pattern": "^[A-Za-z0-9+/=]{80,100}$" }
+    "signature": { "type": "string", "pattern": "^[A-Za-z0-9+/=]{80,100}$" },
+    "publishedAtUtc": { "type": "string" },
+    "gameProductVersion": { "type": "string" },
+    "verifiedGameVersions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "knownIncompatible": { "type": "boolean" },
+    "incompatibleReason": { "type": "string" },
+    "assemblies": { "type": "object" }
   }
 }

@@ -25,7 +25,7 @@
       "required": ["date", "result", "automatedTests", "manualChecklist", "limitations"],
       "properties": {
         "date": { "type": "string", "format": "date" },
-        "result": { "enum": ["tested", "untested", "known-incompatible"] },
+        "result": { "enum": ["tested", "known-incompatible"] },
         "automatedTests": { "enum": ["passed", "pending", "failed", "not-run"] },
         "manualChecklist": { "enum": ["passed", "pending", "failed", "not-run"] },
         "limitations": { "type": "array", "items": { "type": "string" } }

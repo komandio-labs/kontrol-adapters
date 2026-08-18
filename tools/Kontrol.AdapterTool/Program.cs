@@ -626,32 +626,52 @@ public static class AdapterRelease
         string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
         if (Directory.Exists(compatibilityRoot))
         {
+            var verifiedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            JsonObject? latestAssembliesNode = null;
+
             foreach (string recordPath in Directory.EnumerateFiles(compatibilityRoot, "*.json"))
             {
                 var record = JsonNode.Parse(File.ReadAllText(recordPath))?.AsObject();
                 if (record is null || !string.Equals(record["adapterVersion"]?.GetValue<string>(), manifest.AdapterVersion, StringComparison.Ordinal)) continue;
+                if (!string.Equals(record["validation"]?["result"]?.GetValue<string>(), "tested", StringComparison.OrdinalIgnoreCase)) continue;
+
                 var game = record["game"]?.AsObject();
-                if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0)
+                if (game?["productVersion"]?.GetValue<string>() is { } gpv && !string.IsNullOrWhiteSpace(gpv))
                 {
-                    var assembliesNode = new JsonObject();
+                    verifiedVersions.Add(gpv);
+                }
+
+                if (latestAssembliesNode is null && game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0)
+                {
+                    latestAssembliesNode = new JsonObject();
                     foreach ((string name, JsonNode? val) in assembliesObj)
                     {
                         if (val is JsonObject entryObj)
                         {
-                            assembliesNode[name] = new JsonObject
+                            latestAssembliesNode[name] = new JsonObject
                             {
                                 ["sha256"] = entryObj["sha256"]?.GetValue<string>() ?? "",
                                 ["fileVersion"] = entryObj["fileVersion"]?.GetValue<string>() ?? ""
                             };
                         }
                     }
-                    descriptor["assemblies"] = assembliesNode;
-                    if (descriptor["gameProductVersion"] is null && game?["productVersion"]?.GetValue<string>() is { } gpv)
-                    {
-                        descriptor["gameProductVersion"] = gpv;
-                    }
-                    break;
                 }
+            }
+
+            if (latestAssembliesNode != null)
+            {
+                descriptor["assemblies"] = latestAssembliesNode;
+            }
+
+            if (verifiedVersions.Count > 0)
+            {
+                descriptor["gameProductVersion"] = verifiedVersions.First();
+                var arr = new JsonArray();
+                foreach (string v in verifiedVersions)
+                {
+                    arr.Add(v);
+                }
+                descriptor["verifiedGameVersions"] = arr;
             }
         }
 
