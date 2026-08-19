@@ -53,7 +53,7 @@ public sealed class AdapterLogReporter(string adapterId) : IDisposable
             string? folder = Environment.GetEnvironmentVariable("KONTROL_ADAPTER_LOG_FOLDER");
             if (string.IsNullOrWhiteSpace(folder)) folder = adapterId;
             string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Kontrol", "adapters", folder, "logs", "adapter-debug.log");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 

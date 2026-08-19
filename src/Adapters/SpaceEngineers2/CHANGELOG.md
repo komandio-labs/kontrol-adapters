@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.0 — first stable release
+
+- First stable release of the Space Engineers 2 flight adapter.
+- Full 6-DoF analog flight control, dampeners, camera mode switching, and weapons integration.
+- Native Plugin Parameter default deployment and Process Injection alternative.
+- Includes target game build metadata (2.3.0.2798) and verified core engine assembly signatures for automated build validation.
+
 ## 0.1.0-beta.3 — validated beta
 
 - Added target game build (`2.3.0.2798`) and verified core engine assemblies metadata directly to the adapter package manifest for automated local build verification in Kontrol.
