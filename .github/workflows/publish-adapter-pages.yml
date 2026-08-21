@@ -44,8 +44,8 @@ jobs:
           test -n "$slug" && test -n "$version"
           version="${version#v}"
           case "$slug" in
-            spaceengineers2) adapter_folder=SpaceEngineers2 ;;
-            dummyadapter) adapter_folder=DummyAdapter ;;
+            space-engineers-2|spaceengineers2) adapter_folder=SpaceEngineers2 ;;
+            dummy-adapter|dummyadapter) adapter_folder=DummyAdapter ;;
             *) echo "Unsupported adapter slug: $slug" >&2; exit 1 ;;
           esac
           manifest="src/Adapters/$adapter_folder/package.json"
