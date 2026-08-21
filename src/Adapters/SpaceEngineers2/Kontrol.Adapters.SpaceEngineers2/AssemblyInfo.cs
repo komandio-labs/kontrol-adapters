@@ -3,9 +3,9 @@ using Kontrol.Sdk.Attributes;
 
 [assembly: InternalsVisibleTo("Kontrol.Adapters.SpaceEngineers2.Tests")]
 [assembly: KontrolAdapter(
-    "SE2",
+    "space-engineers-2",
     "Space Engineers 2",
-    "SpaceEngineers2",
+    "space-engineers-2",
     "SpaceEngineers2.exe",
     "Game2",
     "1133870",
