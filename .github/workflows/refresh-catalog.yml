@@ -49,6 +49,17 @@ jobs:
           test -d pages/releases
           test -n "$(find pages/releases -maxdepth 1 -type f -name '*.json' -print -quit)"
 
+      - name: Update release descriptors with tested compatibility
+        shell: bash
+        run: |
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release update-descriptors \
+            --releases pages/releases --root .
+          for desc in pages/releases/*.json; do
+            [ -f "$desc" ] || continue
+            dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release sign \
+              --descriptor "$desc" --private-key "$SIGNING_PRIVATE_KEY"
+          done
+
       - name: Rebuild and sign catalog
         shell: bash
         run: |
@@ -60,15 +71,15 @@ jobs:
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog validate \
             --catalog pages/catalog/v1/catalog.json
 
-      - name: Publish catalog only
+      - name: Publish updated descriptors and catalog
         shell: bash
         run: |
           git -C pages config user.name "github-actions[bot]"
           git -C pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C pages add catalog/v1/catalog.json
+          git -C pages add releases catalog/v1/catalog.json
           if git -C pages diff --cached --quiet; then
             echo "Catalog contents are already current."
             exit 0
           fi
-          git -C pages commit -m "chore: refresh signed catalog"
+          git -C pages commit -m "chore: refresh signed catalog and descriptors"
           git -C pages push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

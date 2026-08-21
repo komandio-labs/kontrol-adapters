@@ -6,28 +6,28 @@
   "adapterVersion": "0.1.0-beta.3",
   "game": {
     "product": "Space Engineers 2",
-    "productVersion": "2.3.0.2798",
-    "steamBuildId": "24225481",
+    "productVersion": "2.4.0.77",
+    "steamBuildId": "24225482",
     "relevantAssemblies": {
       "Game2.Client.dll": {
-        "fileVersion": "2.3.0.2798",
+        "fileVersion": "2.4.0.77",
         "sha256": "296360843CD3ED707D5572124E93FB611F8869B4EA07B2953BB3D2116566E12E",
         "mvid": "3e9ef3aa-d7a2-41ad-a627-b068f054b48b"
       },
       "VRage.Core.dll": {
-        "fileVersion": "2.3.0.2798",
+        "fileVersion": "2.4.0.77",
         "sha256": "4B14831F57DABD76F1DC6A6899B2D1CC310ED62830F83D4F9DABE85E6DD51683",
         "mvid": "2b43d7b9-7739-40af-b013-d53f081e66bc"
       },
       "VRage.Library.dll": {
-        "fileVersion": "2.3.0.2798",
+        "fileVersion": "2.4.0.77",
         "sha256": "02A6393FC3B0D4A57C1EA11B9C448A8EC21758D9E6F0B95F8A4B29F7B229B077",
         "mvid": "b072f1e4-5ad2-41c2-9798-ef67f96cbede"
       }
     }
   },
   "validation": {
-    "date": "2026-08-15",
+    "date": "2026-08-19",
     "result": "tested",
     "automatedTests": "passed",
     "manualChecklist": "passed",

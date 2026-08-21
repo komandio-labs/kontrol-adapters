@@ -1,6 +1,6 @@
 # Space Engineers 2 adapter
 
-> **Status:** experimental integration against Space Engineers 2 private runtime APIs. Adapter `0.1.0-beta.2` is a tested beta against SE2 `2.3.0.2798` (Steam build `24225481`). Revalidate after every game update.
+> **Status:** Experimental integration against Space Engineers 2 private runtime APIs. Revalidate after every game update.
 
 ## Disclaimer
 
@@ -44,7 +44,7 @@ Both methods activate the same process-wide
 The adapter is compiled against locally installed, game-owned reference
 assemblies. They are deliberately ignored by Git and are never published.
 
-1. Install the supported Space Engineers 2 build through Steam.
+1. Install Space Engineers 2 through Steam.
 2. From the repository root, run `python ./scripts/kontrol_adapters.py sync-se2`.
    It discovers a local Steam installation, or accepts
    `--game-directory <SE2 installation>`.
@@ -53,64 +53,38 @@ assemblies. They are deliberately ignored by Git and are never published.
 4. Build and run the adapter tests from the repository root.
 
 If the detected game version differs from the validated baseline, the project
-can still compile, but it is not supported until the compatibility checks in
-this document have been completed and recorded.
+can still compile, but it is not supported until the compatibility checks have
+been completed and recorded under `compatibility/game-builds/`.
 
 ## Compatibility and maintenance contract
 
-This document is the maintenance contract between the Kontrol input schema and
-the private Space Engineers 2 (SE2) APIs used by the adapter. Update it whenever
-SE2 changes, whenever a game reference assembly is replaced, or whenever an
-adapter input is added or translated differently.
+This document is the technical reference for the Kontrol input schema and
+the private Space Engineers 2 (SE2) APIs used by the adapter. Specific tested
+game versions and assembly fingerprints are declared in `package.json` and
+individual records in `compatibility/game-builds/*.json`.
 
-The code remains the source of truth. This document records why the current
-symbols are used, their expected signatures and behavior, and what must be
-verified before declaring a newer SE2 build compatible.
+The code remains the source of truth. This document records why the symbols are
+used, their expected signatures and behavior, and what must be verified when
+maintaining the adapter across game updates.
 
-## Validated compatibility baseline
+## Technical parameters
 
-| Item | Validated value |
+| Item | Specification |
 | --- | --- |
-| Historical evidence date | 2026-07-30 |
-| SE2 file/product version | `2.3.0.2798` |
 | Steam application ID | `1133870` |
-| Steam build ID | `24225481` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.1.0-beta.2` (tested beta) |
 | SDK contract version | `1.0.0` |
 | Adapter input schema | Version `5` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
+| Compatibility records | `compatibility/game-builds/*.json` |
+| Adapter manifest | `package.json` |
 
-The locally prepared reference assemblies in `references/2.3.0.2798` matched
-the installed game assemblies during the recorded validation. The directory is
-intentionally ignored and is never committed. Re-run
-`python ./scripts/kontrol_adapters.py test --adapter spaceengineers2` and the
-manual checklist before declaring any later game build tested.
-
-### Reference assembly fingerprints
-
-| Assembly | File version | SHA-256 |
-| --- | --- | --- |
-| `Game2.Client.dll` | `2.3.0.2798` | `296360843CD3ED707D5572124E93FB611F8869B4EA07B2953BB3D2116566E12E` |
-| `Game2.Simulation.dll` | `2.3.0.2798` | `C841BD8F931DC8E9FFEA7F6BB079E47CADF27CA909485C221DF16D9684D181E9` |
-| `VRage.Core.dll` | `2.3.0.2798` | `4B14831F57DABD76F1DC6A6899B2D1CC310ED62830F83D4F9DABE85E6DD51683` |
-| `VRage.Core.Game.dll` | `2.3.0.2798` | Captured locally by `kontrol_adapters.py sync-se2`; update this fingerprint when revalidating the baseline. |
-| `VRage.DCS.dll` | `2.3.0.2798` | `1C71E3D7D6A0EF3459883DA0B97E42CA9E69B32CA9D22AD397C564C22BD93116` |
-| `VRage.Library.dll` | `2.3.0.2798` | `02A6393FC3B0D4A57C1EA11B9C448A8EC21758D9E6F0B95F8A4B29F7B229B077` |
-| `VRage.Physics.dll` | `2.3.0.2798` | `9ADBEF930CB43E6FE6F0A31B4B731C225B0F6BDBBFFC520CDB7EB2957125C22B` |
-| `VRage.Input.dll` | `2.3.0.2798` | Captured locally by `kontrol_adapters.py sync-se2`; update this fingerprint when revalidating the baseline. |
-
-Key module version IDs (MVIDs):
-
-| Assembly | MVID |
-| --- | --- |
-| `Game2.Client.dll` | `3e9ef3aa-d7a2-41ad-a627-b068f054b48b` |
-| `Game2.Simulation.dll` | `65b73207-e158-40ad-bc09-8994d0ca67a6` |
-| `VRage.Library.dll` | `b072f1e4-5ad2-41c2-9798-ef67f96cbede` |
-
-A different hash or MVID does not automatically mean the adapter is broken. It
-means the private symbols and their IL behavior below must be revalidated.
+When a new Space Engineers 2 build is released:
+1. Synchronize references locally with `python ./scripts/kontrol_adapters.py sync-se2`.
+2. Run `python ./scripts/kontrol_adapters.py test --adapter spaceengineers2`.
+3. Complete the manual checklist in-game.
+4. Record verified engine builds in `compatibility/game-builds/<build>.json`.
 
 ## Kontrol input schema and IPC layout
 

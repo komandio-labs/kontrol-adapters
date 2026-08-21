@@ -14,7 +14,7 @@ public class AdapterToolTests
     {
         string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
         AdapterRepository.GetAffectedAdaptersFromPaths(root, ["src/Adapters/DummyAdapter/README.md"])
-            .ShouldBe(["dummyadapter"]);
+            .ShouldBe(["dummy-adapter"]);
     }
 
     [Test]
@@ -22,8 +22,8 @@ public class AdapterToolTests
     {
         string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
         var affected = AdapterRepository.GetAffectedAdaptersFromPaths(root, ["src/Kontrol.Sdk/IPC/InputFrame.cs"]);
-        affected.ShouldContain("dummyadapter");
-        affected.ShouldContain("spaceengineers2");
+        affected.ShouldContain("dummy-adapter");
+        affected.ShouldContain("space-engineers-2");
     }
 
     [Test]
@@ -37,8 +37,8 @@ public class AdapterToolTests
     public void PackageManifests_DeclareRequiredLicenseAndSe2HarmonyNotice()
     {
         string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
-        AdapterManifest se2 = AdapterRepository.GetManifest(root, "spaceengineers2");
-        AdapterManifest dummy = AdapterRepository.GetManifest(root, "dummyadapter");
+        AdapterManifest se2 = AdapterRepository.GetManifest(root, "space-engineers-2");
+        AdapterManifest dummy = AdapterRepository.GetManifest(root, "dummy-adapter");
 
         se2.PackageFiles.ShouldContain("LICENSE");
         se2.PackageFiles.ShouldContain("THIRD_PARTY_NOTICES.md");
@@ -117,8 +117,8 @@ public class AdapterToolTests
                 {
                     new JsonObject
                     {
-                        ["adapterId"] = "DummyAdapter",
-                        ["slug"] = "dummyadapter",
+                        ["adapterId"] = "dummy-adapter",
+                        ["slug"] = "dummy-adapter",
                         ["displayName"] = "Kontrol Sandbox",
                         ["currentVersion"] = "1.1.0",
                         ["releases"] = new JsonArray(currentRelease, oldRelease)
@@ -145,7 +145,7 @@ public class AdapterToolTests
 
         try
         {
-            File.WriteAllText(Path.Combine(releasesDirectory, "dummyadapter-1.0.0.json"), Descriptor("1.0.0").ToJsonString());
+            File.WriteAllText(Path.Combine(releasesDirectory, "dummy-adapter-1.0.0.json"), Descriptor("1.0.0").ToJsonString());
 
             AdapterCatalog.Build(root, releasesDirectory, "1970-01-01T00:00:00.0000000+00:00", catalogPath);
 
@@ -174,8 +174,8 @@ public class AdapterToolTests
             beta1["channel"] = "beta";
             var beta2 = Descriptor("0.1.0-beta.2");
             beta2["channel"] = "beta";
-            File.WriteAllText(Path.Combine(releasesDirectory, "dummyadapter-0.1.0-beta.1.json"), beta1.ToJsonString());
-            File.WriteAllText(Path.Combine(releasesDirectory, "dummyadapter-0.1.0-beta.2.json"), beta2.ToJsonString());
+            File.WriteAllText(Path.Combine(releasesDirectory, "dummy-adapter-0.1.0-beta.1.json"), beta1.ToJsonString());
+            File.WriteAllText(Path.Combine(releasesDirectory, "dummy-adapter-0.1.0-beta.2.json"), beta2.ToJsonString());
 
             AdapterCatalog.Build(root, releasesDirectory, "1970-01-01T00:00:00.0000000+00:00", catalogPath);
 
@@ -233,8 +233,8 @@ public class AdapterToolTests
                 {
                     new JsonObject
                     {
-                        ["adapterId"] = "DummyAdapter",
-                        ["slug"] = "dummyadapter",
+                        ["adapterId"] = "dummy-adapter",
+                        ["slug"] = "dummy-adapter",
                         ["displayName"] = "Kontrol Sandbox",
                         ["currentVersion"] = "1.1.0",
                         ["releases"] = new JsonArray(beta, stable)
@@ -297,7 +297,7 @@ public class AdapterToolTests
         string privateKeyBase64 = Convert.ToBase64String(ecdsa.ExportPkcs8PrivateKey());
         string publicKeyBase64 = Convert.ToBase64String(ecdsa.ExportSubjectPublicKeyInfo());
 
-        string payload = AdapterSignature.CreatePayload("DummyAdapter", "dummyadapter", "1.0.0", "1.0.0", new string('A', 64));
+        string payload = AdapterSignature.CreatePayload("dummy-adapter", "dummy-adapter", "1.0.0", "1.0.0", new string('A', 64));
         string signature = AdapterSignature.Sign(payload, privateKeyBase64);
 
         signature.ShouldNotBeNullOrWhiteSpace();
@@ -305,18 +305,112 @@ public class AdapterToolTests
         AdapterSignature.Verify(payload + "tampered", signature, publicKeyBase64).ShouldBeFalse();
     }
 
+    [Test]
+    public void UpdateDescriptors_RefreshesVerifiedGameVersions_WithoutChangingPackageHash()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string releasesDir = Path.Combine(Path.GetTempPath(), $"kontrol-releases-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(releasesDir);
+            var descriptor = Descriptor("0.1.0-beta.3");
+            descriptor["channel"] = "beta";
+            descriptor["slug"] = "space-engineers-2";
+            descriptor["adapterId"] = "space-engineers-2";
+            descriptor["gameProductVersion"] = "2.3.0.2798";
+            descriptor["source"] = new JsonObject { ["tag"] = "adapters/space-engineers-2/v0.1.0-beta.3", ["commit"] = "abcdef1234567" };
+            descriptor["package"] = new JsonObject
+            {
+                ["fileName"] = "kontrol-adapter-space-engineers-2-0.1.0-beta.3-win-x64.zip",
+                ["sha256"] = new string('A', 64),
+                ["url"] = "https://example.invalid/download.zip",
+                ["architecture"] = "x64"
+            };
+            string descPath = Path.Combine(releasesDir, "space-engineers-2-0.1.0-beta.3.json");
+            File.WriteAllText(descPath, descriptor.ToJsonString());
+
+            AdapterRelease.UpdateDescriptors(root, releasesDir);
+
+            var updated = JsonNode.Parse(File.ReadAllText(descPath))!.AsObject();
+            var verified = updated["verifiedGameVersions"]!.AsArray().Select(v => v!.GetValue<string>()).ToArray();
+            verified.ShouldContain("2.3.0.2798");
+            updated["package"]!["sha256"]!.GetValue<string>().ShouldBe(new string('A', 64));
+        }
+        finally
+        {
+            if (Directory.Exists(releasesDir)) Directory.Delete(releasesDir, recursive: true);
+        }
+    }
+
+    [Test]
+    public void EndToEnd_GameUpdateWorkflow_UpdatesCatalogWithoutRePackingAdapterZip()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string tempDir = Path.Combine(Path.GetTempPath(), $"kontrol-e2e-{Guid.NewGuid():N}");
+        string releasesDir = Path.Combine(tempDir, "releases");
+        string catalogPath = Path.Combine(tempDir, "catalog.json");
+        string dummyCompatDir = Path.Combine(root, "src", "Adapters", "DummyAdapter", "compatibility", "game-builds");
+        string newCompatRecordPath = Path.Combine(dummyCompatDir, "9.9.9.json");
+
+        try
+        {
+            Directory.CreateDirectory(releasesDir);
+            Directory.CreateDirectory(dummyCompatDir);
+
+            // 1. Existing release descriptor published on gh-pages for DummyAdapter 1.0.0
+            var initialDescriptor = Descriptor("1.0.0");
+            initialDescriptor["channel"] = "stable";
+            initialDescriptor["gameProductVersion"] = "1.0.0";
+            initialDescriptor["package"] = new JsonObject
+            {
+                ["fileName"] = "kontrol-adapter-dummy-adapter-1.0.0-win-x64.zip",
+                ["sha256"] = "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+                ["url"] = "https://example.invalid/download.zip",
+                ["architecture"] = "x64"
+            };
+            string descPath = Path.Combine(releasesDir, "dummy-adapter-1.0.0.json");
+            File.WriteAllText(descPath, initialDescriptor.ToJsonString());
+
+            // 2. New game build 9.9.9 compatibility record is added to repository
+            File.WriteAllText(newCompatRecordPath, "{\"schemaVersion\":1,\"adapterId\":\"dummy-adapter\",\"slug\":\"dummy-adapter\",\"adapterVersion\":\"1.0.0\",\"game\":{\"product\":\"Dummy Adapter\",\"productVersion\":\"9.9.9\",\"relevantAssemblies\":{\"Kontrol.Sandbox.Game.exe\":{\"fileVersion\":\"9.9.9\",\"sha256\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"mvid\":\"3e9ef3aa-d7a2-41ad-a627-b068f054b48b\"}}},\"validation\":{\"result\":\"tested\"}}");
+
+            // 3. Workflow runs: updates descriptors and rebuilds catalog
+            AdapterRelease.UpdateDescriptors(root, releasesDir);
+            AdapterCatalog.Build(root, releasesDir, "1970-01-01T00:00:00.0000000+00:00", catalogPath);
+
+            // 4. Validate output
+            AdapterCatalog.Validate(catalogPath);
+
+            var catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!.AsObject();
+            var adapter = catalog["adapters"]!.AsArray().Single(a => a!["slug"]!.GetValue<string>() == "dummy-adapter")!.AsObject();
+            var release = adapter["releases"]!.AsArray().Single(r => r!["adapterVersion"]!.GetValue<string>() == "1.0.0")!.AsObject();
+
+            var verifiedVersions = release["verifiedGameVersions"]!.AsArray().Select(v => v!.GetValue<string>()).ToArray();
+            verifiedVersions.ShouldContain("9.9.9");
+            verifiedVersions.ShouldContain("1.0.0");
+
+            // Verify package hash was completely preserved without re-packing
+            release["package"]!["sha256"]!.GetValue<string>().ShouldBe("1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff");
+        }
+        finally
+        {
+            if (File.Exists(newCompatRecordPath)) File.Delete(newCompatRecordPath);
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
     private static JsonObject Descriptor(string version) => new()
     {
         ["descriptorVersion"] = 1,
-        ["adapterId"] = "DummyAdapter",
-        ["slug"] = "dummyadapter",
+        ["adapterId"] = "dummy-adapter",
+        ["slug"] = "dummy-adapter",
         ["adapterVersion"] = version,
         ["sdkVersion"] = "1.0.0",
         ["channel"] = "stable",
-        ["source"] = new JsonObject { ["tag"] = $"adapters/dummyadapter/v{version}", ["commit"] = "abcdef1234567" },
+        ["source"] = new JsonObject { ["tag"] = $"adapters/dummy-adapter/v{version}", ["commit"] = "abcdef1234567" },
         ["package"] = new JsonObject
         {
-            ["fileName"] = $"kontrol-adapter-dummyadapter-{version}-win-x64.zip",
+            ["fileName"] = $"kontrol-adapter-dummy-adapter-{version}-win-x64.zip",
             ["sha256"] = new string('A', 64),
             ["url"] = "https://example.invalid/download.zip",
             ["architecture"] = "x64"
@@ -325,7 +419,7 @@ public class AdapterToolTests
 
     private static void CreateMinimalPackage(string path)
     {
-        const string manifest = "{\"adapterId\":\"DummyAdapter\",\"slug\":\"dummyadapter\",\"adapterVersion\":\"1.0.0\",\"sdkVersion\":\"1.0.0\",\"package\":{\"include\":[\"adapter.manifest.json\"]}}";
+        const string manifest = "{\"adapterId\":\"dummy-adapter\",\"slug\":\"dummy-adapter\",\"adapterVersion\":\"1.0.0\",\"sdkVersion\":\"1.0.0\",\"package\":{\"include\":[\"adapter.manifest.json\"]}}";
         const string runtime = "{}";
         var checksums = new JsonObject
         {

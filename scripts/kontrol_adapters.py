@@ -17,7 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TOOL_PROJECT = ROOT / "tools" / "Kontrol.AdapterTool" / "Kontrol.AdapterTool.csproj"
 ADAPTERS = {
+    "dummy-adapter": ("DummyAdapter", "Kontrol.Adapters.DummyAdapter"),
     "dummyadapter": ("DummyAdapter", "Kontrol.Adapters.DummyAdapter"),
+    "space-engineers-2": ("SpaceEngineers2", "Kontrol.Adapters.SpaceEngineers2"),
     "spaceengineers2": ("SpaceEngineers2", "Kontrol.Adapters.SpaceEngineers2"),
 }
 SE2_ASSEMBLIES = (

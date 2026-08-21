@@ -156,6 +156,10 @@ public static class AdapterToolProgram
                 AdapterRelease.Sign(options.Required("descriptor"), options.Required("private-key"));
                 Console.WriteLine("Release descriptor is signed.");
                 return 0;
+            case "update-descriptors":
+                AdapterRelease.UpdateDescriptors(root, options.Required("releases"));
+                Console.WriteLine("Release descriptors updated.");
+                return 0;
             default:
                 return Usage();
         }
@@ -417,8 +421,8 @@ public static class AdapterRepository
 
     private static string AdapterFolder(string slug) => slug switch
     {
-        "spaceengineers2" => "SpaceEngineers2",
-        "dummyadapter" => "DummyAdapter",
+        "space-engineers-2" or "spaceengineers2" => "SpaceEngineers2",
+        "dummy-adapter" or "dummyadapter" => "DummyAdapter",
         _ => slug
     };
 }
@@ -721,6 +725,87 @@ public static class AdapterRelease
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("Output path is invalid."));
         if (!overwrite && File.Exists(fullPath)) throw new IOException($"Release descriptor destination already exists: {fullPath}.");
         File.WriteAllText(fullPath, document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
+    }
+
+    public static void UpdateDescriptors(string root, string releasesDirectory)
+    {
+        AdapterRepository.ValidateRepository(root);
+        if (!Directory.Exists(releasesDirectory)) throw new DirectoryNotFoundException($"Release descriptor directory was not found: {releasesDirectory}");
+        var manifestsBySlug = AdapterRepository.GetManifests(root).ToDictionary(manifest => manifest.Slug, StringComparer.OrdinalIgnoreCase);
+
+        foreach (string descriptorPath in Directory.EnumerateFiles(releasesDirectory, "*.json", SearchOption.TopDirectoryOnly))
+        {
+            var descriptor = JsonNode.Parse(File.ReadAllText(descriptorPath))?.AsObject();
+            if (descriptor is null) continue;
+
+            string? slug = descriptor["slug"]?.GetValue<string>();
+            string? adapterVersion = descriptor["adapterVersion"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(slug) || string.IsNullOrWhiteSpace(adapterVersion)) continue;
+            if (!manifestsBySlug.TryGetValue(slug, out AdapterManifest? manifest)) continue;
+
+            string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
+            if (!Directory.Exists(compatibilityRoot)) continue;
+
+            var verifiedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (descriptor["verifiedGameVersions"] is JsonArray existingVersions)
+            {
+                foreach (var v in existingVersions)
+                {
+                    if (v?.GetValue<string>() is { } s && !string.IsNullOrWhiteSpace(s))
+                        verifiedVersions.Add(s);
+                }
+            }
+            if (descriptor["gameProductVersion"]?.GetValue<string>() is { } baseGpv && !string.IsNullOrWhiteSpace(baseGpv))
+            {
+                verifiedVersions.Add(baseGpv);
+            }
+
+            JsonObject? latestAssembliesNode = descriptor["assemblies"]?.AsObject()?.DeepClone().AsObject();
+
+            foreach (string recordPath in Directory.EnumerateFiles(compatibilityRoot, "*.json"))
+            {
+                var record = JsonNode.Parse(File.ReadAllText(recordPath))?.AsObject();
+                if (record is null) continue;
+                if (!string.Equals(record["adapterVersion"]?.GetValue<string>(), adapterVersion, StringComparison.Ordinal)) continue;
+                if (!string.Equals(record["validation"]?["result"]?.GetValue<string>(), "tested", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var game = record["game"]?.AsObject();
+                if (game?["productVersion"]?.GetValue<string>() is { } gpv && !string.IsNullOrWhiteSpace(gpv))
+                {
+                    verifiedVersions.Add(gpv);
+                }
+
+                if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0)
+                {
+                    latestAssembliesNode ??= new JsonObject();
+                    foreach ((string name, JsonNode? val) in assembliesObj)
+                    {
+                        if (val is JsonObject entryObj)
+                        {
+                            latestAssembliesNode[name] = entryObj.DeepClone();
+                        }
+                    }
+                }
+            }
+
+            if (verifiedVersions.Count > 0)
+            {
+                var arr = new JsonArray();
+                foreach (string v in verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase))
+                {
+                    arr.Add(v);
+                }
+                descriptor["verifiedGameVersions"] = arr;
+            }
+
+            if (latestAssembliesNode is not null && latestAssembliesNode.Count > 0)
+            {
+                descriptor["assemblies"] = latestAssembliesNode;
+            }
+
+            File.WriteAllText(descriptorPath, descriptor.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
+            Validate(descriptorPath);
+        }
     }
 
     private static void ValidateChannel(string channel, string version)

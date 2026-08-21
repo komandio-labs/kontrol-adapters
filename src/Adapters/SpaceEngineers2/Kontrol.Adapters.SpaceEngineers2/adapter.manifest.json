@@ -1,7 +1,7 @@
 {
-  "id": "SE2",
+  "id": "space-engineers-2",
   "displayName": "Space Engineers 2",
-  "slug": "SpaceEngineers2",
+  "slug": "space-engineers-2",
   "exeName": "SpaceEngineers2.exe",
   "relativeBinPath": "Game2",
   "pluginDll": "Kontrol.Adapters.SpaceEngineers2.dll",
@@ -11,7 +11,7 @@
   "supportedMethods": [ "NativePluginParameter", "ProcessInjection" ],
   "defaultDeploymentMethod": "NativePluginParameter",
   "image": "icon.png",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.3",
   "gameProductVersion": "2.3.0.2798",
   "relevantAssemblies": [
     "Game2.Client.dll",

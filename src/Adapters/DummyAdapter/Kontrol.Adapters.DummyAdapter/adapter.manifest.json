@@ -1,7 +1,7 @@
 {
-  "id": "DummyAdapter",
+  "id": "dummy-adapter",
   "displayName": "Kontrol Sandbox",
-  "slug": "DummyAdapter",
+  "slug": "dummy-adapter",
   "exeName": "Kontrol.Sandbox.Game.exe",
   "relativeBinPath": "",
   "pluginDll": "Kontrol.Adapters.DummyAdapter.dll",
