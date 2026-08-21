@@ -419,6 +419,13 @@ public static class AdapterRepository
         return true;
     }
 
+    public static string NormalizeSlug(string slug) => slug switch
+    {
+        "spaceengineers2" => "space-engineers-2",
+        "dummyadapter" => "dummy-adapter",
+        _ => slug
+    };
+
     private static string AdapterFolder(string slug) => slug switch
     {
         "space-engineers-2" or "spaceengineers2" => "SpaceEngineers2",
@@ -741,7 +748,8 @@ public static class AdapterRelease
             string? slug = descriptor["slug"]?.GetValue<string>();
             string? adapterVersion = descriptor["adapterVersion"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(slug) || string.IsNullOrWhiteSpace(adapterVersion)) continue;
-            if (!manifestsBySlug.TryGetValue(slug, out AdapterManifest? manifest)) continue;
+            string normalizedSlug = AdapterRepository.NormalizeSlug(slug);
+            if (!manifestsBySlug.TryGetValue(normalizedSlug, out AdapterManifest? manifest)) continue;
 
             string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
             if (!Directory.Exists(compatibilityRoot)) continue;
@@ -829,7 +837,7 @@ public static class AdapterCatalog
         if (descriptors.Length == 0) throw new InvalidOperationException("A catalog requires at least one release descriptor.");
         var manifestsBySlug = AdapterRepository.GetManifests(root).ToDictionary(manifest => manifest.Slug, StringComparer.OrdinalIgnoreCase);
         var adapters = new JsonArray();
-        foreach (var group in descriptors.GroupBy(item => item["slug"]!.GetValue<string>(), StringComparer.Ordinal).OrderBy(item => item.Key, StringComparer.Ordinal))
+        foreach (var group in descriptors.GroupBy(item => AdapterRepository.NormalizeSlug(item["slug"]!.GetValue<string>()), StringComparer.Ordinal).OrderBy(item => item.Key, StringComparer.Ordinal))
         {
             if (!manifestsBySlug.TryGetValue(group.Key, out AdapterManifest? manifest))
                 throw new InvalidOperationException($"Catalog release descriptors reference unknown adapter '{group.Key}'.");
@@ -847,8 +855,8 @@ public static class AdapterCatalog
             }
             adapters.Add(new JsonObject
             {
-                ["adapterId"] = current["adapterId"]!.GetValue<string>(),
-                ["slug"] = group.Key,
+                ["adapterId"] = manifest.AdapterId,
+                ["slug"] = manifest.Slug,
                 ["displayName"] = manifest.DisplayName,
                 ["currentVersion"] = current["adapterVersion"]!.GetValue<string>(),
                 ["releases"] = releases
