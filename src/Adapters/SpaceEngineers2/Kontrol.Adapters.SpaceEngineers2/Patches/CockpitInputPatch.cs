@@ -25,8 +25,8 @@ public static class CockpitInputPatch
     };
     private static readonly Dictionary<(Type Type, string Name), MethodInfo?> TriggerMethods = new();
 
-    private static readonly MmfChannel<InputFrame> ControlChannel = new("Local\\Kontrol_Input_SE2");
-    private static readonly MmfChannel<TelemetryData> TelemetryChannel = new("Local\\Kontrol_Telemetry_SE2");
+    private static readonly MmfChannel<InputFrame> ControlChannel = new("Local\\Kontrol_Input_space-engineers-2");
+    private static readonly MmfChannel<TelemetryData> TelemetryChannel = new("Local\\Kontrol_Telemetry_space-engineers-2");
     private static readonly object ChannelInitializationLock = new();
     private static bool _channelsInitialized;
     private static bool _channelFailureReported;

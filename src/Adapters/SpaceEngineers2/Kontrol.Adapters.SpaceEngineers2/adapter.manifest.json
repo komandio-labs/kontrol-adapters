@@ -11,8 +11,8 @@
   "supportedMethods": [ "NativePluginParameter", "ProcessInjection" ],
   "defaultDeploymentMethod": "NativePluginParameter",
   "image": "icon.png",
-  "version": "0.1.0-beta.1",
-  "gameProductVersion": "2.3.0.2798",
+  "version": "0.1.0-beta.2",
+  "gameProductVersion": "2.4.0.86",
   "relevantAssemblies": [
     "Game2.Client.dll",
     "VRage.Core.dll",

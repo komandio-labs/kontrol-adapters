@@ -25,10 +25,10 @@ public class CockpitInputPatchTests
     public void SetUp()
     {
         // Initialize MMF channels to mimic the WPF app side
-        _testInputChannel = new MmfChannel<InputFrame>("Local\\Kontrol_Input_SE2");
+        _testInputChannel = new MmfChannel<InputFrame>("Local\\Kontrol_Input_space-engineers-2");
         _testInputChannel.CreateOrOpen();
 
-        _testTelemetryChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Telemetry_SE2");
+        _testTelemetryChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Telemetry_space-engineers-2");
         _testTelemetryChannel.CreateOrOpen();
 
         // Redirect internal _updateControlDataMethod to avoid calling actual game logic

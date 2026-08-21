@@ -13,7 +13,7 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
     private static readonly object Gate = new();
     private static SpaceEngineers2AdapterRuntime? _current;
 
-    private readonly AdapterConnectionReporter _connectionReporter = new("SE2");
+    private readonly AdapterConnectionReporter _connectionReporter = new("space-engineers-2");
     private readonly Timer _heartbeatTimer;
     private readonly Harmony? _harmony;
     private bool _disposed;
@@ -100,7 +100,7 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
 
 internal static class SpaceEngineers2AdapterDiagnostics
 {
-    private static readonly AdapterLogReporter Reporter = new("SE2");
+    private static readonly AdapterLogReporter Reporter = new("space-engineers-2");
 
     internal static void Write(string message)
     {
