@@ -85,6 +85,9 @@ jobs:
             git -C pages config user.name "github-actions[bot]"
             git -C pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           fi
+          if [ -d "pages-template" ]; then
+            cp -r pages-template/* pages/
+          fi
 
       - name: Create signed descriptor and catalog
         shell: bash

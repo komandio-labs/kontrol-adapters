@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Official Kontrol game adapter library for connecting additional input devices to supported Windows games.">
+  <link rel="icon" type="image/png" href="./kontrol-logo.png">
+  <title>Kontrol · Game adapter library</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f8ff;
+      --muted: #a9b7ce;
+      --subtle: #7d8da7;
+      --line: rgba(185, 207, 241, .15);
+      --panel: rgba(14, 25, 46, .88);
+      --panel-strong: rgba(18, 32, 57, .96);
+      --blue: #83b4ff;
+      --aqua: #70e6d3;
+      --violet: #c1a8ff;
+      --warning: #ffd078;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .2);
+    }
+    * { box-sizing: border-box; }
+    html { background: #08111f; }
+    body {
+      min-width: 320px;
+      margin: 0;
+      color: var(--ink);
+      font: 16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #08111f;
+      background-image: linear-gradient(rgba(127, 164, 214, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(127, 164, 214, .035) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+    a { color: inherit; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 3px solid rgba(112, 230, 211, .8); outline-offset: 3px; }
+    .page { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    .icon { width: 19px; height: 19px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+    .icon-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .nav { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 0; }
+    .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 780; letter-spacing: -.025em; }
+    .brand-logo { width: 35px; height: 35px; border-radius: 10px; object-fit: cover; box-shadow: 0 0 28px rgba(112, 230, 211, .24); }
+    .nav-links { display: flex; flex-wrap: wrap; justify-content: end; gap: 18px; color: var(--muted); font-size: .9rem; }
+    .nav-links a:hover { color: var(--ink); }
+    .hero { position: relative; padding: clamp(56px, 10vw, 112px) 0 72px; max-width: 820px; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--aqua); font-size: .75rem; font-weight: 780; letter-spacing: .14em; text-transform: uppercase; }
+    .eyebrow .icon { width: 16px; height: 16px; }
+    h1 { max-width: 780px; margin: 0; font-size: clamp(2.8rem, 7vw, 5.7rem); line-height: .98; letter-spacing: -.075em; }
+    .lede { max-width: 700px; margin: 28px 0 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.22rem); }
+    .hero-actions, .actions { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 31px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 0 17px; border: 1px solid var(--line); border-radius: 10px; font-weight: 720; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
+    .button:hover { text-decoration: none; transform: translateY(-1px); border-color: rgba(131, 180, 255, .75); }
+    .button.primary { color: var(--ink); background: #1c3b67; border-color: #487fbe; }
+    .button.secondary { background: rgba(255, 255, 255, .045); }
+    .button.disabled { color: var(--muted); cursor: default; }
+    main { padding-bottom: 76px; }
+    .panel { border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: var(--shadow); }
+    .about-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 17px; margin-bottom: 66px; }
+    .about { padding: 30px; }
+    h2 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.25rem); letter-spacing: -.05em; }
+    .about p:not(.eyebrow) { max-width: 690px; margin-bottom: 0; color: var(--muted); }
+    .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; background: var(--line); }
+    .fact { display: flex; flex-direction: column; gap: 7px; min-height: 130px; padding: 22px; background: rgba(7, 16, 31, .68); }
+    .fact-head { display: flex; align-items: center; gap: 9px; color: var(--aqua); }
+    .fact-value { display: block; font-size: 1.3rem; font-weight: 780; letter-spacing: -.035em; }
+    .fact-label { color: var(--muted); font-size: .84rem; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+    .section-heading p { max-width: 540px; margin: 0; color: var(--muted); font-size: .95rem; text-align: right; }
+    .game-list { display: grid; gap: 17px; }
+    .game-card { padding: 26px; }
+    .game-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+    .game-title-wrap { display: flex; align-items: flex-start; gap: 14px; }
+    .game-icon { display: grid; place-items: center; width: 46px; height: 46px; border: 1px solid rgba(112, 230, 211, .26); border-radius: 13px; color: var(--aqua); background: rgba(112, 230, 211, .08); }
+    .game-icon .icon { width: 24px; height: 24px; }
+    .game-kicker { margin: 0 0 3px; color: var(--subtle); font-size: .75rem; font-weight: 730; letter-spacing: .09em; text-transform: uppercase; }
+    h3 { margin: 0; font-size: clamp(1.35rem, 2.5vw, 1.8rem); letter-spacing: -.045em; }
+    .game-slug { margin: 4px 0 0; color: var(--muted); font-size: .85rem; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; color: #06131d; background: var(--aqua); font-size: .72rem; font-weight: 820; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+    .status-badge.beta { color: #251905; background: var(--warning); }
+    .current-release { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; margin-top: 23px; padding: 19px; border: 1px solid rgba(131, 180, 255, .21); border-radius: 13px; background: var(--panel-strong); }
+    .release-label { margin: 0 0 4px; color: var(--subtle); font-size: .75rem; font-weight: 760; letter-spacing: .09em; text-transform: uppercase; }
+    .release-version { color: var(--aqua); font: 780 1.1rem ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .release-meta { margin: 6px 0 0; color: var(--muted); font-size: .88rem; }
+    .current-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 9px; }
+    .current-actions .button { min-height: 39px; padding: 0 13px; font-size: .85rem; }
+    .history { margin-top: 17px; border-top: 1px solid var(--line); padding-top: 16px; }
+    .history summary { display: inline-flex; align-items: center; gap: 8px; color: var(--blue); cursor: pointer; font-size: .9rem; font-weight: 710; }
+    .history summary:hover { text-decoration: underline; }
+    .history-list { display: grid; gap: 9px; margin: 14px 0 0; padding: 0; list-style: none; }
+    .history-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: rgba(5, 12, 25, .42); }
+    .history-item strong { font: 700 .88rem ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .history-item span { color: var(--muted); font-size: .82rem; }
+    .history-item a { color: var(--blue); font-size: .82rem; font-weight: 650; }
+    .empty, .loading { margin: 0; color: var(--muted); font-size: .95rem; }
+    .error { color: #ffabb8; }
+    .trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
+    .trust-card { padding: 21px; }
+    .trust-icon { display: grid; place-items: center; width: 36px; height: 36px; margin-bottom: 15px; border-radius: 10px; color: var(--violet); background: rgba(193, 168, 255, .1); }
+    .trust-card h3 { font-size: 1rem; }
+    .trust-card p { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
+    footer { display: flex; justify-content: space-between; gap: 16px; padding: 28px 0 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: .84rem; }
+    @media (max-width: 850px) { .about-grid, .trust { grid-template-columns: 1fr 1fr; } .about-grid .about { grid-column: 1 / -1; } }
+    @media (max-width: 680px) {
+      .page { width: min(100% - 28px, 1160px); }
+      .nav { align-items: flex-start; }
+      .nav-links { gap: 12px; }
+      .about-grid, .trust { grid-template-columns: 1fr; }
+      .about-grid .about { grid-column: auto; }
+      .section-heading { display: block; }
+      .section-heading p { margin-top: 9px; text-align: left; }
+      .game-header { display: block; }
+      .game-header .status-badge { margin: 16px 0 0 60px; }
+      .current-release { grid-template-columns: 1fr; }
+      .current-actions { justify-content: start; }
+      footer { display: block; }
+      footer span + span { display: block; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="icon-defs" aria-hidden="true">
+    <symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M7.5 6h9a4.5 4.5 0 0 1 4.3 3.2l1.3 4.4a3.5 3.5 0 0 1-6.4 2.5l-1-1.6H9.3l-1 1.6a3.5 3.5 0 0 1-6.4-2.5l1.3-4.4A4.5 4.5 0 0 1 7.5 6Z"/><path d="M7 10v4M5 12h4M16.5 11.5h.01M19 14h.01"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.3 8.4-8 10-4.7-1.6-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5M12 7v5l3 2"/></symbol>
+    <symbol id="i-windows" viewBox="0 0 24 24"><path d="m3 5 8-1v7H3V5ZM13 3.8l8-1.1V11h-8V3.8ZM3 13h8v7l-8-1v-6ZM13 13h8v8.3l-8-1.1V13Z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 1.4 6.6L20 10l-6.6 1.4L12 18l-1.4-6.6L4 10l6.6-1.4L12 2ZM19 16l.6 2.4L22 19l-2.4.6L19 22l-.6-2.4L16 19l2.4-.6L19 16Z"/></symbol>
+  </svg>
+  <div class="page">
+    <header class="nav">
+      <a class="brand" href="./" aria-label="Kontrol adapter library home"><img class="brand-logo" src="./kontrol-logo.png" alt="">Kontrol adapter library</a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <span>Kontrol app · coming soon</span>
+        <a href="https://github.com/komandio-labs/kontrol-adapters">Source</a>
+        <a href="./catalog/v1/catalog.json">Catalog JSON</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow"><svg class="icon"><use href="#i-spark"></use></svg> Official game adapter library</p>
+        <h1 id="page-title">Connect the controls you already own to the games you play.</h1>
+        <p class="lede">Kontrol is a Windows app for using joysticks, throttles, button boxes, wheels, pedals, and custom controllers with supported games. Each adapter understands one game’s native input model, so your hardware can work with the game instead of pretending to be a keyboard.</p>
+        <div class="hero-actions">
+          <span class="button primary disabled" aria-label="Kontrol app coming soon">Kontrol app · coming soon</span>
+          <a class="button secondary" href="#games"><svg class="icon"><use href="#i-gamepad"></use></svg> Browse supported games</a>
+        </div>
+      </section>
+
+      <section class="about-grid" aria-labelledby="how-it-works">
+        <article class="panel about">
+          <p class="eyebrow"><svg class="icon"><use href="#i-gamepad"></use></svg> How the pieces fit together</p>
+          <h2 id="how-it-works">One Kontrol app, one active game context, one adapter for that game.</h2>
+          <p>Kontrol reads your connected devices and applies your profile. The selected game adapter translates that input into the actions understood by the game. The library below keeps each game’s current release easy to find while preserving older versions for troubleshooting and compatibility history.</p>
+        </article>
+        <aside class="panel facts" aria-label="Library facts">
+          <div class="fact"><div class="fact-head"><svg class="icon"><use href="#i-gamepad"></use></svg><span id="game-count" class="fact-value">—</span></div><span class="fact-label">supported games</span></div>
+          <div class="fact"><div class="fact-head"><svg class="icon"><use href="#i-spark"></use></svg><span id="current-count" class="fact-value">—</span></div><span class="fact-label">current releases</span></div>
+          <div class="fact"><div class="fact-head"><svg class="icon"><use href="#i-history"></use></svg><span id="history-count" class="fact-value">—</span></div><span class="fact-label">historical releases</span></div>
+          <div class="fact"><div class="fact-head"><svg class="icon"><use href="#i-shield"></use></svg><span class="fact-value">Verified</span></div><span class="fact-label">signed distribution</span></div>
+        </aside>
+      </section>
+
+      <section id="games" aria-labelledby="games-title">
+        <div class="section-heading">
+          <div><p class="eyebrow"><svg class="icon"><use href="#i-gamepad"></use></svg> Choose a game</p><h2 id="games-title">Supported games</h2></div>
+          <p>Each card shows the current adapter first. Open release history only when you need an older package or want to compare versions.</p>
+        </div>
+        <div class="game-list" id="game-list"><p class="panel loading" style="padding:24px">Loading the signed game library…</p></div>
+      </section>
+
+      <section class="trust" aria-label="What the library information means">
+        <article class="panel trust-card"><div class="trust-icon"><svg class="icon"><use href="#i-shield"></use></svg></div><h3>Signed catalog</h3><p>Kontrol verifies that release metadata came from the official catalog and was not altered in transit.</p></article>
+        <article class="panel trust-card"><div class="trust-icon"><svg class="icon"><use href="#i-download"></use></svg></div><h3>Signed packages</h3><p>Every ZIP has a publisher signature and SHA-256 hash so Kontrol can verify the exact bytes before installing.</p></article>
+        <article class="panel trust-card"><div class="trust-icon"><svg class="icon"><use href="#i-windows"></use></svg></div><h3>Windows desktop</h3><p>Kontrol is a Windows desktop app. These adapters are distributed for the Windows host and its supported games.</p></article>
+        <article class="panel trust-card"><div class="trust-icon"><svg class="icon"><use href="#i-spark"></use></svg></div><h3>Game-version aware</h3><p>Adapter compatibility is tied to the game builds that were actually checked, not a vague version range.</p></article>
+      </section>
+    </main>
+
+    <footer>
+      <span>© 2026 Komandio Labs · Apache-2.0</span>
+      <span><a href="privacy.html">Privacy</a> · <a href="https://github.com/komandio-labs/kontrol-adapters/blob/main/SECURITY.md">Security reporting</a> · <a href="https://github.com/komandio-labs/kontrol-adapters/blob/main/SUPPORT.md">Support</a></span>
+    </footer>
+  </div>
+
+  <script>
+    const baseUrl = window.location.pathname.startsWith("/kontrol-adapters") ? "/kontrol-adapters" : "";
+    const catalogUrl = `${baseUrl}/catalog/v1/catalog.json`;
+
+    function isBeta(release) { return release.channel === "beta" || /-/.test(release.adapterVersion || ""); }
+    function releaseDetailsUrl(release) { return `${baseUrl}/release.html?adapter=${encodeURIComponent(release.slug)}&version=${encodeURIComponent(release.adapterVersion)}`; }
+    function currentRelease(entry) { return entry.releases.find(release => release.adapterVersion === entry.currentVersion) || entry.releases.find(release => release.status === "current") || entry.releases[0]; }
+    function iconUse(id) { const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg"); icon.classList.add("icon"); const use = document.createElementNS("http://www.w3.org/2000/svg", "use"); use.setAttribute("href", `#${id}`); icon.append(use); return icon; }
+    function link(text, href, className, iconId) { const item = document.createElement("a"); item.className = className; item.href = href; item.textContent = text; if (iconId) item.prepend(iconUse(iconId)); return item; }
+
+    function renderGame(entry) {
+      const current = currentRelease(entry);
+      const history = entry.releases.filter(release => release !== current).sort((a, b) => (b.adapterVersion || "").localeCompare(a.adapterVersion || "", undefined, { numeric: true, sensitivity: "base" }));
+      const card = document.createElement("article"); card.className = "panel game-card";
+      const header = document.createElement("div"); header.className = "game-header";
+      const titleWrap = document.createElement("div"); titleWrap.className = "game-title-wrap";
+      const gameIcon = document.createElement("div"); gameIcon.className = "game-icon"; gameIcon.append(iconUse("i-gamepad"));
+      const titleText = document.createElement("div");
+      const kicker = document.createElement("p"); kicker.className = "game-kicker"; kicker.textContent = "Game adapter";
+      const title = document.createElement("h3"); title.textContent = entry.displayName || entry.adapterId || entry.slug;
+      const slug = document.createElement("p"); slug.className = "game-slug"; slug.textContent = entry.slug;
+      titleText.append(kicker, title, slug); titleWrap.append(gameIcon, titleText);
+      const badge = document.createElement("span"); badge.className = `status-badge${isBeta(current) ? " beta" : ""}`; badge.textContent = isBeta(current) ? "Beta" : "Stable";
+      header.append(titleWrap, badge);
+      const currentBox = document.createElement("div"); currentBox.className = "current-release";
+      const releaseInfo = document.createElement("div");
+      const label = document.createElement("p"); label.className = "release-label"; label.textContent = "Current release";
+      const version = document.createElement("span"); version.className = "release-version"; version.textContent = `v${current.adapterVersion}`;
+      const meta = document.createElement("p"); meta.className = "release-meta"; meta.textContent = `Kontrol SDK ${current.sdkVersion || "—"} · ${history.length ? `${history.length} previous release${history.length === 1 ? "" : "s"}` : "First published release"}`;
+      releaseInfo.append(label, version, meta);
+      const actions = document.createElement("div"); actions.className = "current-actions";
+      if (current.package && current.package.url) actions.append(link("Download", current.package.url, "button primary", "i-download"));
+      actions.append(link("Release details", releaseDetailsUrl(current), "button secondary", "i-arrow"));
+      currentBox.append(releaseInfo, actions); card.append(header, currentBox);
+      if (history.length) {
+        const details = document.createElement("details"); details.className = "history";
+        const summary = document.createElement("summary"); summary.append(iconUse("i-history"), document.createTextNode(`View release history (${history.length})`)); details.append(summary);
+        const list = document.createElement("ul"); list.className = "history-list";
+        history.forEach(release => { const item = document.createElement("li"); item.className = "history-item"; const name = document.createElement("strong"); name.textContent = `v${release.adapterVersion}`; const channel = document.createElement("span"); channel.textContent = `${isBeta(release) ? "Beta" : "Stable"} · Superseded`; item.append(name, channel, link("Details", releaseDetailsUrl(release), "", "i-arrow")); list.append(item); });
+        details.append(list); card.append(details);
+      }
+      return card;
+    }
+
+    async function loadCatalog() {
+      const list = document.getElementById("game-list");
+      try {
+        const response = await fetch(catalogUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Catalog request failed: ${response.status}`);
+        const catalog = await response.json();
+        const entries = (catalog.adapters || []).slice().sort((a, b) => (a.displayName || a.slug).localeCompare(b.displayName || b.slug));
+        const allReleases = entries.flatMap(entry => entry.releases || []);
+        list.replaceChildren();
+        if (!entries.length) { const empty = document.createElement("p"); empty.className = "panel empty"; empty.style.padding = "24px"; empty.textContent = "No game adapters have been published yet. Check back soon."; list.append(empty); }
+        else entries.forEach(entry => list.append(renderGame(entry)));
+        document.getElementById("game-count").textContent = String(entries.length);
+        document.getElementById("current-count").textContent = String(entries.length);
+        document.getElementById("history-count").textContent = String(Math.max(0, allReleases.length - entries.length));
+      } catch (error) {
+        list.replaceChildren(); const notice = document.createElement("p"); notice.className = "panel empty error"; notice.style.padding = "24px"; notice.textContent = "The signed game library could not be loaded right now. Open the Catalog JSON link above to inspect the source directly."; list.append(notice);
+      }
+    }
+    loadCatalog();
+  </script>
+</body>
+</html>
