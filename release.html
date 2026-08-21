@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Release notes and verified package details for a Kontrol game adapter.">
+  <link rel="icon" type="image/png" href="./kontrol-logo.png">
+  <title>Adapter release · Kontrol</title>
+  <style>
+    :root { color-scheme: dark; --ink:#f5f8ff; --muted:#a9b7ce; --subtle:#7d8da7; --line:rgba(185,207,241,.15); --panel:rgba(14,25,46,.9); --panel-strong:rgba(18,32,57,.96); --blue:#83b4ff; --aqua:#70e6d3; --violet:#c1a8ff; --warning:#ffd078; --danger:#ffabb8; --shadow:0 24px 70px rgba(0,0,0,.2); }
+    * { box-sizing:border-box; } html,body { min-height:100%; margin:0; background:#08111f; } body { color:var(--ink); font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background-image:linear-gradient(rgba(127,164,214,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(127,164,214,.035) 1px,transparent 1px); background-size:44px 44px; }
+    a { color:inherit; text-decoration:none; } a:hover { text-decoration:underline; } :focus-visible { outline:3px solid rgba(112,230,211,.8); outline-offset:3px; }
+    .page { width:min(960px,calc(100% - 40px)); margin:0 auto; } .icon { width:19px; height:19px; flex:0 0 auto; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; } .icon-defs { position:absolute; width:0; height:0; overflow:hidden; }
+    .nav { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:24px 0; } .brand { display:inline-flex; align-items:center; gap:11px; font-weight:780; letter-spacing:-.025em; } .brand-logo { width:35px; height:35px; border-radius:10px; object-fit:cover; box-shadow:0 0 28px rgba(112,230,211,.24); } .nav-links { display:flex; flex-wrap:wrap; justify-content:end; gap:18px; color:var(--muted); font-size:.9rem; }
+    main { padding:clamp(42px,7vw,80px) 0 76px; } .eyebrow { display:flex; align-items:center; gap:8px; margin:0 0 13px; color:var(--aqua); font-size:.75rem; font-weight:780; letter-spacing:.14em; text-transform:uppercase; } .eyebrow .icon { width:16px; height:16px; } h1 { margin:0; font-size:clamp(2.35rem,6vw,4.35rem); line-height:1; letter-spacing:-.07em; } .subhead { margin:18px 0 0; color:var(--muted); font-size:1.07rem; }
+    .panel { border:1px solid var(--line); border-radius:18px; background:var(--panel); box-shadow:var(--shadow); } .summary { margin-top:32px; padding:26px; } .summary-top { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:18px; } .badge-row { display:flex; flex-wrap:wrap; gap:8px; } .badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; color:#06131d; background:var(--aqua); font-size:.72rem; font-weight:820; letter-spacing:.08em; text-transform:uppercase; } .badge.beta { color:#251905; background:var(--warning); } .badge.history { color:var(--ink); background:rgba(131,180,255,.2); }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:25px; } .button { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:43px; padding:0 16px; border:1px solid var(--line); border-radius:10px; font-size:.92rem; font-weight:720; transition:transform .15s ease,border-color .15s ease; } .button:hover { text-decoration:none; transform:translateY(-1px); border-color:rgba(131,180,255,.75); } .button.primary { color:var(--ink); background:#1c3b67; border-color:#487fbe; } .button.secondary { background:rgba(255,255,255,.045); }
+    .section-heading { margin:45px 0 17px; } h2 { margin:0; font-size:1.4rem; letter-spacing:-.045em; } .notes { padding:24px 26px; } .notes-copy { margin:0; color:var(--muted); } .notes-copy h3 { margin:0 0 9px; color:var(--ink); font-size:1.05rem; letter-spacing:-.02em; } .notes-copy p { margin:0 0 16px; } .notes-copy p:last-child { margin-bottom:0; } .notes-copy ul { margin:0 0 17px; padding-left:21px; } .notes-copy li { margin:5px 0; } .notes-copy code { color:var(--violet); } .notes-loading { color:var(--muted); }
+    .details { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .detail { padding:19px; } .detail-wide { grid-column:1 / -1; } .label { display:flex; align-items:center; gap:8px; color:var(--subtle); font-size:.74rem; font-weight:740; letter-spacing:.08em; text-transform:uppercase; } .value { display:block; margin-top:6px; font-size:.98rem; font-weight:650; overflow-wrap:anywhere; } code { color:var(--violet); font:inherit; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.86rem; }
+    .explain { display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-top:14px; } .explain-card { padding:19px; } .explain-card h3 { margin:0; font-size:1rem; letter-spacing:-.025em; } .explain-card p { margin:7px 0 0; color:var(--muted); font-size:.88rem; } .explain-icon { display:grid; place-items:center; width:34px; height:34px; margin-bottom:13px; border-radius:10px; color:var(--violet); background:rgba(193,168,255,.1); }
+    .error { color:var(--danger); } .hidden { display:none; } footer { display:flex; justify-content:space-between; gap:16px; padding:28px 0 40px; border-top:1px solid var(--line); color:var(--muted); font-size:.84rem; }
+    @media (max-width:680px) { .page{width:min(100% - 28px,960px)} .nav{align-items:flex-start}.nav-links{gap:12px}.details,.explain{grid-template-columns:1fr}.detail-wide{grid-column:auto} footer{display:block} footer span+span{display:block;margin-top:8px} }
+  </style>
+</head>
+<body>
+  <svg class="icon-defs" aria-hidden="true">
+    <symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M7.5 6h9a4.5 4.5 0 0 1 4.3 3.2l1.3 4.4a3.5 3.5 0 0 1-6.4 2.5l-1-1.6H9.3l-1 1.6a3.5 3.5 0 0 1-6.4-2.5l1.3-4.4A4.5 4.5 0 0 1 7.5 6Z"/><path d="M7 10v4M5 12h4M16.5 11.5h.01M19 14h.01"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.3 8.4-8 10-4.7-1.6-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+  </svg>
+  <div class="page">
+    <header class="nav">
+      <a class="brand" href="./"><img class="brand-logo" src="./kontrol-logo.png" alt="">Kontrol adapter library</a>
+      <nav class="nav-links" aria-label="Primary navigation"><a href="./">All games</a><a href="./catalog/v1/catalog.json">Catalog JSON</a></nav>
+    </header>
+    <main>
+      <div id="release-content" class="hidden">
+        <p class="eyebrow"><svg class="icon"><use href="#i-gamepad"></use></svg> Game adapter release</p>
+        <h1 id="release-title">Loading release…</h1>
+        <p class="subhead" id="release-subhead"></p>
+        <section class="panel summary">
+          <div class="summary-top"><div class="badge-row"><span id="channel-badge" class="badge">Release</span><span id="status-badge" class="badge history">Published</span></div><a id="github-release" class="button secondary hidden" target="_blank" rel="noreferrer"><svg class="icon"><use href="#i-arrow"></use></svg> View GitHub release</a></div>
+          <div class="actions"><a id="download-package" class="button primary"><svg class="icon"><use href="#i-download"></use></svg> Download signed package</a><a id="raw-json" class="button secondary"><svg class="icon"><use href="#i-code"></use></svg> View raw JSON</a></div>
+        </section>
+        <div class="section-heading"><p class="eyebrow"><svg class="icon"><use href="#i-code"></use></svg> What changed</p><h2>Release notes</h2></div>
+        <section class="panel notes"><p id="release-notes" class="notes-copy notes-loading">Loading release notes…</p></section>
+        <div class="section-heading"><p class="eyebrow"><svg class="icon"><use href="#i-shield"></use></svg> Verify before install</p><h2>Package and publication details</h2></div>
+        <section class="details">
+          <article class="panel detail"><span class="label"><svg class="icon"><use href="#i-download"></use></svg> Package</span><span id="package-name" class="value"></span></article>
+          <article class="panel detail"><span class="label"><svg class="icon"><use href="#i-gamepad"></use></svg> Platform</span><span id="architecture" class="value">Windows · x64</span></article>
+          <article class="panel detail detail-wide"><span class="label"><svg class="icon"><use href="#i-shield"></use></svg> SHA-256</span><code id="sha256" class="value"></code></article>
+          <article class="panel detail"><span class="label">Kontrol SDK</span><span id="sdk-version" class="value"></span></article>
+          <article class="panel detail"><span class="label">Release tag</span><code id="source-tag" class="value"></code></article>
+          <article class="panel detail detail-wide"><span class="label">Source commit</span><code id="source-commit" class="value"></code></article>
+        </section>
+        <section class="explain" aria-label="Signature explanation">
+          <article class="panel explain-card"><div class="explain-icon"><svg class="icon"><use href="#i-shield"></use></svg></div><h3>Signed catalog</h3><p>Protects the release metadata Kontrol reads, including the package URL and expected hash.</p></article>
+          <article class="panel explain-card"><div class="explain-icon"><svg class="icon"><use href="#i-download"></use></svg></div><h3>Signed package</h3><p>Proves the ZIP was produced by the official adapter publishing pipeline.</p></article>
+          <article class="panel explain-card"><div class="explain-icon"><svg class="icon"><use href="#i-code"></use></svg></div><h3>Open source</h3><p>Use the source link when you want to inspect the adapter or report a problem.</p></article>
+        </section>
+      </div>
+      <section id="error-content" class="panel summary"><p class="eyebrow">Release not found</p><h1 id="error-title">Loading release details…</h1><p id="error-message" class="subhead">Please wait.</p><div class="actions"><a class="button secondary" href="./"><svg class="icon"><use href="#i-arrow"></use></svg> Back to all games</a></div></section>
+    </main>
+    <footer><span>© 2026 Komandio Labs · Apache-2.0</span><span><a href="privacy.html">Privacy</a> · <a href="https://github.com/komandio-labs/kontrol-adapters/blob/main/SECURITY.md">Security reporting</a> · <a href="https://github.com/komandio-labs/kontrol-adapters/blob/main/SUPPORT.md">Support</a></span></footer>
+  </div>
+  <script>
+    const parameters = new URLSearchParams(window.location.search);
+    const adapter = parameters.get("adapter");
+    const version = parameters.get("version");
+    const baseUrl = window.location.pathname.startsWith("/kontrol-adapters") ? "/kontrol-adapters" : "";
+    const errorContent = document.getElementById("error-content");
+    const releaseContent = document.getElementById("release-content");
+    function showError(title, message) { document.getElementById("error-title").textContent = title; document.getElementById("error-message").textContent = message; errorContent.classList.remove("hidden"); releaseContent.classList.add("hidden"); }
+    function descriptorUrl() { return `${baseUrl}/releases/${encodeURIComponent(adapter)}-${encodeURIComponent(version)}.json`; }
+    function githubApiUrl(tag) { return `https://api.github.com/repos/komandio-labs/kontrol-adapters/releases/tags/${encodeURIComponent(tag)}`; }
+    function setText(id, value) { document.getElementById(id).textContent = value || "Not specified"; }
+    function inlineMarkdown(text) {
+      const fragment = document.createDocumentFragment();
+      text.split(/(`[^`]+`)/g).forEach(part => {
+        if (part.startsWith("`") && part.endsWith("`")) { const code = document.createElement("code"); code.textContent = part.slice(1, -1); fragment.append(code); }
+        else fragment.append(document.createTextNode(part));
+      });
+      return fragment;
+    }
+    function renderNotes(body) {
+      const target = document.getElementById("release-notes"); target.classList.remove("notes-loading"); target.replaceChildren();
+      if (!body) { target.textContent = "No release notes were provided for this release."; return; }
+      let list = null;
+      const closeList = () => { if (list) { target.append(list); list = null; } };
+      body.split(/\r?\n/).forEach(line => {
+        if (!line.trim()) { closeList(); return; }
+        if (/^##\s+/.test(line)) { closeList(); const heading = document.createElement("h3"); heading.append(inlineMarkdown(line.replace(/^##\s+/, ""))); target.append(heading); return; }
+        if (/^[-*]\s+/.test(line)) { if (!list) list = document.createElement("ul"); const item = document.createElement("li"); item.append(inlineMarkdown(line.replace(/^[-*]\s+/, ""))); list.append(item); return; }
+        closeList(); const paragraph = document.createElement("p"); paragraph.append(inlineMarkdown(line)); target.append(paragraph);
+      });
+      closeList();
+    }
+    async function fetchJson(url) { const response = await fetch(url, { cache:"no-store", headers:{"Accept":"application/vnd.github+json"} }); if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }
+    async function loadRelease() {
+      if (!adapter || !version) { showError("Release not specified", "Choose a release from the Kontrol adapter library."); return; }
+      try {
+        const descriptor = await fetchJson(descriptorUrl());
+        if (descriptor.slug !== adapter || descriptor.adapterVersion !== version) throw new Error("Release descriptor identity does not match this page.");
+        const [catalogResult, notesResult] = await Promise.allSettled([
+          fetchJson(`${baseUrl}/catalog/v1/catalog.json`),
+          fetchJson(githubApiUrl(descriptor.source && descriptor.source.tag))
+        ]);
+        const catalog = catalogResult.status === "fulfilled" ? catalogResult.value : null;
+        const notes = notesResult.status === "fulfilled" ? notesResult.value : null;
+        const entry = catalog && (catalog.adapters || []).find(item => item.slug === adapter);
+        const catalogRelease = entry && (entry.releases || []).find(item => item.adapterVersion === version);
+        const displayName = (entry && entry.displayName) || descriptor.adapterId || descriptor.slug;
+        const current = entry && entry.currentVersion === version;
+        document.title = `${displayName} ${descriptor.adapterVersion} · Kontrol`;
+        setText("release-title", `${displayName} · v${descriptor.adapterVersion}`);
+        setText("release-subhead", `${descriptor.channel === "beta" ? "Beta" : "Stable"} adapter release for Kontrol on Windows.`);
+        const channelBadge = document.getElementById("channel-badge"); channelBadge.textContent = descriptor.channel || "Release"; if (descriptor.channel === "beta") channelBadge.classList.add("beta");
+        const statusBadge = document.getElementById("status-badge"); statusBadge.textContent = current ? "Current" : (catalogRelease && catalogRelease.status) || "Published"; if (!current) statusBadge.classList.add("history");
+        setText("package-name", descriptor.package && descriptor.package.fileName);
+        setText("architecture", descriptor.package && descriptor.package.architecture === "x64" ? "Windows · x64" : descriptor.package && descriptor.package.architecture);
+        setText("sha256", descriptor.package && descriptor.package.sha256);
+        setText("sdk-version", descriptor.sdkVersion);
+        setText("source-tag", descriptor.source && descriptor.source.tag);
+        setText("source-commit", descriptor.source && descriptor.source.commit);
+        const download = document.getElementById("download-package"); download.href = descriptor.package && descriptor.package.url;
+        document.getElementById("raw-json").href = descriptorUrl();
+        if (descriptor.source && descriptor.source.tag) { const githubRelease = document.getElementById("github-release"); githubRelease.href = `https://github.com/komandio-labs/kontrol-adapters/releases/tag/${descriptor.source.tag}`; githubRelease.classList.remove("hidden"); }
+        renderNotes(notes && notes.body);
+        errorContent.classList.add("hidden"); releaseContent.classList.remove("hidden");
+      } catch (error) { showError("Release details could not be loaded", "This release may not exist, or its signed descriptor is temporarily unavailable. Return to the library and try again."); }
+    }
+    loadRelease();
+  </script>
+</body>
+</html>
