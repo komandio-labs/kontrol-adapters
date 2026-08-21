@@ -1,6 +1,6 @@
 {
   "catalogVersion": 1,
-  "generatedAtUtc": "2026-08-21T12:53:34Z",
+  "generatedAtUtc": "2026-08-21T12:58:42Z",
   "adapters": [
     {
       "adapterId": "space-engineers-2",
@@ -15,14 +15,14 @@
           "adapterVersion": "0.1.0-beta.1",
           "sdkVersion": "1.0.0",
           "channel": "beta",
-          "publishedAtUtc": "2026-08-21T12:53:32Z",
+          "publishedAtUtc": "2026-08-21T12:58:40Z",
           "source": {
             "tag": "adapters/space-engineers-2/v0.1.0-beta.1",
             "commit": "2e6f6ddcd270d982c50784dc5ed201a9e8c1b503"
           },
           "package": {
             "fileName": "kontrol-adapter-space-engineers-2-0.1.0-beta.1-win-x64.zip",
-            "sha256": "D0282B4F119BBA0E4A70B67F543296BB444296F08DCFE5C036685DECA6CFD131",
+            "sha256": "67A9CC408EE63494E7260B911AFA7955B59F7537ACC88BC5C3ACD2AAF23BA22A",
             "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers-2/0.1.0-beta.1/kontrol-adapter-space-engineers-2-0.1.0-beta.1-win-x64.zip",
             "architecture": "x64"
           },
@@ -45,11 +45,11 @@
             "2.3.0.2798",
             "2.4.0.77"
           ],
-          "signature": "hX70Ax/mybwTbIBWCU8d3UP0/FMM0x2d3aKzIpf2WPaaEro4FS9YvwI947f1mj8NQkFagBgC/gNheRWzVNapOw==",
+          "signature": "aolLR84vCDlDyCW7oxFjfdv8io2da\u002BJLJOpZgtl1ZRAAZcvmEoDp28f3u0gS6ljML4ffIeFLUQJcmSCZGyk/gQ==",
           "status": "current"
         }
       ]
     }
   ],
-  "signature": "HZNt7L0fIPPmebhQzn1M84KLpz0SBVW8lmReU7wXcvZaBei/8gQvYkJSjv7YiDH8yX3uC6F5isOx\u002BMyeyoRyTg=="
+  "signature": "whZRd/LfmcHA8vnkq3q8bAsTnxqTCVAd3z/aapDvUXFDcM9bH5mnIoojJF2c8oWomSZ36RZ3TQwpmoPU/lGozQ=="
 }
