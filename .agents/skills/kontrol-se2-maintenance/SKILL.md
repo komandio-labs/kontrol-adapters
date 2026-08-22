@@ -24,6 +24,27 @@ description: Diagnose, implement, test, and maintain the Kontrol Space Engineers
 
 Do not guess private APIs from method names alone. Inspect the installed assemblies and existing tests, and add opt-in rate-limited debug evidence when runtime behavior remains ambiguous.
 
+## Investigate a reported regression before changing code
+
+Start with evidence, not a presumed game-API break. Read [references/regression-triage.md](references/regression-triage.md) and record the following in the owning GitHub issue:
+
+1. Installed SE2 product version, Steam build ID, install path, and hashes/MVIDs of every manifest-relevant assembly.
+2. Adapter manifest target version, deployed adapter/SDK/Harmony file presence, versions, timestamps, and SHA-256 equality with the active Kontrol adapter package.
+3. The selected deployment method and the evidence level for launch: source-level expected arguments, an observed Kontrol launch log/command line, or an in-game adapter load log. Never describe one level as another.
+4. The first adapter and host error with timestamp and stack trace. Search both current and prior session logs; a successful Harmony message proves assembly load/patch registration only, not working IPC, cockpit controls, or telemetry.
+
+Treat the boundaries independently in this order: deployment and launch, in-game adapter startup/Harmony, status IPC, input/telemetry IPC, then cockpit behavior. A host-side `RuntimeWorker` exception after successful Harmony registration is a host/SDK IPC regression until the raw payload proves otherwise; do not attribute it to the SE2 update.
+
+For status or heartbeat failures, inspect the raw shared-memory JSON and both producer and consumer assembly versions. Check enum encoding, field names, optional fields, and serializer options. Add or update a compatibility test that round-trips the exact payload across the adapter's packaged SDK and the host's actual SDK dependency; matching C# type names alone do not prove wire compatibility.
+
+When logs do not identify the selected method and sanitized launch arguments, add one host-side information-level diagnostic at the launch boundary. Do not add broad per-frame logging or claim a Kontrol-initiated launch merely because the adapter fallback log shows it was loaded.
+
+## Live validation boundaries
+
+- WPF launch or UI inspection must use the managed `wpf-inspector` session described by the repository `AGENTS.md`; end the session after validation.
+- Obtain explicit user confirmation before point-clicking Launch. Keep Kontrol and SE2 in the foreground interactive desktop session.
+- During a live run, capture the Kontrol launch evidence, target process command line when available, adapter startup log, status payload/result, and any first runtime error. State precisely if the game reaches only the load/patch stage rather than the cockpit manual checklist.
+
 ## Implement safely
 
 - Keep the two supported loading entry points thin and keep process-wide ownership in `SpaceEngineers2AdapterRuntime`.

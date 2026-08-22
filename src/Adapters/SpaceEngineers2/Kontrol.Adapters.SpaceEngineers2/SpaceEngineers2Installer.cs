@@ -145,7 +145,6 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     {
         string gameExeDir = GetGameExeDir(gameDirectory);
         if (!Directory.Exists(gameExeDir)) return;
-        if (method == GameLaunchMethod.ProcessInjection) return;
 
         string pluginPath = Path.Combine(gameExeDir, PluginDllName);
         if (File.Exists(pluginPath))

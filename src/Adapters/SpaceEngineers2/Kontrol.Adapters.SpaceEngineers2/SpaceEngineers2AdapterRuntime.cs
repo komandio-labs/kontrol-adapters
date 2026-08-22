@@ -49,9 +49,14 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
 
             SpaceEngineers2AdapterDiagnostics.Write("Space Engineers 2 control integration is ready.");
             SpaceEngineers2AdapterDiagnostics.WriteDebug("Harmony patches successfully registered and applied to JIT memory, including SE2's final movement commit.");
+            _connectionReporter.ReportActive();
         }
         catch (Exception ex)
         {
+            _connectionReporter.ReportError(
+                "Incompatible Game Version",
+                "Space Engineers 2 updated its internal flight control methods. The installed adapter cannot hook into this game version.",
+                "Check the adapter Library for an updated adapter build compatible with this game patch.");
             SpaceEngineers2AdapterDiagnostics.WriteError("Space Engineers 2 control integration could not be enabled.");
             SpaceEngineers2AdapterDiagnostics.WriteDebug($"Harmony patching failed: {ex}");
         }
