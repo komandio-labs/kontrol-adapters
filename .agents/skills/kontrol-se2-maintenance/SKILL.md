@@ -67,3 +67,5 @@ python scripts/kontrol_adapters.py test --adapter spaceengineers2
 This must discover or synchronize the local game references, record inspection evidence, validate metadata, build the adapter, and run SE2 tests. Complete the generated manual checklist before changing a compatibility record to `tested`.
 
 Build and test every changed project. Report failures immediately. After validation, check Git status for proprietary or generated files and update README/changelog/compatibility evidence as appropriate. Do not publish; use `$kontrol-adapter-release` for release work.
+
+NEVER copy, mutate, or deploy files to external directories (such as `%LOCALAPPDATA%`, `%APPDATA%`, or Steam game folders) unless specifically requested by the user. Keep all build outputs strictly within the workspace.

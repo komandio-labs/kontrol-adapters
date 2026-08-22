@@ -15,7 +15,10 @@
   "gameProductVersion": "2.4.0.86",
   "relevantAssemblies": [
     "Game2.Client.dll",
+    "Game2.Simulation.dll",
     "VRage.Core.dll",
-    "VRage.Library.dll"
+    "VRage.DCS.dll",
+    "VRage.Library.dll",
+    "VRage.Physics.dll"
   ]
 }

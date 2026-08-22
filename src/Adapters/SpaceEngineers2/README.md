@@ -166,8 +166,7 @@ Harmony hooks and direct calls:
 
 | Method | Expected signature | Kontrol use |
 | --- | --- | --- |
-| `UpdateRotationData` | `void UpdateRotationData(ref AngularReticleLocalData localData, Optional<T> debugSettings)` | Prefix temporarily merges axes; postfix restores native fields |
-| `ComputeReticlePositioning` | `void ComputeReticlePositioning()` | Prefix temporarily merges axes; postfix restores native fields |
+| `UpdateRotationData` | `void UpdateRotationData(ref AngularReticleLocalData localData, Optional<T> debugSettings)` | Prefix temporarily merges axes for physical ship steering; postfix restores native fields |
 | `UpdateControlData` | `void UpdateControlData()` | Explicit prefix reads action state; adapter also invokes it to commit each effective cockpit state, including neutral |
 
 The Harmony field injection depends on these private instance fields:
@@ -192,8 +191,8 @@ Forward, Backward, Right, Left, Up, Down, RollRight, RollLeft
 
 The critical behavior to inspect in a new game build is not only whether these
 symbols exist. Confirm where `UpdateControlData()` submits `_movementInputs`, and
-confirm that `UpdateRotationData`/`ComputeReticlePositioning` still consume the
-directional look fields before Kontrol restores the native snapshot.
+confirm that `UpdateRotationData` still consumes the directional look fields
+before Kontrol restores the native snapshot.
 
 ### Cockpit actions
 

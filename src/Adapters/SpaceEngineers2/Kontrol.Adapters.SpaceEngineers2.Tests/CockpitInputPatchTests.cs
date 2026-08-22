@@ -242,14 +242,15 @@ public class CockpitInputPatchTests
         );
 
         // Assert
-        // Native mouse analog fields are preserved. Kontrol pitch/yaw use the
-        // proportional key-equivalent directional fields instead.
         pitchAnalog.ShouldBe(0.1f, 0.001f);
         yawAnalog.ShouldBe(0.2f, 0.001f);
         lookUp.ShouldBe(0.5f);
-        lookDown.ShouldBe(0.3f, 0.001f);
-        lookLeft.ShouldBe(0.2f, 0.001f);
-        lookRight.ShouldBe(0f);
+        lookDown.ShouldBe(0.0f);
+        lookLeft.ShouldBe(0.0f);
+        lookRight.ShouldBe(0.0f);
+
+        movementInputs.Pitch.ShouldBe(0.3f, 0.001f);
+        movementInputs.Yaw.ShouldBe(-0.2f, 0.001f);
 
         movementInputs.Forward.ShouldBe(0.5f, 0.001f);
         movementInputs.Backward.ShouldBe(0.0f);
@@ -261,8 +262,7 @@ public class CockpitInputPatchTests
         movementInputs.Down.ShouldBe(0.0f);
 
         movementInputs.RollRight.ShouldBe(0.8f, 0.001f);
-        movementInputs.RollLeft.ShouldBe(0.1f);
-        _commitCount.ShouldBe(1);
+        movementInputs.RollLeft.ShouldBe(0.0f);
     }
 
     [Test]
@@ -281,38 +281,18 @@ public class CockpitInputPatchTests
         movement.Right.ShouldBe(0f); movement.Left.ShouldBe(0f);
         movement.Up.ShouldBe(0f); movement.Down.ShouldBe(0f);
         movement.RollRight.ShouldBe(0f); movement.RollLeft.ShouldBe(0f);
-        _commitCount.ShouldBe(1);
     }
 
     [Test]
-    public void RotationHook_RestoresNativeStateAfterKontrolWasConsumedByTheGameUpdate()
+    public void RotationHook_WhenKontrolIsActive_SuppressesNativeSmoothing()
     {
         var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
         _testInputChannel!.Write(ref control);
         var instance = (CockpitInputHandlerComponent)RuntimeHelpers.GetUninitializedObject(typeof(CockpitInputHandlerComponent));
-        float pitch = .25f, yaw = -.4f, lookUp = .6f, lookDown = 0f, lookLeft = 0f, lookRight = .3f;
-        var movement = new MovementInputs { Forward = .2f, RollLeft = .5f };
 
-        CockpitInputPatch.UpdateRotationDataPrefix(instance, ref pitch, ref yaw, ref lookUp, ref lookDown,
-            ref lookLeft, ref lookRight, ref movement, null!, out var nativeState);
+        bool runOriginal = CockpitInputPatch.UpdateRotationDataPrefix(instance);
 
-        movement.Forward.ShouldBe(.9f, .001f);
-        movement.RollRight.ShouldBe(.8f, .001f);
-        lookDown.ShouldBe(1f);
-        lookLeft.ShouldBe(1f);
-
-        CockpitInputPatch.UpdateRotationDataPostfix(ref pitch, ref yaw, ref lookUp, ref lookDown,
-            ref lookLeft, ref lookRight, ref movement, nativeState);
-
-        pitch.ShouldBe(.25f);
-        yaw.ShouldBe(-.4f);
-        lookUp.ShouldBe(.6f);
-        lookDown.ShouldBe(0f);
-        lookLeft.ShouldBe(0f);
-        lookRight.ShouldBe(.3f);
-        movement.Forward.ShouldBe(.2f);
-        movement.RollLeft.ShouldBe(.5f);
-        movement.RollRight.ShouldBe(0f);
+        runOriginal.ShouldBeFalse();
     }
 
     [TestCase(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f)]
@@ -339,7 +319,6 @@ public class CockpitInputPatchTests
         movement.Left.ShouldBe(left);
         movement.Up.ShouldBe(up);
         movement.Down.ShouldBe(down);
-        _commitCount.ShouldBe(1);
     }
 
     [Test]
@@ -386,8 +365,10 @@ public class CockpitInputPatchTests
         // Assert (Must clamp values to [-1, 1])
         pitchAnalog.ShouldBe(0.5f);
         yawAnalog.ShouldBe(0.5f);
-        lookDown.ShouldBe(1.0f);
-        lookRight.ShouldBe(1.0f);
+        lookDown.ShouldBe(0.0f);
+        lookRight.ShouldBe(0.0f);
+        movementInputs.Pitch.ShouldBe(1.0f);
+        movementInputs.Yaw.ShouldBe(1.0f);
         movementInputs.Forward.ShouldBe(1.0f);
         movementInputs.Left.ShouldBe(1.0f);
         movementInputs.Up.ShouldBe(1.0f);
