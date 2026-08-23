@@ -133,6 +133,7 @@ public static class CockpitInputPatch
             ControlChannel.Dispose();
             SettingsChannel.Dispose();
             TelemetryChannel.Dispose();
+            _lastSettingsJson = null;
             _channelsInitialized = false;
             _channelFailureReported = false;
             _cockpitHookObserved = false;
@@ -183,25 +184,23 @@ public static class CockpitInputPatch
         out NativeInputSnapshot __state
     )
     {
+        __state = default;
         ApplyLiveSettings();
         var settings = SpaceEngineers2SettingsManager.Instance;
-        bool isNativeReticle = string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
 
-        if (isNativeReticle)
+        // MODE 1: Native Reticle Steering
+        if (settings.IsNativeReticleSteering)
         {
             __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
                 ____lookLeft, ____lookRight, ____movementInputs);
-            ProcessOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+            ProcessNativeReticleOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
                 ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
-            return true; // Let SE2 run native UpdateRotationData
+            return true; // Let SE2 run native UpdateRotationData with merged Kontrol input
         }
 
-        __state = default;
-        if (ApplyCurrentKontrolFrameDirect(__instance))
-        {
-            return false; // Skip original smoothing/decay job when DirectAngularFlight is active
-        }
-        return true;
+        // MODE 2: Direct Angular Flight (Direct Gyro Velocity)
+        ApplyCurrentKontrolFrameDirect(__instance);
+        return false; // Skip original smoothing/decay job when DirectAngularFlight is active
     }
 
     [HarmonyPatch(typeof(CockpitInputHandlerComponent), "UpdateRotationData")]
@@ -212,8 +211,7 @@ public static class CockpitInputPatch
         ref MovementInputs ____movementInputs,
         NativeInputSnapshot __state)
     {
-        var settings = SpaceEngineers2SettingsManager.Instance;
-        if (string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase))
+        if (SpaceEngineers2SettingsManager.Instance.IsNativeReticleSteering)
         {
             RestoreNativeInput(__state, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
                 ref ____lookLeft, ref ____lookRight, ref ____movementInputs);
@@ -235,25 +233,23 @@ public static class CockpitInputPatch
         out NativeInputSnapshot __state
     )
     {
+        __state = default;
         ApplyLiveSettings();
         var settings = SpaceEngineers2SettingsManager.Instance;
-        bool isNativeReticle = string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
 
-        if (isNativeReticle)
+        // MODE 1: Native Reticle Steering
+        if (settings.IsNativeReticleSteering)
         {
             __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
                 ____lookLeft, ____lookRight, ____movementInputs);
-            ProcessOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+            ProcessNativeReticleOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
                 ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
-            return true; // Let SE2 run native ComputeReticlePositioning
+            return true; // Let SE2 run native ComputeReticlePositioning with merged Kontrol input
         }
 
-        __state = default;
-        if (ApplyCurrentKontrolFrameDirect(__instance))
-        {
-            return false; // Skip original reticle integration job when DirectAngularFlight is active
-        }
-        return true;
+        // MODE 2: Direct Angular Flight (Direct Gyro Velocity)
+        ApplyCurrentKontrolFrameDirect(__instance);
+        return false; // Skip original reticle integration job when DirectAngularFlight is active
     }
 
     [HarmonyPatch(typeof(CockpitInputHandlerComponent), "ComputeReticlePositioning")]
@@ -264,8 +260,7 @@ public static class CockpitInputPatch
         ref MovementInputs ____movementInputs,
         NativeInputSnapshot __state)
     {
-        var settings = SpaceEngineers2SettingsManager.Instance;
-        if (string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase))
+        if (SpaceEngineers2SettingsManager.Instance.IsNativeReticleSteering)
         {
             RestoreNativeInput(__state, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
                 ref ____lookLeft, ref ____lookRight, ref ____movementInputs);
@@ -278,9 +273,9 @@ public static class CockpitInputPatch
         {
             ApplyLiveSettings();
             var settings = SpaceEngineers2SettingsManager.Instance;
-            bool isNativeReticle = string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
 
-            if (isNativeReticle)
+            // In Native Reticle Steering mode, let SE2 control data run natively after handling discrete triggers & logs
+            if (settings.IsNativeReticleSteering)
             {
                 if (!TryReadControlFrame(out var control)) return true;
                 bool inputEnabled = control.IsInputEnabled != 0;
@@ -292,12 +287,13 @@ public static class CockpitInputPatch
                     float surge = control.AnalogValues[3], sway = control.AnalogValues[4], heave = control.AnalogValues[5], roll = control.AnalogValues[1];
                     LogFinalMovementCommit(surge, sway, heave, roll);
                 }
-                return true; // Let SE2 run native UpdateControlData
+                return true;
             }
 
+            // In Direct Angular Flight mode, apply direct frame and skip native body
             if (ApplyCurrentKontrolFrameDirect(__instance))
             {
-                return false; // Skip native UpdateControlData body to prevent resets in direct angular mode
+                return false;
             }
             return true;
         }
@@ -309,6 +305,18 @@ public static class CockpitInputPatch
     }
 
     public static unsafe void ProcessOverride(
+        CockpitInputHandlerComponent instance,
+        ref float pitchAnalog,
+        ref float yawAnalog,
+        ref float lookUp,
+        ref float lookDown,
+        ref float lookLeft,
+        ref float lookRight,
+        ref MovementInputs movementInputs,
+        object observedBlock
+    ) => ProcessNativeReticleOverride(instance, ref pitchAnalog, ref yawAnalog, ref lookUp, ref lookDown, ref lookLeft, ref lookRight, ref movementInputs, observedBlock);
+
+    public static unsafe void ProcessNativeReticleOverride(
         CockpitInputHandlerComponent instance,
         ref float pitchAnalog,
         ref float yawAnalog,
@@ -347,67 +355,57 @@ public static class CockpitInputPatch
                 SpaceEngineers2AdapterDiagnostics.WriteDebug($"Input override state changed to: {isInputEnabled}.");
             }
 
-            if (isInputEnabled)
+            if (!isInputEnabled)
             {
-                try
+                if (_wasKontrolActiveInCockpit)
                 {
-                    var cockpitComponent = (CockpitComponent?)CockpitComponentField?.GetValue(instance);
-                    bool currentTargetBased = TargetBasedGyroField?.GetValue(instance) is true;
-                    if (!_wasKontrolActiveInCockpit || !currentTargetBased)
-                    {
-                        SwitchGyroModeMethod?.Invoke(instance, [true]);
-                        _wasKontrolActiveInCockpit = true;
-                        SpaceEngineers2AdapterDiagnostics.WriteDebug("Switched cockpit gyro mode to target-based for Native Reticle Steering.");
-                    }
+                    NeutralizeCockpitInput(instance);
                 }
-                catch { }
-
-                try
-                {
-                    var cubeBlock = (CubeBlockComponent?)observedBlock;
-                    var gridEntity = cubeBlock?.Grid?.Entity;
-                    if (gridEntity != null)
-                    {
-                        gridEntity.Data.Set(new AngularControlData { TargetAngularVelocity = Vector3.Zero });
-                    }
-                    _currentCockpitAngularVelocity = Vector3.Zero;
-                }
-                catch { }
-
-                float pitch = NormalizeAxis(control.AnalogValues[0]);
-                float roll = NormalizeAxis(control.AnalogValues[1]);
-                float yaw = NormalizeAxis(control.AnalogValues[2]);
-                float surge = NormalizeAxis(control.AnalogValues[3]);
-                float sway = NormalizeAxis(control.AnalogValues[4]);
-                float heave = NormalizeAxis(control.AnalogValues[5]);
-
-                LogReceivedFrame(control.SchemaVersion, pitch, roll, yaw, surge, sway, heave,
-                    control.DiscreteStates, control.TriggeredActions);
-
-                ProcessTriggeredActions(instance, control.TriggeredActions);
-                ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
-                ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
-
-                MergeTranslation(ref movementInputs, surge, sway, heave, roll);
-                MergeRotationDirections(ref lookUp, ref lookDown, ref lookLeft, ref lookRight, pitch, yaw);
-
-                LogAppliedGameState(pitchAnalog, yawAnalog, movementInputs.Forward, movementInputs.Backward,
-                    movementInputs.Right, movementInputs.Left, movementInputs.Up, movementInputs.Down,
-                    movementInputs.RollRight, movementInputs.RollLeft);
-
-                CommitControlData(instance);
+                return;
             }
-            else if (_wasKontrolActiveInCockpit)
+
+            _wasKontrolActiveInCockpit = true;
+
+            try
             {
-                NeutralizeCockpitInput(instance);
+                bool currentTargetBased = TargetBasedGyroField?.GetValue(instance) is true;
+                if (!currentTargetBased)
+                {
+                    SwitchGyroModeMethod?.Invoke(instance, [true]);
+                    SpaceEngineers2AdapterDiagnostics.WriteDebug("Ensured cockpit gyro mode is target-based for Native Reticle Steering.");
+                }
             }
+            catch { }
+
+            float pitch = NormalizeAxis(control.AnalogValues[0]);
+            float roll = NormalizeAxis(control.AnalogValues[1]);
+            float yaw = NormalizeAxis(control.AnalogValues[2]);
+            float surge = NormalizeAxis(control.AnalogValues[3]);
+            float sway = NormalizeAxis(control.AnalogValues[4]);
+            float heave = NormalizeAxis(control.AnalogValues[5]);
+
+            LogReceivedFrame(control.SchemaVersion, pitch, roll, yaw, surge, sway, heave,
+                control.DiscreteStates, control.TriggeredActions);
+
+            ProcessTriggeredActions(instance, control.TriggeredActions);
+            ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
+            ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
+
+            MergeTranslation(ref movementInputs, surge, sway, heave, roll);
+            MergeRotationDirections(ref lookUp, ref lookDown, ref lookLeft, ref lookRight, pitch, yaw);
+
+            LogAppliedGameState(pitchAnalog, yawAnalog, movementInputs.Forward, movementInputs.Backward,
+                movementInputs.Right, movementInputs.Left, movementInputs.Up, movementInputs.Down,
+                movementInputs.RollRight, movementInputs.RollLeft);
+
+            CommitControlData(instance);
 
             WriteTelemetry(observedBlock as CubeBlockComponent);
         }
         catch (Exception ex)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError("The Space Engineers 2 adapter encountered an input-processing error.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ProcessOverride error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ProcessNativeReticleOverride error: {ex}");
         }
     }
 
@@ -550,10 +548,8 @@ public static class CockpitInputPatch
             ActiveToolActionPatch.ApplyPrimaryFire(false);
             ActiveToolActionPatch.ApplyReload(false);
 
-            var cockpitComponent = (CockpitComponent?)CockpitComponentField?.GetValue(instance);
-            bool desiredMode = cockpitComponent?.TargetBasedGyro ?? _originalDesiredTargetBasedGyro;
-            SwitchGyroModeMethod?.Invoke(instance, [desiredMode]);
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Restored cockpit gyro mode to: {desiredMode}.");
+            SwitchGyroModeMethod?.Invoke(instance, [true]);
+            SpaceEngineers2AdapterDiagnostics.WriteDebug("Restored cockpit gyro mode to: true.");
         }
         catch (Exception ex)
         {

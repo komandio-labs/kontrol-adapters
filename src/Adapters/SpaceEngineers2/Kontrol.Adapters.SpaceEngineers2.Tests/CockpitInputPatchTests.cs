@@ -21,6 +21,7 @@ public class CockpitInputPatchTests
     private static int _commitCount;
     private MmfChannel<InputFrame>? _testInputChannel;
     private MmfChannel<TelemetryData>? _testTelemetryChannel;
+    private MmfChannel<TelemetryData>? _testSettingsChannel;
 
     [SetUp]
     public void SetUp()
@@ -33,6 +34,9 @@ public class CockpitInputPatchTests
 
         _testTelemetryChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Telemetry_space-engineers-2");
         _testTelemetryChannel.CreateOrOpen();
+
+        _testSettingsChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Settings_space-engineers-2");
+        _testSettingsChannel.CreateOrOpen();
 
         // Redirect internal _updateControlDataMethod to avoid calling actual game logic
         var field = typeof(CockpitInputPatch).GetField("_updateControlDataMethod", BindingFlags.NonPublic | BindingFlags.Static);
@@ -47,6 +51,7 @@ public class CockpitInputPatchTests
     {
         _testInputChannel?.Dispose();
         _testTelemetryChannel?.Dispose();
+        _testSettingsChannel?.Dispose();
 
         CockpitInputPatch.ResetChannelsForTests();
         SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>());
@@ -54,6 +59,18 @@ public class CockpitInputPatchTests
         // Reset the patch fields
         var field = typeof(CockpitInputPatch).GetField("_updateControlDataMethod", BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
+    }
+
+    private void SetFlightModelMode(string mode)
+    {
+        var dict = new Dictionary<string, object?> { ["flightModelMode"] = mode };
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(dict);
+        if (_testSettingsChannel != null)
+        {
+            var telemetry = new TelemetryData();
+            telemetry.SetJson(System.Text.Json.JsonSerializer.Serialize(dict));
+            _testSettingsChannel.Write(ref telemetry);
+        }
     }
 
     private static void DummyUpdateControlData()
@@ -244,13 +261,13 @@ public class CockpitInputPatchTests
         );
 
         // Assert
-        // Native mouse analog fields are preserved. Kontrol pitch/yaw use the
-        // proportional key-equivalent directional fields instead.
+        // Analog fields are NOT modified by MergeRotationDirections — rotation goes
+        // through lookUp/Down/Left/Right as directional magnitudes instead.
         pitchAnalog.ShouldBe(0.1f, 0.001f);
         yawAnalog.ShouldBe(0.2f, 0.001f);
         lookUp.ShouldBe(0.5f);
-        lookDown.ShouldBe(0.3f, 0.001f);
-        lookLeft.ShouldBe(0.2f, 0.001f);
+        lookDown.ShouldBe(0.3f, 0.001f);   // pitch 0.3 → lookDown = max(0, 0.3)
+        lookLeft.ShouldBe(0.2f, 0.001f);    // yaw -0.2 → lookLeft = max(0, 0.2)
         lookRight.ShouldBe(0.0f);
 
         movementInputs.Forward.ShouldBe(0.5f, 0.001f);
@@ -302,8 +319,8 @@ public class CockpitInputPatchTests
         pitchAnalog.ShouldBe(0.0f);
         yawAnalog.ShouldBe(0.0f);
         lookUp.ShouldBe(0.0f);
-        lookDown.ShouldBe(0.3f, 0.001f);
-        lookLeft.ShouldBe(0.2f, 0.001f);
+        lookDown.ShouldBe(0.3f, 0.001f);   // pitch 0.3 → lookDown = max(0, 0.3)
+        lookLeft.ShouldBe(0.2f, 0.001f);    // yaw -0.2 → lookLeft = max(0, 0.2)
         lookRight.ShouldBe(0.0f);
     }
 
@@ -328,10 +345,7 @@ public class CockpitInputPatchTests
     [Test]
     public void RotationHook_WhenDirectAngularModeIsActive_SuppressesNativeSmoothing()
     {
-        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
-        {
-            ["flightModelMode"] = "DirectAngularFlight"
-        });
+        SetFlightModelMode("DirectAngularFlight");
 
         var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
         _testInputChannel!.Write(ref control);
@@ -347,10 +361,7 @@ public class CockpitInputPatchTests
     [Test]
     public void RotationHook_WhenNativeReticleModeIsActive_AllowsNativeSmoothing()
     {
-        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
-        {
-            ["flightModelMode"] = "NativeReticleSteering"
-        });
+        SetFlightModelMode("NativeReticleSteering");
 
         var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
         _testInputChannel!.Write(ref control);
@@ -366,10 +377,7 @@ public class CockpitInputPatchTests
     [Test]
     public void ComputeReticlePositioning_WhenDirectAngularModeIsActive_SuppressesNativeReticleMath()
     {
-        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
-        {
-            ["flightModelMode"] = "DirectAngularFlight"
-        });
+        SetFlightModelMode("DirectAngularFlight");
 
         var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
         _testInputChannel!.Write(ref control);
@@ -385,10 +393,7 @@ public class CockpitInputPatchTests
     [Test]
     public void ComputeReticlePositioning_WhenNativeReticleModeIsActive_AllowsNativeReticleMath()
     {
-        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
-        {
-            ["flightModelMode"] = "NativeReticleSteering"
-        });
+        SetFlightModelMode("NativeReticleSteering");
 
         var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
         _testInputChannel!.Write(ref control);
@@ -468,11 +473,11 @@ public class CockpitInputPatchTests
             observedBlock: null!
         );
 
-        // Assert (Must clamp values to [-1, 1])
-        pitchAnalog.ShouldBe(0.5f);
-        yawAnalog.ShouldBe(0.5f);
-        lookDown.ShouldBe(1.0f);
-        lookRight.ShouldBe(1.0f);
+        // Assert (MergeRotationDirections: analog stays unchanged, rotation via look directions)
+        pitchAnalog.ShouldBe(0.5f, 0.001f);
+        yawAnalog.ShouldBe(0.5f, 0.001f);
+        lookDown.ShouldBe(1.0f, 0.001f);   // pitch 1.0 → lookDown = max(0, 1.0)
+        lookRight.ShouldBe(1.0f, 0.001f);  // yaw 1.0 → lookRight = max(0, 1.0)
         movementInputs.Forward.ShouldBe(1.0f);
         movementInputs.Left.ShouldBe(1.0f);
         movementInputs.Up.ShouldBe(1.0f);

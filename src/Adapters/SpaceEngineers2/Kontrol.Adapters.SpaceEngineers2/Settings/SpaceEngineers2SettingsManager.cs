@@ -39,6 +39,8 @@ public sealed class SpaceEngineers2SettingsManager : IDisposable
     public AdapterSettingsSnapshot CurrentSnapshot => _currentSnapshot;
 
     public string FlightModelMode => _currentSnapshot.GetString("flightModelMode", "DirectAngularFlight");
+    public bool IsNativeReticleSteering => string.Equals(FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
+    public bool IsDirectAngularFlight => string.Equals(FlightModelMode, "DirectAngularFlight", StringComparison.OrdinalIgnoreCase);
     public float DirectAngularAcceleration => _currentSnapshot.GetNumber("directAngularAcceleration", 1.3f);
     public float DirectAngularDeceleration => _currentSnapshot.GetNumber("directAngularDeceleration", 1.0f);
     public float DirectAngularMaxRate => _currentSnapshot.GetNumber("directAngularMaxRate", 0.85f);
