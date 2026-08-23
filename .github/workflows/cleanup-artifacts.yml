@@ -1,0 +1,53 @@
+name: Cleanup Actions Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (only list artifacts, do not delete)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete Repository Artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Purge Actions Artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          echo "Fetching artifacts for ${GITHUB_REPOSITORY}..."
+          
+          # Query all artifact records
+          artifacts_json=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts" --jq '.artifacts[] | {id: .id, name: .name, size_in_bytes: .size_in_bytes, created_at: .created_at}')
+          
+          if [ -z "$artifacts_json" ]; then
+            echo "No artifacts found in ${GITHUB_REPOSITORY}."
+            exit 0
+          fi
+
+          echo "$artifacts_json" | jq -c '.' | while IFS= read -r item; do
+            id=$(echo "$item" | jq -r '.id')
+            name=$(echo "$item" | jq -r '.name')
+            size=$(echo "$item" | jq -r '.size_in_bytes')
+            created=$(echo "$item" | jq -r '.created_at')
+            size_mb=$(awk "BEGIN {printf \"%.2f\", $size/1048576}")
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[DRY RUN] Would delete: ID=$id, Name='$name', Size=${size_mb} MB, Created=$created"
+            else
+              echo "Deleting artifact: ID=$id, Name='$name', Size=${size_mb} MB, Created=$created"
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/$id"
+            fi
+          done
+
+          echo "Cleanup complete."
