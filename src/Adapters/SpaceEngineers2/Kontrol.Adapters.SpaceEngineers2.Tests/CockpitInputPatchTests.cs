@@ -6,6 +6,7 @@ using NSubstitute;
 using Shouldly;
 using Kontrol.Sdk.IPC;
 using Kontrol.Adapters.SpaceEngineers2.Patches;
+using Kontrol.Adapters.SpaceEngineers2.Settings;
 using Kontrol.Sdk.Inputs;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers.BlockTools;
@@ -24,6 +25,8 @@ public class CockpitInputPatchTests
     [SetUp]
     public void SetUp()
     {
+        CockpitInputPatch.ResetChannelsForTests();
+
         // Initialize MMF channels to mimic the WPF app side
         _testInputChannel = new MmfChannel<InputFrame>("Local\\Kontrol_Input_space-engineers-2");
         _testInputChannel.CreateOrOpen();
@@ -36,6 +39,7 @@ public class CockpitInputPatchTests
         var dummyMethod = typeof(CockpitInputPatchTests).GetMethod(nameof(DummyUpdateControlData), BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, dummyMethod);
         _commitCount = 0;
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>());
     }
 
     [TearDown]
@@ -44,14 +48,12 @@ public class CockpitInputPatchTests
         _testInputChannel?.Dispose();
         _testTelemetryChannel?.Dispose();
 
+        CockpitInputPatch.ResetChannelsForTests();
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>());
+
         // Reset the patch fields
         var field = typeof(CockpitInputPatch).GetField("_updateControlDataMethod", BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
-
-        var channelsInitializedField = typeof(CockpitInputPatch).GetField("_channelsInitialized", BindingFlags.NonPublic | BindingFlags.Static);
-        channelsInitializedField?.SetValue(null, false);
-        var actionsField = typeof(CockpitInputPatch).GetField("_previousTriggeredActions", BindingFlags.NonPublic | BindingFlags.Static);
-        actionsField?.SetValue(null, 0UL);
     }
 
     private static void DummyUpdateControlData()
@@ -242,15 +244,14 @@ public class CockpitInputPatchTests
         );
 
         // Assert
+        // Native mouse analog fields are preserved. Kontrol pitch/yaw use the
+        // proportional key-equivalent directional fields instead.
         pitchAnalog.ShouldBe(0.1f, 0.001f);
         yawAnalog.ShouldBe(0.2f, 0.001f);
         lookUp.ShouldBe(0.5f);
-        lookDown.ShouldBe(0.0f);
-        lookLeft.ShouldBe(0.0f);
+        lookDown.ShouldBe(0.3f, 0.001f);
+        lookLeft.ShouldBe(0.2f, 0.001f);
         lookRight.ShouldBe(0.0f);
-
-        movementInputs.Pitch.ShouldBe(0.3f, 0.001f);
-        movementInputs.Yaw.ShouldBe(-0.2f, 0.001f);
 
         movementInputs.Forward.ShouldBe(0.5f, 0.001f);
         movementInputs.Backward.ShouldBe(0.0f);
@@ -262,7 +263,48 @@ public class CockpitInputPatchTests
         movementInputs.Down.ShouldBe(0.0f);
 
         movementInputs.RollRight.ShouldBe(0.8f, 0.001f);
-        movementInputs.RollLeft.ShouldBe(0.0f);
+        movementInputs.RollLeft.ShouldBe(0.1f);
+    }
+
+    [Test]
+    public void ProcessOverride_WhenInNativeReticleMode_UpdatesLookInputs()
+    {
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
+        {
+            ["flightModelMode"] = "NativeReticleSteering"
+        });
+
+        var control = CreateInputFrame(true, surge: .5f, pitch: .3f, yaw: -.2f);
+        _testInputChannel!.Write(ref control);
+
+        var instance = (CockpitInputHandlerComponent)RuntimeHelpers.GetUninitializedObject(typeof(CockpitInputHandlerComponent));
+
+        float pitchAnalog = 0.0f;
+        float yawAnalog = 0.0f;
+        float lookUp = 0.0f;
+        float lookDown = 0.0f;
+        float lookLeft = 0.0f;
+        float lookRight = 0.0f;
+        var movementInputs = new MovementInputs();
+
+        CockpitInputPatch.ProcessOverride(
+            instance,
+            ref pitchAnalog,
+            ref yawAnalog,
+            ref lookUp,
+            ref lookDown,
+            ref lookLeft,
+            ref lookRight,
+            ref movementInputs,
+            observedBlock: null!
+        );
+
+        pitchAnalog.ShouldBe(0.0f);
+        yawAnalog.ShouldBe(0.0f);
+        lookUp.ShouldBe(0.0f);
+        lookDown.ShouldBe(0.3f, 0.001f);
+        lookLeft.ShouldBe(0.2f, 0.001f);
+        lookRight.ShouldBe(0.0f);
     }
 
     [Test]
@@ -284,15 +326,79 @@ public class CockpitInputPatchTests
     }
 
     [Test]
-    public void RotationHook_WhenKontrolIsActive_SuppressesNativeSmoothing()
+    public void RotationHook_WhenDirectAngularModeIsActive_SuppressesNativeSmoothing()
     {
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
+        {
+            ["flightModelMode"] = "DirectAngularFlight"
+        });
+
         var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
         _testInputChannel!.Write(ref control);
         var instance = (CockpitInputHandlerComponent)RuntimeHelpers.GetUninitializedObject(typeof(CockpitInputHandlerComponent));
 
-        bool runOriginal = CockpitInputPatch.UpdateRotationDataPrefix(instance);
+        float pitchAnalog = 0f, yawAnalog = 0f, lookUp = 0f, lookDown = 0f, lookLeft = 0f, lookRight = 0f;
+        var movementInputs = default(MovementInputs);
+        bool runOriginal = CockpitInputPatch.UpdateRotationDataPrefix(instance, ref pitchAnalog, ref yawAnalog, ref lookUp, ref lookDown, ref lookLeft, ref lookRight, ref movementInputs, null!, out _);
 
         runOriginal.ShouldBeFalse();
+    }
+
+    [Test]
+    public void RotationHook_WhenNativeReticleModeIsActive_AllowsNativeSmoothing()
+    {
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
+        {
+            ["flightModelMode"] = "NativeReticleSteering"
+        });
+
+        var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
+        _testInputChannel!.Write(ref control);
+        var instance = (CockpitInputHandlerComponent)RuntimeHelpers.GetUninitializedObject(typeof(CockpitInputHandlerComponent));
+
+        float pitchAnalog = 0f, yawAnalog = 0f, lookUp = 0f, lookDown = 0f, lookLeft = 0f, lookRight = 0f;
+        var movementInputs = default(MovementInputs);
+        bool runOriginal = CockpitInputPatch.UpdateRotationDataPrefix(instance, ref pitchAnalog, ref yawAnalog, ref lookUp, ref lookDown, ref lookLeft, ref lookRight, ref movementInputs, null!, out _);
+
+        runOriginal.ShouldBeTrue();
+    }
+
+    [Test]
+    public void ComputeReticlePositioning_WhenDirectAngularModeIsActive_SuppressesNativeReticleMath()
+    {
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
+        {
+            ["flightModelMode"] = "DirectAngularFlight"
+        });
+
+        var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
+        _testInputChannel!.Write(ref control);
+        var instance = (CockpitInputHandlerComponent)RuntimeHelpers.GetUninitializedObject(typeof(CockpitInputHandlerComponent));
+
+        float pitchAnalog = 0f, yawAnalog = 0f, lookUp = 0f, lookDown = 0f, lookLeft = 0f, lookRight = 0f;
+        var movementInputs = default(MovementInputs);
+        bool runOriginal = CockpitInputPatch.ComputeReticlePositioningPrefix(instance, ref pitchAnalog, ref yawAnalog, ref lookUp, ref lookDown, ref lookLeft, ref lookRight, ref movementInputs, null!, out _);
+
+        runOriginal.ShouldBeFalse();
+    }
+
+    [Test]
+    public void ComputeReticlePositioning_WhenNativeReticleModeIsActive_AllowsNativeReticleMath()
+    {
+        SpaceEngineers2SettingsManager.Instance.ApplySettings(new Dictionary<string, object?>
+        {
+            ["flightModelMode"] = "NativeReticleSteering"
+        });
+
+        var control = CreateInputFrame(true, surge: .9f, pitch: 1f, yaw: -1f, roll: .8f);
+        _testInputChannel!.Write(ref control);
+        var instance = (CockpitInputHandlerComponent)RuntimeHelpers.GetUninitializedObject(typeof(CockpitInputHandlerComponent));
+
+        float pitchAnalog = 0f, yawAnalog = 0f, lookUp = 0f, lookDown = 0f, lookLeft = 0f, lookRight = 0f;
+        var movementInputs = default(MovementInputs);
+        bool runOriginal = CockpitInputPatch.ComputeReticlePositioningPrefix(instance, ref pitchAnalog, ref yawAnalog, ref lookUp, ref lookDown, ref lookLeft, ref lookRight, ref movementInputs, null!, out _);
+
+        runOriginal.ShouldBeTrue();
     }
 
     [TestCase(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f)]
@@ -365,10 +471,8 @@ public class CockpitInputPatchTests
         // Assert (Must clamp values to [-1, 1])
         pitchAnalog.ShouldBe(0.5f);
         yawAnalog.ShouldBe(0.5f);
-        lookDown.ShouldBe(0.0f);
-        lookRight.ShouldBe(0.0f);
-        movementInputs.Pitch.ShouldBe(1.0f);
-        movementInputs.Yaw.ShouldBe(1.0f);
+        lookDown.ShouldBe(1.0f);
+        lookRight.ShouldBe(1.0f);
         movementInputs.Forward.ShouldBe(1.0f);
         movementInputs.Left.ShouldBe(1.0f);
         movementInputs.Up.ShouldBe(1.0f);

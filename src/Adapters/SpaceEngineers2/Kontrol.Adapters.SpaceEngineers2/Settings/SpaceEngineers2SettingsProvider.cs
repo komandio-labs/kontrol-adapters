@@ -1,0 +1,126 @@
+using Kontrol.Sdk.Interfaces;
+using Kontrol.Sdk.Settings;
+
+namespace Kontrol.Adapters.SpaceEngineers2.Settings;
+
+/// <summary>
+/// Authoritative setting schema provider for Space Engineers 2.
+/// Exposes flight control modes and angular input mechanics.
+/// </summary>
+public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
+{
+    public string AdapterId => "space-engineers-2";
+
+    public IReadOnlyList<SettingCategoryGroup> Categories { get; } = new List<SettingCategoryGroup>
+    {
+        new("Flight Controls", SettingIcon.Spacecraft, "Flight control translation mode and angular input mechanics.")
+    };
+
+    public IReadOnlyList<AdapterSettingDescriptor> Descriptors { get; } = new List<AdapterSettingDescriptor>
+    {
+        new StringSettingDescriptor
+        {
+            Key = "flightModelMode",
+            DisplayName = "Flight Control Mode",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Spacecraft,
+            Layout = LayoutSpan.Full,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = "DirectAngularFlight",
+            Description = "Selects how joystick inputs are translated to ship controls.",
+            AllowedValues = new List<SettingOption>
+            {
+                new("DirectAngularFlight", "Direct Angular Flight (Default)", "Direct rate-controlled angular velocity with smooth acceleration ramping and glide easing."),
+                new("NativeReticleSteering", "Native Reticle Steering", "Preserves Space Engineers 2's native virtual mouse-reticle steering and built-in crosshair dampening.")
+            }
+        },
+        new NumberSettingDescriptor
+        {
+            Key = "directAngularAcceleration",
+            DisplayName = "Rotational Acceleration Ramp",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Clock,
+            Layout = LayoutSpan.Half,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = 1.3f,
+            Min = 0.1f,
+            Max = 5.0f,
+            Step = 0.1f,
+            Unit = "rad/s²",
+            MinLabel = "0.1 (Smooth Ramp)",
+            MidLabel = "1.3 (Balanced)",
+            MaxLabel = "5.0 (Instant)",
+            Description = "Controls how smoothly rotation accelerates up to full commanded rate when deflecting the stick.",
+            VisibleWhen = new SettingCondition("flightModelMode", ExpectedValue: "DirectAngularFlight")
+        },
+        new NumberSettingDescriptor
+        {
+            Key = "directAngularDeceleration",
+            DisplayName = "Rotational Glide Deceleration",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Inertia,
+            Layout = LayoutSpan.Half,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = 1.0f,
+            Min = 0.1f,
+            Max = 5.0f,
+            Step = 0.1f,
+            Unit = "rad/s²",
+            MinLabel = "0.1 (Long Glide)",
+            MidLabel = "1.0 (Balanced)",
+            MaxLabel = "5.0 (Quick Stop)",
+            Description = "Controls rotational glide easing when releasing the stick to center before coming to rest.",
+            VisibleWhen = new SettingCondition("flightModelMode", ExpectedValue: "DirectAngularFlight")
+        },
+        new NumberSettingDescriptor
+        {
+            Key = "directAngularMaxRate",
+            DisplayName = "Maximum Turn Rate Scaling",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Gyroscope,
+            Layout = LayoutSpan.Half,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = 0.85f,
+            Min = 0.1f,
+            Max = 3.0f,
+            Step = 0.05f,
+            Unit = "rad/s",
+            DisplayUnit = "°/s",
+            DisplayMultiplier = 57.2957795f,
+            MinLabel = "6 °/s",
+            MidLabel = "49 °/s",
+            MaxLabel = "172 °/s",
+            Description = "Scales maximum target angular velocity achieved at 100% full stick deflection.",
+            VisibleWhen = new SettingCondition("flightModelMode", ExpectedValue: "DirectAngularFlight")
+        }
+    };
+
+    public AdapterSettingsSnapshot GetDefaultSnapshot()
+    {
+        return AdapterSettingsSnapshot.Create(Descriptors, new Dictionary<string, object?>(), 1);
+    }
+
+    public bool ValidateSettings(IReadOnlyDictionary<string, object?> values, out IReadOnlyDictionary<string, string> errors)
+    {
+        var errorDict = new Dictionary<string, string>();
+
+        foreach (var desc in Descriptors)
+        {
+            if (values.TryGetValue(desc.Key, out var val) && val != null)
+            {
+                if (!desc.Validate(val, out var error))
+                {
+                    errorDict[desc.Key] = error ?? "Invalid value.";
+                }
+            }
+        }
+
+        errors = errorDict;
+        return errorDict.Count == 0;
+    }
+
+    public AdapterSettingsSnapshot CreateSnapshot(IReadOnlyDictionary<string, object?> rawValues, ulong sequenceNumber = 1)
+    {
+        return AdapterSettingsSnapshot.Create(Descriptors, rawValues, sequenceNumber);
+    }
+}

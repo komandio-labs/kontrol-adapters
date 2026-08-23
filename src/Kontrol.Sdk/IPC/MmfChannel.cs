@@ -14,6 +14,7 @@ public class MmfChannel<T>(string mapName) : IDisposable
 
     public void CreateOrOpen()
     {
+        Dispose();
         try
         {
             // Attempt to open existing memory mapped file
@@ -55,6 +56,8 @@ public class MmfChannel<T>(string mapName) : IDisposable
     public void Dispose()
     {
         _accessor?.Dispose();
+        _accessor = null;
         _mmf?.Dispose();
+        _mmf = null;
     }
 }

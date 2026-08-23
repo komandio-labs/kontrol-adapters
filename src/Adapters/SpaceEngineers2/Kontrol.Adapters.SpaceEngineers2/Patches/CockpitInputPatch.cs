@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using HarmonyLib;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers;
 using Keen.Game2.Simulation.GameSystems.Movement;
@@ -9,6 +10,7 @@ using Keen.VRage.Core.Game.Components;
 using Keen.VRage.Core.Game.Data;
 using Keen.VRage.DCS.Components;
 using Keen.VRage.Library.Mathematics;
+using Kontrol.Adapters.SpaceEngineers2.Settings;
 using Kontrol.Sdk.IPC;
 
 namespace Kontrol.Adapters.SpaceEngineers2.Patches;
@@ -23,6 +25,9 @@ public static class CockpitInputPatch
 
     private static readonly MethodInfo? SwitchGyroModeMethod = AccessTools.DeclaredMethod(
         typeof(CockpitInputHandlerComponent), "SwitchGyroMode", [typeof(bool)]);
+
+    private static MethodInfo? _updateControlDataMethod = AccessTools.DeclaredMethod(
+        typeof(CockpitInputHandlerComponent), "UpdateControlData");
 
     private static readonly FieldInfo? CockpitComponentField = AccessTools.Field(
         typeof(CockpitInputHandlerComponent), "_cockpitComponent");
@@ -42,10 +47,32 @@ public static class CockpitInputPatch
     private static readonly FieldInfo? TargetBasedGyroField = AccessTools.Field(
         typeof(CockpitInputHandlerComponent), "_targetBasedGyro");
 
+    private static readonly FieldInfo? LookUpField = AccessTools.Field(
+        typeof(CockpitInputHandlerComponent), "_lookUp");
+
+    private static readonly FieldInfo? LookDownField = AccessTools.Field(
+        typeof(CockpitInputHandlerComponent), "_lookDown");
+
+    private static readonly FieldInfo? LookLeftField = AccessTools.Field(
+        typeof(CockpitInputHandlerComponent), "_lookLeft");
+
+    private static readonly FieldInfo? LookRightField = AccessTools.Field(
+        typeof(CockpitInputHandlerComponent), "_lookRight");
+
+    private static readonly FieldInfo? PitchAnalogField = AccessTools.Field(
+        typeof(CockpitInputHandlerComponent), "_pitchAnalog");
+
+    private static readonly FieldInfo? YawAnalogField = AccessTools.Field(
+        typeof(CockpitInputHandlerComponent), "_yawAnalog");
+
     private static bool _wasKontrolActiveInCockpit;
     private static bool _originalDesiredTargetBasedGyro = true;
+    private static bool _lastOverrideActiveState;
     private static object? _lastObservedBlock;
     private static Vector3 _currentCockpitAngularVelocity;
+
+    [ThreadStatic]
+    private static bool _committingControlData;
 
     private static readonly Dictionary<int, string> TriggerActions = new()
     {
@@ -58,6 +85,8 @@ public static class CockpitInputPatch
     private static readonly Dictionary<(Type Type, string Name), MethodInfo?> TriggerMethods = new();
 
     private static readonly MmfChannel<InputFrame> ControlChannel = new("Local\\Kontrol_Input_space-engineers-2");
+    private static readonly MmfChannel<TelemetryData> SettingsChannel = new("Local\\Kontrol_Settings_space-engineers-2");
+    private static string? _lastSettingsJson;
     private static readonly MmfChannel<TelemetryData> TelemetryChannel = new("Local\\Kontrol_Telemetry_space-engineers-2");
     private static readonly object ChannelInitializationLock = new();
     private static bool _channelsInitialized;
@@ -68,6 +97,8 @@ public static class CockpitInputPatch
     private static ulong _lastDiscreteDebugState;
     private static DateTime _lastAppliedDebugUtc;
     private static string? _lastAppliedDebugSummary;
+    private static DateTime _lastFinalCommitDebugUtc;
+    private static string? _lastFinalCommitDebugSummary;
     private static bool _missingObservedBlockReported;
     private static ulong _previousTriggeredActions;
 
@@ -80,6 +111,7 @@ public static class CockpitInputPatch
             try
             {
                 ControlChannel.CreateOrOpen();
+                SettingsChannel.CreateOrOpen();
                 TelemetryChannel.CreateOrOpen();
                 _channelsInitialized = true;
                 _channelFailureReported = false;
@@ -91,6 +123,23 @@ public static class CockpitInputPatch
                 SpaceEngineers2AdapterDiagnostics.WriteError("The Space Engineers 2 adapter could not open its input channel.");
                 SpaceEngineers2AdapterDiagnostics.WriteDebug($"IPC channel initialization error: {ex}");
             }
+        }
+    }
+
+    internal static void ResetChannelsForTests()
+    {
+        lock (ChannelInitializationLock)
+        {
+            ControlChannel.Dispose();
+            SettingsChannel.Dispose();
+            TelemetryChannel.Dispose();
+            _channelsInitialized = false;
+            _channelFailureReported = false;
+            _cockpitHookObserved = false;
+            _previousTriggeredActions = 0UL;
+            _wasKontrolActiveInCockpit = false;
+            _lastOverrideActiveState = false;
+            _lastObservedBlock = null;
         }
     }
 
@@ -119,51 +168,136 @@ public static class CockpitInputPatch
         }
     }
 
-    [HarmonyPatch(typeof(CockpitInputHandlerComponent), "ComputeReticlePositioning")]
+    [HarmonyPatch(typeof(CockpitInputHandlerComponent), "UpdateRotationData")]
     [HarmonyPrefix]
-    public static bool ComputeReticlePositioningPrefix(CockpitInputHandlerComponent __instance)
+    public static bool UpdateRotationDataPrefix(
+        CockpitInputHandlerComponent __instance,
+        ref float ____pitchAnalog,
+        ref float ____yawAnalog,
+        ref float ____lookUp,
+        ref float ____lookDown,
+        ref float ____lookLeft,
+        ref float ____lookRight,
+        ref MovementInputs ____movementInputs,
+        object ____observedBlock,
+        out NativeInputSnapshot __state
+    )
     {
-        try
+        ApplyLiveSettings();
+        var settings = SpaceEngineers2SettingsManager.Instance;
+        bool isNativeReticle = string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
+
+        if (isNativeReticle)
         {
-            if (ApplyCurrentKontrolFrame(__instance))
-            {
-                return false; // Skip original reticle integration job when Kontrol is active
-            }
-            return true;
+            __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
+                ____lookLeft, ____lookRight, ____movementInputs);
+            ProcessOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+                ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
+            return true; // Let SE2 run native UpdateRotationData
         }
-        catch (Exception ex)
+
+        __state = default;
+        if (ApplyCurrentKontrolFrameDirect(__instance))
         {
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ComputeReticlePositioningPrefix error: {ex}");
-            return true;
+            return false; // Skip original smoothing/decay job when DirectAngularFlight is active
         }
+        return true;
     }
 
     [HarmonyPatch(typeof(CockpitInputHandlerComponent), "UpdateRotationData")]
-    [HarmonyPrefix]
-    public static bool UpdateRotationDataPrefix(CockpitInputHandlerComponent __instance)
+    [HarmonyPostfix]
+    public static void UpdateRotationDataPostfix(
+        ref float ____pitchAnalog, ref float ____yawAnalog,
+        ref float ____lookUp, ref float ____lookDown, ref float ____lookLeft, ref float ____lookRight,
+        ref MovementInputs ____movementInputs,
+        NativeInputSnapshot __state)
     {
-        try
+        var settings = SpaceEngineers2SettingsManager.Instance;
+        if (string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase))
         {
-            if (ApplyCurrentKontrolFrame(__instance))
-            {
-                return false; // Skip original smoothing/decay job when Kontrol is active
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"UpdateRotationDataPrefix error: {ex}");
-            return true;
+            RestoreNativeInput(__state, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+                ref ____lookLeft, ref ____lookRight, ref ____movementInputs);
         }
     }
 
-    public static bool UpdateControlDataPrefix(CockpitInputHandlerComponent __instance)
+    [HarmonyPatch(typeof(CockpitInputHandlerComponent), "ComputeReticlePositioning")]
+    [HarmonyPrefix]
+    public static bool ComputeReticlePositioningPrefix(
+        CockpitInputHandlerComponent __instance,
+        ref float ____pitchAnalog,
+        ref float ____yawAnalog,
+        ref float ____lookUp,
+        ref float ____lookDown,
+        ref float ____lookLeft,
+        ref float ____lookRight,
+        ref MovementInputs ____movementInputs,
+        object ____observedBlock,
+        out NativeInputSnapshot __state
+    )
+    {
+        ApplyLiveSettings();
+        var settings = SpaceEngineers2SettingsManager.Instance;
+        bool isNativeReticle = string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
+
+        if (isNativeReticle)
+        {
+            __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
+                ____lookLeft, ____lookRight, ____movementInputs);
+            ProcessOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+                ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
+            return true; // Let SE2 run native ComputeReticlePositioning
+        }
+
+        __state = default;
+        if (ApplyCurrentKontrolFrameDirect(__instance))
+        {
+            return false; // Skip original reticle integration job when DirectAngularFlight is active
+        }
+        return true;
+    }
+
+    [HarmonyPatch(typeof(CockpitInputHandlerComponent), "ComputeReticlePositioning")]
+    [HarmonyPostfix]
+    public static void ComputeReticlePositioningPostfix(
+        ref float ____pitchAnalog, ref float ____yawAnalog,
+        ref float ____lookUp, ref float ____lookDown, ref float ____lookLeft, ref float ____lookRight,
+        ref MovementInputs ____movementInputs,
+        NativeInputSnapshot __state)
+    {
+        var settings = SpaceEngineers2SettingsManager.Instance;
+        if (string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase))
+        {
+            RestoreNativeInput(__state, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+                ref ____lookLeft, ref ____lookRight, ref ____movementInputs);
+        }
+    }
+
+    public static unsafe bool UpdateControlDataPrefix(CockpitInputHandlerComponent __instance)
     {
         try
         {
-            if (ApplyCurrentKontrolFrame(__instance))
+            ApplyLiveSettings();
+            var settings = SpaceEngineers2SettingsManager.Instance;
+            bool isNativeReticle = string.Equals(settings.FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
+
+            if (isNativeReticle)
             {
-                return false; // Skip native UpdateControlData body to prevent resets
+                if (!TryReadControlFrame(out var control)) return true;
+                bool inputEnabled = control.IsInputEnabled != 0;
+                ProcessTriggeredActions(__instance, inputEnabled ? control.TriggeredActions : 0);
+                ActiveToolActionPatch.ApplyPrimaryFire(inputEnabled && (control.DiscreteStates & (1UL << 11)) != 0);
+                ActiveToolActionPatch.ApplyReload(inputEnabled && (control.DiscreteStates & (1UL << 12)) != 0);
+                if (inputEnabled)
+                {
+                    float surge = control.AnalogValues[3], sway = control.AnalogValues[4], heave = control.AnalogValues[5], roll = control.AnalogValues[1];
+                    LogFinalMovementCommit(surge, sway, heave, roll);
+                }
+                return true; // Let SE2 run native UpdateControlData
+            }
+
+            if (ApplyCurrentKontrolFrameDirect(__instance))
+            {
+                return false; // Skip native UpdateControlData body to prevent resets in direct angular mode
             }
             return true;
         }
@@ -174,7 +308,110 @@ public static class CockpitInputPatch
         }
     }
 
-    public static unsafe bool ApplyCurrentKontrolFrame(CockpitInputHandlerComponent instance)
+    public static unsafe void ProcessOverride(
+        CockpitInputHandlerComponent instance,
+        ref float pitchAnalog,
+        ref float yawAnalog,
+        ref float lookUp,
+        ref float lookDown,
+        ref float lookLeft,
+        ref float lookRight,
+        ref MovementInputs movementInputs,
+        object observedBlock
+    )
+    {
+        try
+        {
+            EnsureChannels();
+
+            if (!_cockpitHookObserved)
+            {
+                _cockpitHookObserved = true;
+                SpaceEngineers2AdapterDiagnostics.Write("Kontrol input is available while piloting a cockpit.");
+            }
+
+            if (observedBlock != _lastObservedBlock)
+            {
+                _lastObservedBlock = observedBlock;
+                SpaceEngineers2AdapterDiagnostics.WriteDebug(observedBlock is null
+                    ? "SE2 cleared the observed cockpit block."
+                    : $"Player entered cockpit block ({observedBlock.GetType().Name}).");
+            }
+
+            if (!TryReadControlFrame(out var control)) return;
+
+            bool isInputEnabled = control.IsInputEnabled != 0;
+            if (isInputEnabled != _lastOverrideActiveState)
+            {
+                _lastOverrideActiveState = isInputEnabled;
+                SpaceEngineers2AdapterDiagnostics.WriteDebug($"Input override state changed to: {isInputEnabled}.");
+            }
+
+            if (isInputEnabled)
+            {
+                try
+                {
+                    var cockpitComponent = (CockpitComponent?)CockpitComponentField?.GetValue(instance);
+                    bool currentTargetBased = TargetBasedGyroField?.GetValue(instance) is true;
+                    if (!_wasKontrolActiveInCockpit || !currentTargetBased)
+                    {
+                        SwitchGyroModeMethod?.Invoke(instance, [true]);
+                        _wasKontrolActiveInCockpit = true;
+                        SpaceEngineers2AdapterDiagnostics.WriteDebug("Switched cockpit gyro mode to target-based for Native Reticle Steering.");
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    var cubeBlock = (CubeBlockComponent?)observedBlock;
+                    var gridEntity = cubeBlock?.Grid?.Entity;
+                    if (gridEntity != null)
+                    {
+                        gridEntity.Data.Set(new AngularControlData { TargetAngularVelocity = Vector3.Zero });
+                    }
+                    _currentCockpitAngularVelocity = Vector3.Zero;
+                }
+                catch { }
+
+                float pitch = NormalizeAxis(control.AnalogValues[0]);
+                float roll = NormalizeAxis(control.AnalogValues[1]);
+                float yaw = NormalizeAxis(control.AnalogValues[2]);
+                float surge = NormalizeAxis(control.AnalogValues[3]);
+                float sway = NormalizeAxis(control.AnalogValues[4]);
+                float heave = NormalizeAxis(control.AnalogValues[5]);
+
+                LogReceivedFrame(control.SchemaVersion, pitch, roll, yaw, surge, sway, heave,
+                    control.DiscreteStates, control.TriggeredActions);
+
+                ProcessTriggeredActions(instance, control.TriggeredActions);
+                ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
+                ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
+
+                MergeTranslation(ref movementInputs, surge, sway, heave, roll);
+                MergeRotationDirections(ref lookUp, ref lookDown, ref lookLeft, ref lookRight, pitch, yaw);
+
+                LogAppliedGameState(pitchAnalog, yawAnalog, movementInputs.Forward, movementInputs.Backward,
+                    movementInputs.Right, movementInputs.Left, movementInputs.Up, movementInputs.Down,
+                    movementInputs.RollRight, movementInputs.RollLeft);
+
+                CommitControlData(instance);
+            }
+            else if (_wasKontrolActiveInCockpit)
+            {
+                NeutralizeCockpitInput(instance);
+            }
+
+            WriteTelemetry(observedBlock as CubeBlockComponent);
+        }
+        catch (Exception ex)
+        {
+            SpaceEngineers2AdapterDiagnostics.WriteError("The Space Engineers 2 adapter encountered an input-processing error.");
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ProcessOverride error: {ex}");
+        }
+    }
+
+    public static unsafe bool ApplyCurrentKontrolFrameDirect(CockpitInputHandlerComponent instance)
     {
         try
         {
@@ -204,7 +441,6 @@ public static class CockpitInputPatch
                     : $"Player entered cockpit block ({observedBlock.GetType().Name}).");
             }
 
-            // 1. Mode Management: Switch SE2 cockpit to native angular mode cleanly
             var cockpitComponent = (CockpitComponent?)CockpitComponentField?.GetValue(instance);
             bool currentTargetBased = TargetBasedGyroField?.GetValue(instance) is true;
 
@@ -216,7 +452,6 @@ public static class CockpitInputPatch
                 SpaceEngineers2AdapterDiagnostics.WriteDebug($"Switched cockpit gyro mode to angular (saved desired target-based={_originalDesiredTargetBasedGyro}).");
             }
 
-            // 2. Read and normalize axes directly from joystick frame
             float pitch = NormalizeAxis(control.AnalogValues[0]);
             float roll = NormalizeAxis(control.AnalogValues[1]);
             float yaw = NormalizeAxis(control.AnalogValues[2]);
@@ -227,12 +462,10 @@ public static class CockpitInputPatch
             LogReceivedFrame(control.SchemaVersion, pitch, roll, yaw, surge, sway, heave,
                 control.DiscreteStates, control.TriggeredActions);
 
-            // 3. Handle discrete actions
             ProcessTriggeredActions(instance, control.TriggeredActions);
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
-            // 4. Submit translation & physics ControlData via Fly-by-Wire Speed Governor (Mode 2)
             var observerChild = (ChildTransformComponent?)ObserverChildTransformField?.GetValue(instance);
             var gridEntity = observedBlock?.Grid?.Entity;
 
@@ -240,74 +473,40 @@ public static class CockpitInputPatch
             {
                 var observerOrientation = observerChild.Data.Get<RelativeTransform>().Orientation;
 
-                float maxLinearSpeed = 100.0f;
-                var velocityLimits = (IVelocityLimitProvider?)VelocityLimitsField?.GetValue(instance);
-                if (velocityLimits != null && float.IsFinite(velocityLimits.LinearVelocityLimit) && velocityLimits.LinearVelocityLimit > 0f)
-                {
-                    maxLinearSpeed = velocityLimits.LinearVelocityLimit;
-                }
-
-                float commandedSurge = surge;
-                float commandedSway = sway;
-                float commandedHeave = heave;
-
-                // Closed-loop velocity governor: throttle position = target velocity (like Star Citizen / DCS / Flight Sim)
-                if (gridEntity.Data.Has<Keen.VRage.Physics.Data.RigidBodyData>())
-                {
-                    var rigidBody = gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>();
-                    WorldTransform worldTransform = gridEntity.Data.GetWorldTransform();
-                    Vector3 shipVelLocal = WorldTransform.TransformDirectionInv(rigidBody.LinearVelocity, worldTransform);
-                    Vector3 cockpitVel = Quaternion.Inverse(observerOrientation) * shipVelLocal;
-
-                    float currentForward = -cockpitVel.Z;
-                    float currentStrafe = cockpitVel.X;
-                    float currentLift = cockpitVel.Y;
-
-                    float targetForward = surge * maxLinearSpeed;
-                    float targetStrafe = sway * maxLinearSpeed;
-                    float targetLift = heave * maxLinearSpeed;
-
-                    float kp = 0.25f; // 4 m/s proportional band to smoothly throttle back into cruise speed
-                    commandedSurge = Math.Clamp((targetForward - currentForward) * kp, -1f, 1f);
-                    commandedSway = Math.Clamp((targetStrafe - currentStrafe) * kp, -1f, 1f);
-                    commandedHeave = Math.Clamp((targetLift - currentLift) * kp, -1f, 1f);
-                }
-
                 var movementInputs = new MovementInputs
                 {
-                    Forward = Math.Max(commandedSurge, 0f),
-                    Backward = Math.Max(-commandedSurge, 0f),
-                    Right = Math.Max(commandedSway, 0f),
-                    Left = Math.Max(-commandedSway, 0f),
-                    Up = Math.Max(commandedHeave, 0f),
-                    Down = Math.Max(-commandedHeave, 0f),
+                    Forward = Math.Max(surge, 0f),
+                    Backward = Math.Max(-surge, 0f),
+                    Right = Math.Max(sway, 0f),
+                    Left = Math.Max(-sway, 0f),
+                    Up = Math.Max(heave, 0f),
+                    Down = Math.Max(-heave, 0f),
                     RollRight = Math.Max(roll, 0f),
                     RollLeft = Math.Max(-roll, 0f),
                     Pitch = pitch,
                     Yaw = yaw
                 };
 
-                gridEntity.Data.UpdateControlData(in movementInputs, new Quaternion?(observerOrientation), isAngular: false);
+                MovementInputsField?.SetValue(instance, movementInputs);
+                gridEntity.Data.UpdateControlData(in movementInputs, new Quaternion?(observerOrientation), isAngular: true);
 
-                // 5. Direct Angular Target with exponential response curve, realistic angular rate scaling,
-                // and smooth inertial slewing filter so the ship accelerates and decelerates with true physical inertia.
+                var settings = SpaceEngineers2SettingsManager.Instance;
+                float maxRate = settings.DirectAngularMaxRate;
+                float accelRate = settings.DirectAngularAcceleration;
+                float decelRate = settings.DirectAngularDeceleration;
+
                 float shapedPitch = ShapeResponse(pitch, exponent: 2.0f);
                 float shapedRoll = ShapeResponse(roll, exponent: 2.0f);
                 float shapedYaw = ShapeResponse(yaw, exponent: 2.0f);
 
-                float targetRateScale = 0.85f; // ~48 deg/sec at 100% stick deflection
-                Vector3 targetCockpitAngular = new Vector3(-shapedPitch, -shapedYaw, -shapedRoll) * targetRateScale;
+                Vector3 targetCockpitAngular = new Vector3(-shapedPitch, -shapedYaw, -shapedRoll) * maxRate;
 
                 float dt = 1f / 60f;
-                // Physical rotational ramp-up & braking deceleration rates (rad/s^2)
-                float accelRate = 1.3f; // ~0.65s to reach 100% speed
-                float decelRate = 1.0f; // ~0.85s natural glide down when centered
-
                 _currentCockpitAngularVelocity.X = SlewAxis(_currentCockpitAngularVelocity.X, targetCockpitAngular.X, dt, accelRate, decelRate);
                 _currentCockpitAngularVelocity.Y = SlewAxis(_currentCockpitAngularVelocity.Y, targetCockpitAngular.Y, dt, accelRate, decelRate);
                 _currentCockpitAngularVelocity.Z = SlewAxis(_currentCockpitAngularVelocity.Z, targetCockpitAngular.Z, dt, accelRate, decelRate);
 
-                var cockpitOrientation = observedBlock.Data.GetRelativeTransform().Orientation;
+                var cockpitOrientation = observedBlock?.Data.GetRelativeTransform().Orientation ?? Quaternion.Identity;
                 Vector3 gridAngular = cockpitOrientation * _currentCockpitAngularVelocity;
 
                 gridEntity.Data.Set(new AngularControlData
@@ -315,20 +514,18 @@ public static class CockpitInputPatch
                     TargetAngularVelocity = gridAngular
                 });
 
-                LogAppliedGameState(movementInputs.Forward, movementInputs.Backward,
+                LogAppliedGameState(pitch, yaw, movementInputs.Forward, movementInputs.Backward,
                     movementInputs.Right, movementInputs.Left, movementInputs.Up, movementInputs.Down,
-                    movementInputs.RollRight, movementInputs.RollLeft, pitch, yaw);
+                    movementInputs.RollRight, movementInputs.RollLeft);
             }
 
-            // 7. Write telemetry to WPF app
             WriteTelemetry(observedBlock);
-
             return true;
         }
         catch (Exception ex)
         {
-            SpaceEngineers2AdapterDiagnostics.WriteError("Error in ApplyCurrentKontrolFrame.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ApplyCurrentKontrolFrame exception: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError("Error in ApplyCurrentKontrolFrameDirect.");
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ApplyCurrentKontrolFrameDirect exception: {ex}");
             return false;
         }
     }
@@ -364,42 +561,84 @@ public static class CockpitInputPatch
         }
     }
 
-    public static unsafe void ProcessOverride(
-        CockpitInputHandlerComponent instance,
-        ref float pitchAnalog,
-        ref float yawAnalog,
-        ref float lookUp,
-        ref float lookDown,
-        ref float lookLeft,
-        ref float lookRight,
-        ref MovementInputs movementInputs,
-        object observedBlock
-    )
+    private static void MergeTranslation(ref MovementInputs movementInputs, float surge, float sway, float heave, float roll)
     {
-        if (TryReadControlFrame(out var control) && control.IsInputEnabled != 0)
-        {
-            float pitch = NormalizeAxis(control.AnalogValues[0]);
-            float roll = NormalizeAxis(control.AnalogValues[1]);
-            float yaw = NormalizeAxis(control.AnalogValues[2]);
-            float surge = NormalizeAxis(control.AnalogValues[3]);
-            float sway = NormalizeAxis(control.AnalogValues[4]);
-            float heave = NormalizeAxis(control.AnalogValues[5]);
-
-            movementInputs.Forward = Math.Max(surge, 0f);
-            movementInputs.Backward = Math.Max(-surge, 0f);
-            movementInputs.Right = Math.Max(sway, 0f);
-            movementInputs.Left = Math.Max(-sway, 0f);
-            movementInputs.Up = Math.Max(heave, 0f);
-            movementInputs.Down = Math.Max(-heave, 0f);
-            movementInputs.RollRight = Math.Max(roll, 0f);
-            movementInputs.RollLeft = Math.Max(-roll, 0f);
-            movementInputs.Pitch = pitch;
-            movementInputs.Yaw = yaw;
-        }
-        ApplyCurrentKontrolFrame(instance);
+        movementInputs.Forward = Math.Max(movementInputs.Forward, Math.Max(surge, 0f));
+        movementInputs.Backward = Math.Max(movementInputs.Backward, Math.Max(-surge, 0f));
+        movementInputs.Right = Math.Max(movementInputs.Right, Math.Max(sway, 0f));
+        movementInputs.Left = Math.Max(movementInputs.Left, Math.Max(-sway, 0f));
+        movementInputs.Up = Math.Max(movementInputs.Up, Math.Max(heave, 0f));
+        movementInputs.Down = Math.Max(movementInputs.Down, Math.Max(-heave, 0f));
+        movementInputs.RollRight = Math.Max(movementInputs.RollRight, Math.Max(roll, 0f));
+        movementInputs.RollLeft = Math.Max(movementInputs.RollLeft, Math.Max(-roll, 0f));
     }
 
-    private static float ShapeResponse(float value, float exponent = 1.8f)
+    private static void MergeRotationDirections(
+        ref float lookUp, ref float lookDown, ref float lookLeft, ref float lookRight,
+        float pitch, float yaw)
+    {
+        pitch = NormalizeAxis(pitch);
+        yaw = NormalizeAxis(yaw);
+        // UpdateControlData calculates Pitch = analog - (Up - Down) * digital
+        // and Yaw = analog + (Right - Left) * digital. These mappings preserve
+        // the old Kontrol signs while using SE2's key-equivalent path.
+        lookDown = Math.Max(lookDown, Math.Max(pitch, 0f));
+        lookUp = Math.Max(lookUp, Math.Max(-pitch, 0f));
+        lookRight = Math.Max(lookRight, Math.Max(yaw, 0f));
+        lookLeft = Math.Max(lookLeft, Math.Max(-yaw, 0f));
+    }
+
+    private static NativeInputSnapshot CaptureNativeInput(
+        float pitchAnalog, float yawAnalog, float lookUp, float lookDown, float lookLeft, float lookRight,
+        MovementInputs movementInputs) =>
+        new(pitchAnalog, yawAnalog, lookUp, lookDown, lookLeft, lookRight, movementInputs);
+
+    private static void RestoreNativeInput(
+        NativeInputSnapshot snapshot,
+        ref float pitchAnalog, ref float yawAnalog, ref float lookUp, ref float lookDown, ref float lookLeft, ref float lookRight,
+        ref MovementInputs movementInputs)
+    {
+        pitchAnalog = snapshot.PitchAnalog;
+        yawAnalog = snapshot.YawAnalog;
+        lookUp = snapshot.LookUp;
+        lookDown = snapshot.LookDown;
+        lookLeft = snapshot.LookLeft;
+        lookRight = snapshot.LookRight;
+        movementInputs = snapshot.MovementInputs;
+    }
+
+    private static void CommitControlData(CockpitInputHandlerComponent instance)
+    {
+        if (_committingControlData) return;
+        var method = _updateControlDataMethod;
+        if (method is null)
+        {
+            SpaceEngineers2AdapterDiagnostics.WriteError("Kontrol cannot submit cockpit input because SE2's UpdateControlData method was not found.");
+            return;
+        }
+
+        try
+        {
+            _committingControlData = true;
+            method.Invoke(instance, null);
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            SpaceEngineers2AdapterDiagnostics.WriteError("Kontrol could not submit the cockpit input state to SE2.");
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 movement commit error: {ex.InnerException}");
+        }
+        catch (Exception ex)
+        {
+            SpaceEngineers2AdapterDiagnostics.WriteError("Kontrol could not submit the cockpit input state to SE2.");
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 movement commit error: {ex}");
+        }
+        finally
+        {
+            _committingControlData = false;
+        }
+    }
+
+    private static float ShapeResponse(float value, float exponent = 2.0f)
     {
         if (!float.IsFinite(value) || value == 0f) return 0f;
         float clamped = Math.Clamp(value, -1f, 1f);
@@ -423,6 +662,25 @@ public static class CockpitInputPatch
 
     private static float NormalizeAxis(float value) =>
         float.IsFinite(value) ? Math.Clamp(value, -1f, 1f) : 0f;
+
+    private static void ApplyLiveSettings()
+    {
+        EnsureChannels();
+        SettingsChannel.Read(out var packet);
+        var json = packet.GetJson();
+        if (string.IsNullOrWhiteSpace(json) || string.Equals(json, _lastSettingsJson, StringComparison.Ordinal)) return;
+        try
+        {
+            var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(json);
+            if (values is null) return;
+            SpaceEngineers2SettingsManager.Instance.ApplySettings(values, (ulong)DateTime.UtcNow.Ticks);
+            _lastSettingsJson = json;
+        }
+        catch (JsonException ex)
+        {
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Ignoring invalid adapter settings snapshot: {ex.Message}");
+        }
+    }
 
     private static void WriteTelemetry(CubeBlockComponent? observedBlock)
     {
@@ -538,6 +796,15 @@ public static class CockpitInputPatch
         ];
     }
 
+    private static void LogFinalMovementCommit(float surge, float sway, float heave, float roll)
+    {
+        string summary = $"forward={surge:F2}; strafe={sway:F2}; lift={heave:F2}; roll={roll:F2}";
+        if (summary == _lastFinalCommitDebugSummary || DateTime.UtcNow - _lastFinalCommitDebugUtc < TimeSpan.FromMilliseconds(250)) return;
+        _lastFinalCommitDebugSummary = summary;
+        _lastFinalCommitDebugUtc = DateTime.UtcNow;
+        SpaceEngineers2AdapterDiagnostics.WriteDebug($"Committed Kontrol movement to SE2: {summary}.");
+    }
+
     private static void LogReceivedFrame(uint schemaVersion, float pitch, float roll, float yaw, float surge, float sway, float heave, ulong discrete, ulong actions)
     {
         string summary = $"schema={schemaVersion}; pitch={pitch:F2}; roll={roll:F2}; yaw={yaw:F2}; forward={surge:F2}; strafe={sway:F2}; lift={heave:F2}; discrete=0x{discrete:X}; actions=0x{actions:X}";
@@ -550,9 +817,9 @@ public static class CockpitInputPatch
         SpaceEngineers2AdapterDiagnostics.WriteDebug($"Received Kontrol input frame: {summary}.");
     }
 
-    private static void LogAppliedGameState(float forward, float backward, float right, float left, float up, float down, float rollRight, float rollLeft, float pitch, float yaw)
+    private static void LogAppliedGameState(float pitch, float yaw, float forward, float backward, float right, float left, float up, float down, float rollRight, float rollLeft)
     {
-        string summary = $"movement F/B={forward:F2}/{backward:F2}, R/L={right:F2}/{left:F2}, U/D={up:F2}/{down:F2}, roll R/L={rollRight:F2}/{rollLeft:F2}, pitch/yaw={pitch:F2}/{yaw:F2}";
+        string summary = $"pitchAnalog={pitch:F2}; yawAnalog={yaw:F2}; movement F/B={forward:F2}/{backward:F2}, R/L={right:F2}/{left:F2}, U/D={up:F2}/{down:F2}, roll R/L={rollRight:F2}/{rollLeft:F2}";
         if (summary == _lastAppliedDebugSummary || DateTime.UtcNow - _lastAppliedDebugUtc < TimeSpan.FromMilliseconds(250)) return;
         _lastAppliedDebugSummary = summary;
         _lastAppliedDebugUtc = DateTime.UtcNow;

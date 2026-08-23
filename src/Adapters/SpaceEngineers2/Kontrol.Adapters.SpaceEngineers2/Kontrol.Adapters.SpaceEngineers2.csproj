@@ -19,6 +19,12 @@
     <InformationalVersion>$(AdapterVersion)</InformationalVersion>
     <SpaceEngineers2ReferenceVersion Condition="'$(SpaceEngineers2ReferenceVersion)' == ''">2.3.0.2798</SpaceEngineers2ReferenceVersion>
     <SpaceEngineers2ReferencesDirectory>$(MSBuildProjectDirectory)\..\references\$(SpaceEngineers2ReferenceVersion)</SpaceEngineers2ReferencesDirectory>
+    <AssemblyTitle>Space Engineers 2 Controls Adapter for Kontrol</AssemblyTitle>
+    <Product>Kontrol</Product>
+    <Description>Controls adapter and hardware integration plugin for Space Engineers 2.</Description>
+    <Company>Komandio Labs</Company>
+    <Authors>Komandio Labs</Authors>
+    <Copyright>Copyright © 2026 Komandio Labs. All rights reserved.</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../Kontrol.Sdk/Kontrol.Sdk.csproj" />
     <None Include="adapter.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="adapter.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

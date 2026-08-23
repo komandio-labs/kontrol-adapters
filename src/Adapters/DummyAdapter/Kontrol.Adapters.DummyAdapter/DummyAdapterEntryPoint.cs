@@ -6,9 +6,9 @@ using Kontrol.Sdk.Diagnostics;
 using System.Diagnostics;
 
 [assembly: KontrolAdapter(
-    "DummyAdapter",
+    "dummy-adapter",
     "Kontrol Sandbox",
-    "KontrolSandbox",
+    "dummy-adapter",
     "Kontrol.Sandbox.Game.exe",
     "",
     "0",

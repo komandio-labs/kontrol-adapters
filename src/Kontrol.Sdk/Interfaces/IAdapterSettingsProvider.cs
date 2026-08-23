@@ -1,0 +1,33 @@
+using Kontrol.Sdk.Settings;
+
+namespace Kontrol.Sdk.Interfaces;
+
+/// <summary>
+/// Implemented by game adapters that expose configurable settings to the Kontrol host.
+/// Provides schemas, default values, category metadata, and snapshot validation.
+/// </summary>
+public interface IAdapterSettingsProvider
+{
+    /// <summary>Unique adapter identifier (e.g. "space-engineers-2").</summary>
+    string AdapterId { get; }
+
+    /// <summary>Ordered list of categories for UI grouping.</summary>
+    IReadOnlyList<SettingCategoryGroup> Categories { get; }
+
+    /// <summary>The complete setting schema descriptors supported by this adapter.</summary>
+    IReadOnlyList<AdapterSettingDescriptor> Descriptors { get; }
+
+    /// <summary>Produces the initial factory-default snapshot.</summary>
+    AdapterSettingsSnapshot GetDefaultSnapshot();
+
+    /// <summary>
+    /// Validates candidate values against the descriptor schema.
+    /// Returns true if all values are valid; otherwise false with field-specific errors.
+    /// </summary>
+    bool ValidateSettings(IReadOnlyDictionary<string, object?> values, out IReadOnlyDictionary<string, string> errors);
+
+    /// <summary>
+    /// Constructs a verified, sanitized snapshot from candidate values.
+    /// </summary>
+    AdapterSettingsSnapshot CreateSnapshot(IReadOnlyDictionary<string, object?> rawValues, ulong sequenceNumber = 1);
+}
