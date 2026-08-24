@@ -4,23 +4,21 @@
 
 ## 0.1.0 — first stable release
 
-- First stable release of the Space Engineers 2 flight adapter.
-- Full 6-DoF analog flight control, dampeners, camera mode switching, and weapons integration.
-- Native Plugin Parameter default deployment and Process Injection alternative.
-- Includes target game build metadata (2.3.0.2798) and verified core engine assembly signatures for automated build validation.
+### Compatible Game Version
+- Space Engineers 2 (`2.4.0.86`)
 
-## 0.1.0-beta.3 — validated beta
+### Dual Flight Control Modes
+- Direct Angular Flight (Default): True 1:1 joystick flight with rate-controlled angular velocity, natural acceleration ramping, and customizable rotational glide.
+- Native Reticle Steering: Preserves the game's classic virtual mouse-reticle steering and crosshair dampening on physical joystick axes.
 
-- Added target game build (`2.3.0.2798`) and verified core engine assemblies metadata directly to the adapter package manifest for automated local build verification in Kontrol.
-- Validated the exact adapter package against Space Engineers 2 `2.3.0.2798`.
-- Automated adapter validation passed (29 tests) and compatibility verification confirmed.
-- Retains Native Plugin Parameter as the default deployment method and Process Injection as an alternate method.
+### Real-Time In-Flight Tuning
+- Rotational Acceleration Ramp: Fine-tune how quickly the ship reaches full turn speed.
+- Rotational Glide Deceleration: Control inertia and coasting when releasing the stick to center.
+- Maximum Turn Rate: Scale maximum rotational speed from precision docking to high agility.
 
-## 0.1.0-beta.2 — validated beta
-
-- Validated the exact adapter package against Space Engineers 2 `2.3.0.2798`.
-- Automated adapter validation passed (29 tests) and the complete manual game checklist passed.
-- Retains Native Plugin Parameter as the default deployment method and Process Injection as an alternate method.
+### Controls & Actions
+- Full 6-DoF analog movement (pitch, yaw, roll, and 3D translation).
+- Dedicated binding support for Inertial Dampeners, Camera View Switching, Primary Fire, and Tool actions.
 
 ## 0.1.0-beta.1 — first public beta
 
