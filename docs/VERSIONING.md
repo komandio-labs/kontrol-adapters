@@ -37,6 +37,11 @@ The following versions have distinct purposes:
 There is no separate IPC protocol version. The IPC structures are part of the
 Kontrol SDK contract and use the SDK contract version.
 
+### SDK SemVer & Backward Compatibility Invariant
+
+- **Minor Version Invariant (Backward Compatibility)**: Every minor SDK bump (e.g. `1.0.0` -> `1.1.0` -> `1.2.0`) **must preserve 100% backward compatibility** with all previous minor versions of the same major version. An updated Kontrol host application must continue to support adapters compiled against earlier minor versions.
+- **Breaking Changes Require Major Version**: Any change that modifies or removes existing public APIs, interfaces, binary layouts, or IPC wire protocol contracts is strictly a **MAJOR** version bump (e.g. `2.0.0`). Breaking changes in a minor SDK release are strictly prohibited.
+
 ## Source-code versioning
 
 Each adapter has one current source tree on `main`. Do not create copied source
