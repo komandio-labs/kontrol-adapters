@@ -91,7 +91,7 @@
       const closeList = () => { if (list) { target.append(list); list = null; } };
       body.split(/\r?\n/).forEach(line => {
         if (!line.trim()) { closeList(); return; }
-        if (/^##\s+/.test(line)) { closeList(); const heading = document.createElement("h3"); heading.append(inlineMarkdown(line.replace(/^##\s+/, ""))); target.append(heading); return; }
+        if (/^#{2,4}\s+/.test(line)) { closeList(); const heading = document.createElement("h3"); heading.append(inlineMarkdown(line.replace(/^#{2,4}\s+/, ""))); target.append(heading); return; }
         if (/^[-*]\s+/.test(line)) { if (!list) list = document.createElement("ul"); const item = document.createElement("li"); item.append(inlineMarkdown(line.replace(/^[-*]\s+/, ""))); list.append(item); return; }
         closeList(); const paragraph = document.createElement("p"); paragraph.append(inlineMarkdown(line)); target.append(paragraph);
       });
