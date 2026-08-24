@@ -50,9 +50,9 @@ Pages package, descriptor, and catalog are all signed.
 6. Build exactly one local package:
 
    ```powershell
-   python scripts/kontrol_adapters.py pack --adapter spaceengineers2 --version 0.1.0-beta.1 --output artifacts/space-engineers-2-0.1.0-beta.1.zip
-   python scripts/kontrol_adapters.py verify-package --package artifacts/space-engineers-2-0.1.0-beta.1.zip
-   Get-FileHash artifacts/space-engineers-2-0.1.0-beta.1.zip -Algorithm SHA256
+   python scripts/kontrol_adapters.py pack --adapter spaceengineers2 --version 0.1.0 --output artifacts/kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip
+   python scripts/kontrol_adapters.py verify-package --package artifacts/kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip
+   Get-FileHash artifacts/kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip -Algorithm SHA256
    ```
 
 The package tool automatically includes the repository Apache-2.0 `LICENSE`.
