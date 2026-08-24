@@ -65,7 +65,7 @@ def main() -> int:
         raise RuntimeError(f"Invalid adapterVersion in package.json: {version}")
     channel = "beta" if "-" in version else "stable"
     tag = f"adapters/{adapter}/v{version}"
-    package = ROOT / "artifacts" / f"kontrol-adapter-{adapter}-{version}-win-x64.zip"
+    package = ROOT / "artifacts" / f"{adapter}-{version}.zip"
 
     heading("Step 2 of 6 — Release summary and safety checks")
     print(f"Adapter: {adapter}\nVersion: {version}\nChannel: {channel}\nTag: {tag}\nPackage: {package}")

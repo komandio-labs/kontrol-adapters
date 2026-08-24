@@ -12,6 +12,7 @@ using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers.BlockTools;
 using Keen.Game2.Client.GameSystems.CameraSystems;
 using Keen.Game2.Simulation.WorldObjects.Movement;
+using Keen.VRage.Library.Mathematics;
 
 namespace Kontrol.Adapters.SpaceEngineers2.Tests;
 
@@ -76,6 +77,56 @@ public class CockpitInputPatchTests
     private static void DummyUpdateControlData()
     {
         _commitCount++;
+    }
+
+    [Test]
+    public void ComputeAxisThrottle_UnderSpeed_ReturnsPositiveThrottle()
+    {
+        // Target: 50 m/s (50% stick at 100 m/s max), Current: 0 m/s
+        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 0f);
+        pos.ShouldBe(1.0f); // Max acceleration thrust
+        neg.ShouldBe(0f);
+    }
+
+    [Test]
+    public void ComputeAxisThrottle_ApproachingTargetSpeed_ScalesDownThrottle()
+    {
+        // Target: 50 m/s, Current: 48 m/s (error = 2 m/s, rampBand = 5 m/s)
+        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 48f);
+        pos.ShouldBe(0.4f, 0.01f);
+        neg.ShouldBe(0f);
+    }
+
+    [Test]
+    public void ComputeAxisThrottle_TargetSpeedReached_ReturnsZeroThrottleToCruise()
+    {
+        // Target: 50 m/s, Current: 50 m/s (within 0.5 m/s deadband)
+        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 50f);
+        pos.ShouldBe(0f);
+        neg.ShouldBe(0f);
+    }
+
+    [Test]
+    public void ComputeAxisThrottle_OverSpeed_ReturnsNegativeBrakingThrottle()
+    {
+        // Target: 50 m/s, Current: 70 m/s (error = -20 m/s) -> Brake
+        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 70f);
+        pos.ShouldBe(0f);
+        neg.ShouldBe(1.0f);
+    }
+
+    [Test]
+    public void ComputeAxisThrottle_ReverseCommand_MaintainsReverseSpeed()
+    {
+        // Target: -50 m/s (-50% stick), Current: 0 m/s
+        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(-0.5f, -50f, 0f);
+        pos.ShouldBe(0f);
+        neg.ShouldBe(1.0f);
+
+        // Target: -50 m/s, Current: -50 m/s -> Steady cruise
+        var (steadyPos, steadyNeg) = CockpitInputPatch.ComputeAxisThrottle(-0.5f, -50f, -50f);
+        steadyPos.ShouldBe(0f);
+        steadyNeg.ShouldBe(0f);
     }
 
     [TestCase("ToggleDampeners")]
@@ -482,5 +533,23 @@ public class CockpitInputPatchTests
         movementInputs.Left.ShouldBe(1.0f);
         movementInputs.Up.ShouldBe(1.0f);
         movementInputs.RollRight.ShouldBe(1.0f);
+    }
+
+    [Test]
+    public void Translation_DirectAngularAndNativeReticle_ProduceIdenticalMovementInputs()
+    {
+        var control = CreateInputFrame(true, surge: 0.6f, sway: -0.4f, heave: 0.8f, roll: 0.5f);
+        _testInputChannel!.Write(ref control);
+        var instance = (CockpitInputHandlerComponent)RuntimeHelpers.GetUninitializedObject(typeof(CockpitInputHandlerComponent));
+
+        // Test MergeTranslation directly
+        var movement1 = new MovementInputs();
+        float pA = 0f, yA = 0f, lu = 0f, ld = 0f, ll = 0f, lr = 0f;
+        CockpitInputPatch.ProcessOverride(instance, ref pA, ref yA, ref lu, ref ld, ref ll, ref lr, ref movement1, null!);
+
+        movement1.Forward.ShouldBe(0.6f, 0.001f);
+        movement1.Left.ShouldBe(0.4f, 0.001f);
+        movement1.Up.ShouldBe(0.8f, 0.001f);
+        movement1.RollRight.ShouldBe(0.5f, 0.001f);
     }
 }

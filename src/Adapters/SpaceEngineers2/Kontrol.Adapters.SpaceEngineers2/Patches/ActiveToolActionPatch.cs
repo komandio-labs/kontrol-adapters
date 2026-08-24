@@ -2,6 +2,7 @@ using System.Reflection;
 using HarmonyLib;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers.BlockTools;
+// ReSharper disable InconsistentNaming
 
 namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 
@@ -13,7 +14,7 @@ namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 [HarmonyPatch]
 internal static class ActiveToolActionPatch
 {
-    private static readonly object Sync = new();
+    private static readonly Lock Sync = new();
     private static object? _activeHandler;
     private static MethodInfo? _primaryMethod;
     private static MethodInfo? _secondaryMethod;

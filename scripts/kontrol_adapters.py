@@ -191,7 +191,7 @@ def package(slug: str, version: str, game_directory: str | None, output: str | N
     test_adapter(slug, game_directory, False)
     _, project, _ = adapter_paths(slug)
     run("dotnet", "build", str(project), "-c", "Release")
-    destination = Path(output).resolve() if output else ROOT / "artifacts" / f"kontrol-adapter-{slug}-{version}-win-x64.zip"
+    destination = Path(output).resolve() if output else ROOT / "artifacts" / f"{slug}-{version}.zip"
     arguments = ["pack", "--adapter", slug, "--configuration", "Release", "--output", str(destination)]
     if overwrite:
         arguments.extend(["--overwrite", "true"])

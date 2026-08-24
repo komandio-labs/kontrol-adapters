@@ -57,7 +57,7 @@ jobs:
           echo "slug=$slug" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
-          echo "package=kontrol-adapter-$slug-$version-win-x64.zip" >> "$GITHUB_OUTPUT"
+          echo "package=$slug-$version.zip" >> "$GITHUB_OUTPUT"
 
       - name: Download locally validated release package
         run: gh release download "$TAG" --pattern "${{ steps.release.outputs.package }}" --dir release-input

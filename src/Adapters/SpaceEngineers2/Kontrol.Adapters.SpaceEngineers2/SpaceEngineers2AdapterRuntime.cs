@@ -10,7 +10,7 @@ namespace Kontrol.Adapters.SpaceEngineers2;
 /// </summary>
 internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
 {
-    private static readonly object Gate = new();
+    private static readonly Lock Gate = new();
     private static SpaceEngineers2AdapterRuntime? _current;
 
     private readonly AdapterConnectionReporter _connectionReporter = new("space-engineers-2");

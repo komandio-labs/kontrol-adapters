@@ -1,6 +1,7 @@
 using System.Reflection;
 using HarmonyLib;
 using Keen.Game2.Client.GameSystems.CameraSystems;
+// ReSharper disable InconsistentNaming
 
 namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 
