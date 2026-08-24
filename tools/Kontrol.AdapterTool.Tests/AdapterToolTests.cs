@@ -182,7 +182,7 @@ public class AdapterToolTests
             JsonObject catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!.AsObject();
             JsonObject adapter = catalog["adapters"]!.AsArray()[0]!.AsObject();
             adapter["currentVersion"]!.GetValue<string>().ShouldBe("0.1.0-beta.2");
-            adapter["releases"]!.AsArray().Single(item => item!["adapterVersion"]!.GetValue<string>() == "0.1.0-beta.2")["status"]!.GetValue<string>().ShouldBe("current");
+            adapter["releases"]!.AsArray().Single(item => item!["adapterVersion"]!.GetValue<string>() == "0.1.0-beta.2")?["status"]!.GetValue<string>().ShouldBe("current");
         }
         finally
         {
