@@ -593,9 +593,12 @@ public static class AdapterRelease
         if (!string.Equals(tag, expectedTag, StringComparison.Ordinal)) throw new InvalidOperationException($"Release tag must be '{expectedTag}'.");
         if (!Uri.TryCreate(packageUrl, UriKind.Absolute, out _)) throw new InvalidOperationException("Package URL must be absolute.");
         if (!Regex.IsMatch(commit, "^[0-9a-fA-F]{7,64}$")) throw new InvalidOperationException("Source commit must be a Git SHA.");
-        string expectedFileName = $"kontrol-adapter-{manifest.Slug}-{manifest.AdapterVersion}-win-x64.zip";
-        if (!string.Equals(Path.GetFileName(packagePath), expectedFileName, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException($"Package filename must be '{expectedFileName}'.");
+        string fileName = Path.GetFileName(packagePath);
+        string expectedName1 = $"{manifest.Slug}-{manifest.AdapterVersion}.zip";
+        string expectedName2 = $"kontrol-adapter-{manifest.Slug}-{manifest.AdapterVersion}-win-x64.zip";
+        if (!string.Equals(fileName, expectedName1, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(fileName, expectedName2, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Package filename must be '{expectedName1}' or '{expectedName2}'.");
         ValidateChannel(channel, manifest.AdapterVersion);
 
         string timestamp;
@@ -622,7 +625,7 @@ public static class AdapterRelease
             ["source"] = new JsonObject { ["tag"] = tag, ["commit"] = commit.ToLowerInvariant() },
             ["package"] = new JsonObject
             {
-                ["fileName"] = expectedFileName,
+                ["fileName"] = fileName,
                 ["sha256"] = AdapterRepository.HashFile(packagePath),
                 ["url"] = packageUrl,
                 ["architecture"] = "x64"
@@ -709,11 +712,22 @@ public static class AdapterRelease
         var source = descriptor["source"]?.AsObject() ?? throw new InvalidOperationException("Release descriptor is missing source metadata.");
         if (!string.Equals(source["tag"]?.GetValue<string>(), $"adapters/{slug}/v{version}", StringComparison.Ordinal) || !Regex.IsMatch(source["commit"]?.GetValue<string>() ?? string.Empty, "^[0-9a-fA-F]{7,64}$")) throw new InvalidOperationException("Release descriptor source metadata is invalid.");
         var package = descriptor["package"]?.AsObject() ?? throw new InvalidOperationException("Release descriptor is missing package metadata.");
-        string expectedFile = $"kontrol-adapter-{slug}-{version}-win-x64.zip";
-        if (!string.Equals(package["fileName"]?.GetValue<string>(), expectedFile, StringComparison.Ordinal) || !Sha256.IsMatch(package["sha256"]?.GetValue<string>() ?? string.Empty) || !Uri.TryCreate(package["url"]?.GetValue<string>(), UriKind.Absolute, out _) || package["architecture"]?.GetValue<string>() != "x64") throw new InvalidOperationException("Release descriptor package metadata is invalid.");
+        string expectedFile1 = $"{slug}-{version}.zip";
+        string expectedFile2 = $"kontrol-adapter-{slug}-{version}-win-x64.zip";
+        string? actualPackageFile = package["fileName"]?.GetValue<string>();
+        if ((!string.Equals(actualPackageFile, expectedFile1, StringComparison.Ordinal) &&
+             !string.Equals(actualPackageFile, expectedFile2, StringComparison.Ordinal)) ||
+            !Sha256.IsMatch(package["sha256"]?.GetValue<string>() ?? string.Empty) ||
+            !Uri.TryCreate(package["url"]?.GetValue<string>(), UriKind.Absolute, out _) ||
+            package["architecture"]?.GetValue<string>() != "x64")
+            throw new InvalidOperationException("Release descriptor package metadata is invalid.");
         if (packagePath is null) return;
         AdapterPackage.Verify(packagePath);
-        if (!string.Equals(Path.GetFileName(packagePath), expectedFile, StringComparison.OrdinalIgnoreCase) || !string.Equals(AdapterRepository.HashFile(packagePath), package["sha256"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Release package does not match its descriptor.");
+        string packageFileName = Path.GetFileName(packagePath);
+        if ((!string.Equals(packageFileName, expectedFile1, StringComparison.OrdinalIgnoreCase) &&
+             !string.Equals(packageFileName, expectedFile2, StringComparison.OrdinalIgnoreCase)) ||
+            !string.Equals(AdapterRepository.HashFile(packagePath), package["sha256"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Release package does not match its descriptor.");
     }
 
     public static void Sign(string descriptorPath, string privateKey)
