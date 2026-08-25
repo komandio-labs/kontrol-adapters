@@ -6,7 +6,7 @@ custom controllers. It lets a player configure those devices alongside the
 usual keyboard, mouse, and game controller.
 
 This repository contains the game-specific adapters and public SDK used by the
-[Kontrol app](https://github.com/komandio-labs/kontrol-app). The app discovers
+[Kontrol app](https://www.komandio.com/kontrol/). The app discovers
 devices, lets the player create mappings and profiles, and manages the game
 session. An adapter makes that input meaningful to one game: it receives
 normalized input from the Kontrol host over local IPC, translates it to that
