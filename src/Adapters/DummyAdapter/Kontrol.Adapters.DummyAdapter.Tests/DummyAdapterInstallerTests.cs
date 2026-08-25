@@ -44,7 +44,7 @@ public class DummyAdapterInstallerTests
     {
         KontrolSdkContract.Version.ShouldBe("1.1.0");
         KontrolSdkContract.Major.ShouldBe(1);
-        typeof(KontrolSdkContract).Assembly.GetName().Version!.ToString().ShouldBe("1.1.0.0");
+        typeof(KontrolSdkContract).Assembly.GetName().Version!.ToString().ShouldBe("1.1.1.0");
         typeof(DummyAdapterInstaller).Assembly.GetName().Version!.ToString().ShouldBe("1.0.0.0");
     }
 }
