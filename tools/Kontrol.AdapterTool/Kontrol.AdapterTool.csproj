@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Kontrol.AdapterTool</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Kontrol.Sdk\Kontrol.Sdk.csproj" />
+  </ItemGroup>
 </Project>

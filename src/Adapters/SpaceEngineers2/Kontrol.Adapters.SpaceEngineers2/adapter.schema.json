@@ -10,14 +10,7 @@
   "descriptors": [
     {
       "$type": "string",
-      "key": "flightModelMode",
-      "displayName": "Flight Control Mode",
-      "category": "Flight Controls",
-      "icon": "Spacecraft",
-      "layout": "Full",
-      "updateScope": "Realtime",
       "defaultValue": "DirectAngularFlight",
-      "description": "Selects how joystick inputs are translated to ship controls.",
       "allowedValues": [
         {
           "value": "DirectAngularFlight",
@@ -27,77 +20,92 @@
         {
           "value": "NativeReticleSteering",
           "displayName": "Native Reticle Steering",
-          "description": "Preserves Space Engineers 2's native virtual mouse-reticle steering and built-in crosshair dampening."
+          "description": "Preserves Space Engineers 2\u0027s native virtual mouse-reticle steering and built-in crosshair dampening."
         }
-      ]
+      ],
+      "key": "flightModelMode",
+      "displayName": "Flight Control Mode",
+      "category": "Flight Controls",
+      "type": "String",
+      "icon": "Spacecraft",
+      "description": "Selects how joystick inputs are translated to ship controls.",
+      "updateScope": "Realtime",
+      "layout": "Full",
+      "isReadOnly": false
     },
     {
       "$type": "number",
-      "key": "directAngularAcceleration",
-      "displayName": "Rotational Acceleration Ramp",
-      "category": "Flight Controls",
-      "icon": "Clock",
-      "layout": "Half",
-      "updateScope": "Realtime",
-      "min": 0.1,
-      "max": 5.0,
-      "step": 0.1,
-      "unit": "rad/s²",
       "defaultValue": 1.3,
+      "min": 0.1,
+      "max": 5,
+      "step": 0.1,
+      "unit": "rad/s\u00B2",
       "minLabel": "0.1 (Smooth Ramp)",
       "midLabel": "1.3 (Balanced)",
       "maxLabel": "5.0 (Instant)",
+      "key": "directAngularAcceleration",
+      "displayName": "Rotational Acceleration Ramp",
+      "category": "Flight Controls",
+      "type": "Number",
+      "icon": "Clock",
       "description": "Controls how smoothly rotation accelerates up to full commanded rate when deflecting the stick.",
+      "updateScope": "Realtime",
+      "layout": "Half",
       "visibleWhen": {
         "dependsOnKey": "flightModelMode",
         "expectedValue": "DirectAngularFlight"
-      }
+      },
+      "isReadOnly": false
     },
     {
       "$type": "number",
-      "key": "directAngularDeceleration",
-      "displayName": "Rotational Glide Deceleration",
-      "category": "Flight Controls",
-      "icon": "Inertia",
-      "layout": "Half",
-      "updateScope": "Realtime",
+      "defaultValue": 1,
       "min": 0.1,
-      "max": 5.0,
+      "max": 5,
       "step": 0.1,
-      "unit": "rad/s²",
-      "defaultValue": 1.0,
+      "unit": "rad/s\u00B2",
       "minLabel": "0.1 (Long Glide)",
       "midLabel": "1.0 (Balanced)",
       "maxLabel": "5.0 (Quick Stop)",
+      "key": "directAngularDeceleration",
+      "displayName": "Rotational Glide Deceleration",
+      "category": "Flight Controls",
+      "type": "Number",
+      "icon": "Inertia",
       "description": "Controls rotational glide easing when releasing the stick to center before coming to rest.",
+      "updateScope": "Realtime",
+      "layout": "Half",
       "visibleWhen": {
         "dependsOnKey": "flightModelMode",
         "expectedValue": "DirectAngularFlight"
-      }
+      },
+      "isReadOnly": false
     },
     {
       "$type": "number",
+      "defaultValue": 0.85,
+      "min": 0.1,
+      "max": 3,
+      "step": 0.05,
+      "unit": "rad/s",
+      "displayMultiplier": 57.29578,
+      "displayUnit": "\u00B0/s",
+      "minLabel": "6 \u00B0/s",
+      "midLabel": "49 \u00B0/s",
+      "maxLabel": "172 \u00B0/s",
       "key": "directAngularMaxRate",
       "displayName": "Maximum Turn Rate Scaling",
       "category": "Flight Controls",
+      "type": "Number",
       "icon": "Gyroscope",
-      "layout": "Half",
-      "updateScope": "Realtime",
-      "min": 0.1,
-      "max": 3.0,
-      "step": 0.05,
-      "unit": "rad/s",
-      "displayUnit": "°/s",
-      "displayMultiplier": 57.2957795,
-      "defaultValue": 0.85,
-      "minLabel": "6 °/s",
-      "midLabel": "49 °/s",
-      "maxLabel": "172 °/s",
       "description": "Scales maximum target angular velocity achieved at 100% full stick deflection.",
+      "updateScope": "Realtime",
+      "layout": "Half",
       "visibleWhen": {
         "dependsOnKey": "flightModelMode",
         "expectedValue": "DirectAngularFlight"
-      }
+      },
+      "isReadOnly": false
     }
   ]
 }

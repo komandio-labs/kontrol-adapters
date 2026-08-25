@@ -436,6 +436,62 @@ public class AdapterToolTests
         WriteEntry(archive, "checksums.json", checksums.ToJsonString());
     }
 
+    [Test]
+    public void ExportSchemaFromAssembly_GeneratesValidSchemaDocument()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        AdapterManifest se2 = AdapterRepository.GetManifest(root, "space-engineers-2");
+        string adapterRoot = AdapterRepository.AdapterRoot(se2);
+        string assemblyPath = Path.Combine(adapterRoot, Path.GetFileNameWithoutExtension(se2.EntryAssembly), "bin", "Debug", se2.TargetFramework, se2.EntryAssembly);
+
+        if (File.Exists(assemblyPath))
+        {
+            string? json = AdapterSchemaExporter.ExportSchemaFromAssembly(assemblyPath);
+            json.ShouldNotBeNull();
+
+            var doc = JsonNode.Parse(json)!.AsObject();
+            doc["adapterId"]!.GetValue<string>().ShouldBe("space-engineers-2");
+            doc["categories"]!.AsArray().Count.ShouldBeGreaterThan(0);
+            doc["descriptors"]!.AsArray().Count.ShouldBeGreaterThan(0);
+
+            var descriptors = doc["descriptors"]!.AsArray();
+            var flightMode = descriptors.First(d => d!["key"]!.GetValue<string>() == "flightModelMode");
+            flightMode!["$type"]!.GetValue<string>().ShouldBe("string");
+            flightMode["defaultValue"]!.GetValue<string>().ShouldBe("DirectAngularFlight");
+
+            var accel = descriptors.First(d => d!["key"]!.GetValue<string>() == "directAngularAcceleration");
+            accel!["$type"]!.GetValue<string>().ShouldBe("number");
+            accel["defaultValue"]!.GetValue<double>().ShouldBe(1.3);
+        }
+    }
+
+    [Test]
+    public void Pack_AutomaticallyExportsAndPackagesAdapterSchema()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string tempZip = Path.Combine(Path.GetTempPath(), $"kontrol-pack-se2-{Guid.NewGuid():N}.zip");
+        try
+        {
+            AdapterPackage.Create(root, "space-engineers-2", "Debug", tempZip, overwrite: true);
+
+            Should.NotThrow(() => AdapterPackage.Verify(tempZip));
+
+            using ZipArchive archive = ZipFile.OpenRead(tempZip);
+            var schemaEntry = archive.GetEntry("adapter.schema.json");
+            schemaEntry.ShouldNotBeNull();
+
+            using var reader = new StreamReader(schemaEntry.Open());
+            var schemaJson = reader.ReadToEnd();
+            var doc = JsonNode.Parse(schemaJson)!.AsObject();
+            doc["adapterId"]!.GetValue<string>().ShouldBe("space-engineers-2");
+            doc["descriptors"]!.AsArray().Count.ShouldBeGreaterThan(0);
+        }
+        finally
+        {
+            if (File.Exists(tempZip)) File.Delete(tempZip);
+        }
+    }
+
     private static void WriteEntry(ZipArchive archive, string name, string content)
     {
         using var writer = new StreamWriter(archive.CreateEntry(name).Open(), new UTF8Encoding(false));

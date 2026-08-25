@@ -1,11 +1,15 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Kontrol.Sdk.Interfaces;
+using Kontrol.Sdk.Settings;
 
 return await AdapterToolProgram.RunAsync(args);
 
@@ -25,6 +29,8 @@ public static class AdapterToolProgram
                     return Affected(root, args);
                 case "pack":
                     return Pack(root, CommandOptions.Parse(args.Skip(1)));
+                case "export-schema":
+                    return ExportSchema(root, CommandOptions.Parse(args.Skip(1)));
                 case "verify-package":
                     var verifyOptions = CommandOptions.Parse(args.Skip(1));
                     AdapterPackage.Verify(verifyOptions.Required("package"), verifyOptions.Get("public-key"), verifyOptions.Get("require-signature") == "true");
@@ -60,7 +66,7 @@ public static class AdapterToolProgram
 
     private static int Usage()
     {
-        Console.Error.WriteLine("Usage: validate repository | validate adapter --adapter <slug> | validate compatibility --adapter <slug> --inspection <path> | affected paths <paths...> | pack --adapter <slug> --output <zip> [--configuration Release] [--overwrite true] | sign-package --package <zip> --private-key <key> [--key-id kontrol-p256-2026-01] | verify-package --package <zip> [--require-signature true --public-key <key>] | release create --adapter <slug> --package <zip> --package-url <url> --tag <tag> --commit <sha> --output <json> [--channel stable|beta] | release sign --descriptor <json> --private-key <key> | release validate --descriptor <json> [--package <zip>] | catalog build --releases <directory> --generated-at <ISO-8601> --output <json> | catalog sign --catalog <json> --private-key <key> | catalog validate --catalog <json> | inspect-assembly --path <dll>");
+        Console.Error.WriteLine("Usage: validate repository | validate adapter --adapter <slug> | validate compatibility --adapter <slug> --inspection <path> | affected paths <paths...> | pack --adapter <slug> --output <zip> [--configuration Release] [--overwrite true] | export-schema --adapter <slug> [--output <json>] [--configuration Release] | sign-package --package <zip> --private-key <key> [--key-id kontrol-p256-2026-01] | verify-package --package <zip> [--require-signature true --public-key <key>] | release create --adapter <slug> --package <zip> --package-url <url> --tag <tag> --commit <sha> --output <json> [--channel stable|beta] | release sign --descriptor <json> --private-key <key> | release validate --descriptor <json> [--package <zip>] | catalog build --releases <directory> --generated-at <ISO-8601> --output <json> | catalog sign --catalog <json> --private-key <key> | catalog validate --catalog <json> | inspect-assembly --path <dll>");
         return 2;
     }
 
@@ -109,6 +115,34 @@ public static class AdapterToolProgram
         string configuration = options.Get("configuration") ?? "Release";
         AdapterPackage.Create(root, options.Required("adapter"), configuration, output, options.Get("overwrite") == "true");
         Console.WriteLine(Path.GetFullPath(output));
+        return 0;
+    }
+
+    private static int ExportSchema(string root, CommandOptions options)
+    {
+        string slug = options.Required("adapter");
+        string configuration = options.Get("configuration") ?? "Release";
+        AdapterManifest manifest = AdapterRepository.GetManifest(root, slug);
+        string adapterRoot = AdapterRepository.AdapterRoot(manifest);
+        string outputDirectory = Path.Combine(adapterRoot, Path.GetFileNameWithoutExtension(manifest.EntryAssembly), "bin", configuration, manifest.TargetFramework);
+        string entryAssemblyPath = Path.Combine(outputDirectory, manifest.EntryAssembly);
+
+        if (!File.Exists(entryAssemblyPath))
+        {
+            throw new FileNotFoundException($"Entry assembly not found at '{entryAssemblyPath}'. Please build the adapter first.", entryAssemblyPath);
+        }
+
+        string outputPath = options.Get("output")
+            ?? Path.Combine(adapterRoot, Path.GetFileNameWithoutExtension(manifest.EntryAssembly), "adapter.schema.json");
+
+        string? json = AdapterSchemaExporter.ExportSchemaFromAssembly(entryAssemblyPath, outputPath);
+        if (json == null)
+        {
+            Console.Error.WriteLine($"No IAdapterSettingsProvider found in '{manifest.EntryAssembly}'.");
+            return 1;
+        }
+
+        Console.WriteLine(Path.GetFullPath(outputPath));
         return 0;
     }
 
@@ -453,6 +487,13 @@ public static class AdapterPackage
         if (File.Exists(destination) && !overwrite)
             throw new IOException($"Package destination already exists: {destination}. Use --overwrite true only for an unpublished local package.");
         if (File.Exists(destination)) File.Delete(destination);
+
+        string entryAssemblyPath = Path.Combine(outputDirectory, manifest.EntryAssembly);
+        if (File.Exists(entryAssemblyPath))
+        {
+            string schemaOutputPath = Path.Combine(outputDirectory, "adapter.schema.json");
+            AdapterSchemaExporter.ExportSchemaFromAssembly(entryAssemblyPath, schemaOutputPath);
+        }
 
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -961,4 +1002,84 @@ public static class AdapterSignature
         null => "null",
         _ => throw new InvalidOperationException("Unsupported JSON node.")
     };
+}
+
+public static class AdapterSchemaExporter
+{
+    public static string? ExportSchemaFromAssembly(string dllPath, string? outputPath = null)
+    {
+        string fullDllPath = Path.GetFullPath(dllPath);
+        if (!File.Exists(fullDllPath))
+            throw new FileNotFoundException("Assembly was not found.", fullDllPath);
+
+        string dir = Path.GetDirectoryName(fullDllPath)!;
+        ResolveEventHandler resolveHandler = (sender, args) =>
+        {
+            string assemblyName = new AssemblyName(args.Name).Name + ".dll";
+            string candidate = Path.Combine(dir, assemblyName);
+            if (File.Exists(candidate))
+            {
+                return Assembly.LoadFrom(candidate);
+            }
+            return null;
+        };
+
+        AppDomain.CurrentDomain.AssemblyResolve += resolveHandler;
+        try
+        {
+            Assembly assembly = Assembly.LoadFrom(fullDllPath);
+            Type? providerType = null;
+            try
+            {
+                providerType = assembly.GetTypes()
+                    .FirstOrDefault(t => !t.IsAbstract && !t.IsInterface && typeof(IAdapterSettingsProvider).IsAssignableFrom(t));
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                providerType = ex.Types
+                    .FirstOrDefault(t => t != null && !t.IsAbstract && !t.IsInterface && typeof(IAdapterSettingsProvider).IsAssignableFrom(t));
+            }
+
+            if (providerType == null)
+                return null;
+
+            var provider = (IAdapterSettingsProvider)Activator.CreateInstance(providerType)!;
+            return ExportSchema(provider, outputPath);
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.AssemblyResolve -= resolveHandler;
+        }
+    }
+
+    public static string ExportSchema(IAdapterSettingsProvider provider, string? outputPath = null)
+    {
+        var schemaDoc = new
+        {
+            adapterId = provider.AdapterId,
+            categories = provider.Categories,
+            descriptors = provider.Descriptors
+        };
+
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters = { new JsonStringEnumConverter() }
+        };
+
+        string json = JsonSerializer.Serialize(schemaDoc, options);
+        if (!string.IsNullOrEmpty(outputPath))
+        {
+            string dir = Path.GetDirectoryName(Path.GetFullPath(outputPath))!;
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            File.WriteAllText(outputPath, json);
+        }
+
+        return json;
+    }
 }
