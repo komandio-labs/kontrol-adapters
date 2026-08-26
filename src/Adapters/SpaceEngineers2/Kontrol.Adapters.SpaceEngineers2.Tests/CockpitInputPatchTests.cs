@@ -160,9 +160,15 @@ public class CockpitInputPatchTests
     {
         var schema = new SpaceEngineers2Installer().GetInputSchema();
 
-        schema.Version.ShouldBe(5);
+        schema.Version.ShouldBe(6);
         schema.Inputs[10].Id.ShouldBe("systems.exit_grid");
-        schema.Inputs[10].DiscreteBehavior.ShouldBe(DiscreteBehavior.Trigger);
+        schema.Inputs[6].Id.ShouldBe("systems.dampeners");
+        schema.Inputs[6].DiscreteBehavior.ShouldBe(DiscreteBehavior.Toggle);
+        schema.Inputs[6].EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Toggle);
+        schema.Inputs[6].EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.Event);
+        schema.Inputs[7].Id.ShouldBe("systems.lights");
+        schema.Inputs[7].EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Trigger);
+        schema.Inputs[7].EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.Event);
         schema.Inputs[11].Id.ShouldBe("weapons.fire_primary");
         schema.Inputs[11].DiscreteBehavior.ShouldBe(DiscreteBehavior.Momentary);
         schema.Inputs[12].Id.ShouldBe("weapons.reload");

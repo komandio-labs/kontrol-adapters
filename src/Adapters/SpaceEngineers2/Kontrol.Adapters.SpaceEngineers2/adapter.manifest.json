@@ -11,7 +11,7 @@
   "supportedMethods": [ "NativePluginParameter", "ProcessInjection" ],
   "defaultDeploymentMethod": "NativePluginParameter",
   "image": "icon.png",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.2",
   "gameProductVersion": "2.4.0.86",
   "relevantAssemblies": [
     "Game2.Client.dll",

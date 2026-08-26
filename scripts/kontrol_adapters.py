@@ -23,6 +23,10 @@ ADAPTERS = {
     "space-engineers-2": ("SpaceEngineers2", "Kontrol.Adapters.SpaceEngineers2"),
     "spaceengineers2": ("SpaceEngineers2", "Kontrol.Adapters.SpaceEngineers2"),
 }
+CANONICAL_ADAPTER_SLUGS = {
+    "dummyadapter": "dummy-adapter",
+    "spaceengineers2": "space-engineers-2",
+}
 SE2_ASSEMBLIES = (
     "Game2.Client.dll", "Game2.Simulation.dll", "VRage.Core.dll", "VRage.Core.Game.dll",
     "VRage.DCS.dll", "VRage.Library.dll", "VRage.Physics.dll", "VRage.Input.dll",
@@ -57,6 +61,11 @@ def adapter_paths(slug: str) -> tuple[Path, Path, Path]:
         raise RuntimeError(f"Unknown adapter '{slug}'.") from error
     root = ROOT / "src" / "Adapters" / folder
     return root, root / assembly_name / f"{assembly_name}.csproj", root / f"{assembly_name}.Tests" / f"{assembly_name}.Tests.csproj"
+
+
+def canonical_adapter_slug(slug: str) -> str:
+    """Translate accepted CLI aliases before passing a slug to AdapterTool."""
+    return CANONICAL_ADAPTER_SLUGS.get(slug, slug)
 
 
 def manifest(slug: str) -> dict:
@@ -305,6 +314,7 @@ def validate_repository() -> None:
 
 
 def package(slug: str, version: str, game_directory: str | None, output: str | None, overwrite: bool) -> None:
+    slug = canonical_adapter_slug(slug)
     data = manifest(slug)
     if data["adapterVersion"] != version:
         raise RuntimeError(f"Requested version {version} does not match manifest version {data['adapterVersion']}.")
