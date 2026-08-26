@@ -56,6 +56,22 @@ If the detected game version differs from the validated baseline, the project
 can still compile, but it is not supported until the compatibility checks have
 been completed and recorded under `compatibility/game-builds/`.
 
+### Optional assembly decompilation scratch tool
+
+The repository includes a local-only helper for inspecting the selected SE2
+assemblies during compatibility work. It is not part of the adapter package or
+the main solution. Supply both paths explicitly; never add game-owned binaries
+or generated decompiled source to Git:
+
+```powershell
+dotnet run --project .\src\Adapters\SpaceEngineers2\scratch\DecompileScratch\DecompileScratch.csproj -- `
+  --game-directory "<SE2 installation>\Game2" `
+  --output-directory ".\src\Adapters\SpaceEngineers2\scratch\DecompileScratch\output"
+```
+
+The output directory is ignored by Git. The utility returns a nonzero exit code
+if any selected assembly fails to decompile.
+
 ## Compatibility and maintenance contract
 
 This document is the technical reference for the Kontrol input schema and

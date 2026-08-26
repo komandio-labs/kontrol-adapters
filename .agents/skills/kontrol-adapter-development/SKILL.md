@@ -27,7 +27,13 @@ description: Create, extend, debug, review, or test Kontrol game adapters and th
 - Keep adapters independent from WPF and host-owned device polling. Cross process/thread boundaries only through SDK contracts and immutable values.
 - Keep normal adapter diagnostics on host IPC. Do not add normal game-side disk logging; keep any debug fallback explicit and opt-in.
 - Never commit proprietary game assemblies, local references, build output, logs, dumps, or generated packages.
-- Do not hardcode developer-specific absolute paths. Resolve repository, game, Steam, and user-document locations at runtime.
+
+## Repository privacy and path hygiene
+
+- Never add developer names, personal email addresses, usernames, home directories, hostnames, machine identifiers, absolute local paths, Steam installation paths, or AppData paths to tracked files, documentation, examples, tests, logs, compatibility evidence, generated metadata, or issue bodies.
+- Do not hardcode developer-specific paths or machine-specific defaults. Use generic placeholders, command-line parameters, environment variables, runtime discovery, temporary test directories, and relative repository paths.
+- Redact personal and machine-specific values from logs, stack traces, command lines, screenshots, and diagnostic evidence before recording or sharing them.
+- Before committing, search the complete diff and tracked-file set for personal identifiers and machine-specific path patterns. Organization and product metadata such as `Komandio Labs` is allowed.
 
 ## Implement and document
 

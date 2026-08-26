@@ -81,7 +81,9 @@ public class InstallerTests
     [Test]
     public void NativePluginParameter_UsesThePluginLoaderArgumentSyntax()
     {
-        SpaceEngineers2Installer.BuildNativePluginArgument(@"D:\Games\SE2\Game2\Kontrol.Adapters.SpaceEngineers2.dll")
-            .ShouldBe(@"-plugins:D:\Games\SE2\Game2\Kontrol.Adapters.SpaceEngineers2.dll");
+        string pluginPath = Path.Combine("test-game", "Game2", "Kontrol.Adapters.SpaceEngineers2.dll");
+
+        SpaceEngineers2Installer.BuildNativePluginArgument(pluginPath)
+            .ShouldBe($"-plugins:{pluginPath}");
     }
 }

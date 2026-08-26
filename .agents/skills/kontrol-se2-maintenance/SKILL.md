@@ -28,7 +28,7 @@ Do not guess private APIs from method names alone. Inspect the installed assembl
 
 Start with evidence, not a presumed game-API break. Read [references/regression-triage.md](references/regression-triage.md) and record the following in the owning GitHub issue:
 
-1. Installed SE2 product version, Steam build ID, install path, and hashes/MVIDs of every manifest-relevant assembly.
+1. Installed SE2 product version, Steam build ID, a sanitized install-location category (for example, Steam library or custom library), and hashes/MVIDs of every manifest-relevant assembly. Never record an absolute install path, username, home directory, hostname, or other developer-machine detail.
 2. Adapter manifest target version, deployed adapter/SDK/Harmony file presence, versions, timestamps, and SHA-256 equality with the active Kontrol adapter package.
 3. The selected deployment method and the evidence level for launch: source-level expected arguments, an observed Kontrol launch log/command line, or an in-game adapter load log. Never describe one level as another.
 4. The first adapter and host error with timestamp and stack trace. Search both current and prior session logs; a successful Harmony message proves assembly load/patch registration only, not working IPC, cockpit controls, or telemetry.
@@ -53,6 +53,13 @@ When logs do not identify the selected method and sanitized launch arguments, ad
 - Preserve native mouse and keyboard behavior while Kontrol Input Control is enabled or disabled.
 - Keep schema indices append-only and update the README's mapping/runtime documentation with every hook or behavior change.
 - Never commit files from `references/` or any installed SE2 assembly.
+
+## Repository privacy and path hygiene
+
+- Never add developer names, personal email addresses, usernames, home directories, hostnames, machine identifiers, absolute local paths, Steam installation paths, or AppData paths to tracked files, documentation, examples, tests, logs, compatibility evidence, generated metadata, or issue bodies.
+- Use generic placeholders such as `<SE2 installation>`, command-line parameters, environment variables, runtime discovery, temporary test directories, and relative repository paths instead of machine-specific defaults.
+- Redact personal and machine-specific values from logs, stack traces, command lines, screenshots, and diagnostic evidence before recording or sharing them.
+- Before committing, search the complete diff and tracked-file set for personal identifiers and machine-specific path patterns. Organization and product metadata such as `Komandio Labs` is allowed.
 
 ## Validate locally
 

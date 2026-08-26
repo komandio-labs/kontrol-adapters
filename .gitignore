@@ -28,6 +28,7 @@ publish/
 
 ## Game-owned reference assemblies are prepared locally and must never be committed.
 /src/Adapters/*/references/
+/src/Adapters/SpaceEngineers2/scratch/DecompileScratch/output/
 
 ## Ignore NuGet packages generated on build
 *.nupkg

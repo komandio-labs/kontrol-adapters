@@ -15,13 +15,20 @@
 
 - Host logs: `%LOCALAPPDATA%\\Kontrol\\logs\\Kontrol-*.log`
 - Adapter fallback log when debug is enabled: `%LOCALAPPDATA%\\Kontrol\\adapters\\<slug>\\logs\\adapter.log`
-- Native plugin deployment: `<SE2 install>\\Game2\\Kontrol.Adapters.SpaceEngineers2.dll`, `Kontrol.Sdk.dll`, and `0Harmony.dll`
+- Native plugin deployment: `<SE2 install>\\Game2\\Kontrol.Adapters.SpaceEngineers2.dll`, `Kontrol.Sdk.dll`, and `0Harmony.dll`; keep the install root as a placeholder or sanitized category
 - Search host logs for `RuntimeWorker`, `Input runtime worker stopped unexpectedly`, `JsonException`, deployment, launch, and `-plugins`.
 - Search adapter logs for runtime location, assembly count, Harmony registration, initialization errors, and first cockpit/input messages.
 
 ## Status-contract failure pattern
 
 If the adapter log says Harmony registered but the host worker stops immediately, capture the JSON before editing. Compare its `State` representation (for example `"Active"` versus `1`) with the host deserializer's configured converters and with the SDK assembly actually loaded by the host. Check for package-versus-project-reference drift. Fix the wire contract deliberately and test both the legacy and current payload policy if compatibility is required.
+
+## Privacy guardrail
+
+Keep absolute install paths, usernames, home directories, hostnames, machine
+identifiers, full command lines containing local paths, private assemblies, full
+dumps, and user-specific logs out of commits and issue bodies. Use placeholders,
+sanitized location categories, and redacted evidence instead.
 
 ## Reporting template
 

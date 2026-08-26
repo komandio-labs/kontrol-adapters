@@ -10,8 +10,21 @@
     <AssemblyVersion>$(KontrolSdkAssemblyVersion)</AssemblyVersion>
     <FileVersion>$(KontrolSdkVersion)</FileVersion>
     <InformationalVersion>$(KontrolSdkVersion)</InformationalVersion>
-    <Authors>Tomer</Authors>
+    <Authors>Komandio Labs</Authors>
+    <Company>Komandio Labs</Company>
+    <Product>Kontrol</Product>
+    <Copyright>Copyright © 2026 Komandio Labs</Copyright>
+    <RepositoryUrl>https://github.com/komandio-labs/kontrol-adapters</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://www.komandio.com/kontrol</PackageProjectUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>Kontrol;game adapters;SDK;IPC</PackageTags>
     <Description>Shared SDK contracts and interfaces for Kontrol game adapters.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>
