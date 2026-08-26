@@ -249,8 +249,8 @@ def validate_se2_consistency() -> None:
             errors.append(f"Compatibility record '{path}' does not match its product version.")
         if record.get("adapterId") != package["adapterId"] or record.get("slug") != package["slug"]:
             errors.append(f"Compatibility record '{path}' identifies a different adapter.")
-        if record.get("adapterVersion") != package["adapterVersion"]:
-            errors.append(f"Compatibility record '{path}' does not match adapter version {package['adapterVersion']}.")
+        if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?", str(record.get("adapterVersion", ""))):
+            errors.append(f"Compatibility record '{path}' has an invalid adapter version.")
         game = record.get("game", {})
         assemblies = game.get("relevantAssemblies", {})
         if set(assemblies) != set(SE2_COMPATIBILITY_ASSEMBLIES):

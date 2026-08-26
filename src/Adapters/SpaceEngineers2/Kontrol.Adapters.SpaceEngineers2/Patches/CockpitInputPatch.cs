@@ -94,6 +94,7 @@ public static class CockpitInputPatch
     private static bool _cockpitHookObserved;
     private static bool _missingObservedBlockReported;
     private static ulong _previousTriggeredActions;
+    private static long _nextTranslationTraceTick;
 
     private static void EnsureChannels()
     {
@@ -134,6 +135,7 @@ public static class CockpitInputPatch
             _wasKontrolActiveInCockpit = false;
             _lastOverrideActiveState = false;
             _lastObservedBlock = null;
+            _nextTranslationTraceTick = 0;
         }
     }
 
@@ -377,7 +379,7 @@ public static class CockpitInputPatch
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
-            MergeTranslation(ref movementInputs, surge, sway, heave, roll, instance, observedBlock as CubeBlockComponent);
+            MergeTranslation(ref movementInputs, in control, surge, sway, heave, roll, instance, observedBlock as CubeBlockComponent);
             MergeRotationDirections(ref lookUp, ref lookDown, ref lookLeft, ref lookRight, pitch, yaw);
 
             CommitControlData(instance);
@@ -461,6 +463,7 @@ public static class CockpitInputPatch
 
                 // Closed-loop velocity throttle for translation (Surge / Sway / Heave)
                 var (fwd, back, right, left, up, down) = ComputeTargetVelocityThrottle(surge, sway, heave, instance, observedBlock);
+                WriteTranslationTrace("DirectAngularFlight", in control, surge, sway, heave, fwd, back, right, left, up, down, instance, observedBlock);
 
                 // Build translation from Kontrol IPC, then merge native keyboard values via Math.Max
                 var movementInputs = new MovementInputs
@@ -566,11 +569,12 @@ public static class CockpitInputPatch
         }
     }
 
-    private static void MergeTranslation(
-        ref MovementInputs movementInputs, float surge, float sway, float heave, float roll,
+    private static unsafe void MergeTranslation(
+        ref MovementInputs movementInputs, in InputFrame control, float surge, float sway, float heave, float roll,
         CockpitInputHandlerComponent? instance = null, CubeBlockComponent? observedBlock = null)
     {
         var (fwd, back, right, left, up, down) = ComputeTargetVelocityThrottle(surge, sway, heave, instance, observedBlock);
+        WriteTranslationTrace("NativeReticleSteering", in control, surge, sway, heave, fwd, back, right, left, up, down, instance, observedBlock);
         movementInputs.Forward = Math.Max(movementInputs.Forward, fwd);
         movementInputs.Backward = Math.Max(movementInputs.Backward, back);
         movementInputs.Right = Math.Max(movementInputs.Right, right);
@@ -579,6 +583,36 @@ public static class CockpitInputPatch
         movementInputs.Down = Math.Max(movementInputs.Down, down);
         movementInputs.RollRight = Math.Max(movementInputs.RollRight, Math.Max(roll, 0f));
         movementInputs.RollLeft = Math.Max(movementInputs.RollLeft, Math.Max(-roll, 0f));
+    }
+
+    private static unsafe void WriteTranslationTrace(
+        string flightMode, in InputFrame control, float surge, float sway, float heave,
+        float forward, float backward, float right, float left, float up, float down,
+        CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock)
+    {
+        long now = Environment.TickCount64;
+        if (now < _nextTranslationTraceTick) return;
+        _nextTranslationTraceTick = now + 250;
+
+        float currentSurge = 0f, currentSway = 0f, currentHeave = 0f, maxSpeed = 100f;
+        var gridEntity = observedBlock?.Grid?.Entity;
+        if (gridEntity?.Data.Has<Keen.VRage.Physics.Data.RigidBodyData>() == true)
+        {
+            var observerChild = (ChildTransformComponent?)ObserverChildTransformField?.GetValue(instance);
+            var orientation = observerChild?.Data.Get<RelativeTransform>().Orientation
+                ?? observedBlock?.Data.GetRelativeTransform().Orientation
+                ?? Quaternion.Identity;
+            Vector3 localVelocity = Quaternion.Inverse(orientation) * gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>().LinearVelocity;
+            currentSurge = -localVelocity.Z;
+            currentSway = localVelocity.X;
+            currentHeave = localVelocity.Y;
+        }
+
+        if (VelocityLimitsField?.GetValue(instance) is IVelocityLimitProvider limits && limits.LinearVelocityLimit > 0f)
+            maxSpeed = limits.LinearVelocityLimit;
+
+        SpaceEngineers2AdapterDiagnostics.WriteDebug(
+            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; target velocity surge={surge * maxSpeed:F2}, sway={sway * maxSpeed:F2}, heave={heave * maxSpeed:F2}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; submitted thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
     }
 
     internal static (float positive, float negative) ComputeAxisThrottle(
