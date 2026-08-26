@@ -41,6 +41,9 @@ public sealed class SpaceEngineers2SettingsManager : IDisposable
     public string FlightModelMode => _currentSnapshot.GetString("flightModelMode", "DirectAngularFlight");
     public bool IsNativeReticleSteering => string.Equals(FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
     public bool IsDirectAngularFlight => string.Equals(FlightModelMode, "DirectAngularFlight", StringComparison.OrdinalIgnoreCase);
+    public string TranslationControlMode => _currentSnapshot.GetString("translationControlMode", "DirectThrust");
+    public bool IsVelocityHoldTranslation => string.Equals(TranslationControlMode, "VelocityHold", StringComparison.OrdinalIgnoreCase);
+    public float VelocityHoldMaxTargetSpeed => _currentSnapshot.GetNumber("velocityHoldMaxTargetSpeed", 300f);
     public float DirectAngularAcceleration => _currentSnapshot.GetNumber("directAngularAcceleration", 1.3f);
     public float DirectAngularDeceleration => _currentSnapshot.GetNumber("directAngularDeceleration", 1.0f);
     public float DirectAngularMaxRate => _currentSnapshot.GetNumber("directAngularMaxRate", 0.85f);

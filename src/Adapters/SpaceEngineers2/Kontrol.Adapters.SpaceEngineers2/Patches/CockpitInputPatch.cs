@@ -461,10 +461,12 @@ public static class CockpitInputPatch
                 float nativeLookLeft = (float?)LookLeftField?.GetValue(instance) ?? 0f;
                 float nativeLookRight = (float?)LookRightField?.GetValue(instance) ?? 0f;
 
-                // Translation is direct, proportional thrust. The host has already
-                // applied the configured deadzone and response curve.
-                var (fwd, back, right, left, up, down) = ComputeProportionalThrust(surge, sway, heave);
-                WriteTranslationTrace("DirectAngularFlight", in control, surge, sway, heave, fwd, back, right, left, up, down, instance, observedBlock);
+                var settings = SpaceEngineers2SettingsManager.Instance;
+                var (fwd, back, right, left, up, down) = ComputeTranslationThrust(
+                    settings, surge, sway, heave, instance, observedBlock, out var maximumTargetSpeed);
+                WriteTranslationTrace(
+                    $"DirectAngularFlight/{settings.TranslationControlMode}", in control, surge, sway, heave,
+                    fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
 
                 // Build translation from Kontrol IPC, then merge native keyboard values via Math.Max
                 var movementInputs = new MovementInputs
@@ -480,13 +482,16 @@ public static class CockpitInputPatch
                     Pitch = pitch,
                     Yaw = yaw
                 };
+                if (settings.IsVelocityHoldTranslation)
+                {
+                    MergeVelocityHoldTranslation(ref movementInputs, fwd, back, right, left, up, down);
+                }
 
                 // Commit translation directly to grid entity without polluting instance._movementInputs
                 // (which would make nativeMovement sticky across frames).
                 gridEntity.Data.UpdateControlData(in movementInputs, new Quaternion?(observerOrientation), isAngular: true);
 
                 // Angular velocity target computed and set LAST so it overrides UpdateControlData's angular output
-                var settings = SpaceEngineers2SettingsManager.Instance;
                 float maxRate = settings.DirectAngularMaxRate;
                 float accelRate = settings.DirectAngularAcceleration;
                 float decelRate = settings.DirectAngularDeceleration;
@@ -574,14 +579,22 @@ public static class CockpitInputPatch
         ref MovementInputs movementInputs, in InputFrame control, float surge, float sway, float heave, float roll,
         CockpitInputHandlerComponent? instance = null, CubeBlockComponent? observedBlock = null)
     {
-        var (fwd, back, right, left, up, down) = ComputeProportionalThrust(surge, sway, heave);
-        WriteTranslationTrace("NativeReticleSteering", in control, surge, sway, heave, fwd, back, right, left, up, down, instance, observedBlock);
+        var settings = SpaceEngineers2SettingsManager.Instance;
+        var (fwd, back, right, left, up, down) = ComputeTranslationThrust(
+            settings, surge, sway, heave, instance, observedBlock, out var maximumTargetSpeed);
+        WriteTranslationTrace(
+            $"NativeReticleSteering/{settings.TranslationControlMode}", in control, surge, sway, heave,
+            fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
         movementInputs.Forward = Math.Max(movementInputs.Forward, fwd);
         movementInputs.Backward = Math.Max(movementInputs.Backward, back);
         movementInputs.Right = Math.Max(movementInputs.Right, right);
         movementInputs.Left = Math.Max(movementInputs.Left, left);
         movementInputs.Up = Math.Max(movementInputs.Up, up);
         movementInputs.Down = Math.Max(movementInputs.Down, down);
+        if (settings.IsVelocityHoldTranslation)
+        {
+            MergeVelocityHoldTranslation(ref movementInputs, fwd, back, right, left, up, down);
+        }
         movementInputs.RollRight = Math.Max(movementInputs.RollRight, Math.Max(roll, 0f));
         movementInputs.RollLeft = Math.Max(movementInputs.RollLeft, Math.Max(-roll, 0f));
     }
@@ -589,28 +602,17 @@ public static class CockpitInputPatch
     private static unsafe void WriteTranslationTrace(
         string flightMode, in InputFrame control, float surge, float sway, float heave,
         float forward, float backward, float right, float left, float up, float down,
-        CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock)
+        CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock, float maximumTargetSpeed = 0f)
     {
         long now = Environment.TickCount64;
         if (now < _nextTranslationTraceTick) return;
         _nextTranslationTraceTick = now + 250;
 
         float currentSurge = 0f, currentSway = 0f, currentHeave = 0f;
-        var gridEntity = observedBlock?.Grid?.Entity;
-        if (gridEntity?.Data.Has<Keen.VRage.Physics.Data.RigidBodyData>() == true)
-        {
-            var observerChild = (ChildTransformComponent?)ObserverChildTransformField?.GetValue(instance);
-            var orientation = observerChild?.Data.Get<RelativeTransform>().Orientation
-                ?? observedBlock?.Data.GetRelativeTransform().Orientation
-                ?? Quaternion.Identity;
-            Vector3 localVelocity = Quaternion.Inverse(orientation) * gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>().LinearVelocity;
-            currentSurge = -localVelocity.Z;
-            currentSway = localVelocity.X;
-            currentHeave = localVelocity.Y;
-        }
+        TryGetLocalVelocity(instance, observedBlock, out currentSurge, out currentSway, out currentHeave);
 
         SpaceEngineers2AdapterDiagnostics.WriteDebug(
-            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; submitted proportional thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
+            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; Vmax={maximumTargetSpeed:F1} m/s; submitted translation thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
     }
 
     internal static (float fwd, float back, float right, float left, float up, float down) ComputeProportionalThrust(
@@ -624,6 +626,136 @@ public static class CockpitInputPatch
             Math.Max(surge, 0f), Math.Max(-surge, 0f),
             Math.Max(sway, 0f), Math.Max(-sway, 0f),
             Math.Max(heave, 0f), Math.Max(-heave, 0f));
+    }
+
+    internal static (float fwd, float back, float right, float left, float up, float down) ComputeVelocityHoldThrust(
+        float surge, float sway, float heave,
+        float actualSurge, float actualSway, float actualHeave,
+        float maximumTargetSpeedMetersPerSecond) =>
+        TranslationVelocityController.ComputeVelocityHoldThrust(
+            surge, sway, heave, actualSurge, actualSway, actualHeave, maximumTargetSpeedMetersPerSecond);
+
+    private static void MergeVelocityHoldTranslation(
+        ref MovementInputs movementInputs,
+        float forward, float backward, float right, float left, float up, float down)
+    {
+        MergeVelocityHoldAxis(ref movementInputs.Forward, ref movementInputs.Backward, forward, backward);
+        MergeVelocityHoldAxis(ref movementInputs.Right, ref movementInputs.Left, right, left);
+        MergeVelocityHoldAxis(ref movementInputs.Up, ref movementInputs.Down, up, down);
+    }
+
+    private static void MergeVelocityHoldAxis(ref float positive, ref float negative, float controlledPositive, float controlledNegative)
+    {
+        if (controlledPositive > 0f)
+        {
+            positive = Math.Max(positive, controlledPositive);
+            negative = 0f;
+            return;
+        }
+
+        if (controlledNegative > 0f)
+        {
+            positive = 0f;
+            negative = Math.Max(negative, controlledNegative);
+            return;
+        }
+
+        // The controller has reached its target. Preserve a native translation
+        // request, but collapse opposite key inputs to one signed command.
+        float merged = positive - negative;
+        positive = Math.Max(merged, 0f);
+        negative = Math.Max(-merged, 0f);
+    }
+
+    private static (float fwd, float back, float right, float left, float up, float down) ComputeTranslationThrust(
+        SpaceEngineers2SettingsManager settings,
+        float surge, float sway, float heave,
+        CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock,
+        out float maximumTargetSpeed)
+    {
+        if (!settings.IsVelocityHoldTranslation)
+        {
+            maximumTargetSpeed = 0f;
+            return ComputeProportionalThrust(surge, sway, heave);
+        }
+
+        maximumTargetSpeed = ResolveVelocityHoldMaximumSpeed(instance, settings.VelocityHoldMaxTargetSpeed);
+        if (!TryGetLocalVelocity(instance, observedBlock, out var actualSurge, out var actualSway, out var actualHeave))
+        {
+            // A velocity target without a cockpit-frame measurement is unsafe. Keep
+            // current direct behavior until SE2 provides the rigid body and observer.
+            return ComputeProportionalThrust(surge, sway, heave);
+        }
+
+        return ComputeVelocityHoldThrust(
+            surge, sway, heave, actualSurge, actualSway, actualHeave, maximumTargetSpeed);
+    }
+
+    private static bool TryGetLocalVelocity(
+        CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock,
+        out float surge, out float sway, out float heave)
+    {
+        surge = 0f;
+        sway = 0f;
+        heave = 0f;
+        var gridEntity = observedBlock?.Grid?.Entity;
+        if (gridEntity?.Data.Has<Keen.VRage.Physics.Data.RigidBodyData>() != true) return false;
+
+        var observerChild = (ChildTransformComponent?)ObserverChildTransformField?.GetValue(instance);
+        var orientation = observerChild?.Data.Get<RelativeTransform>().Orientation
+            ?? observedBlock?.Data.GetRelativeTransform().Orientation
+            ?? Quaternion.Identity;
+        Vector3 localVelocity = Quaternion.Inverse(orientation) * gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>().LinearVelocity;
+        surge = -localVelocity.Z;
+        sway = localVelocity.X;
+        heave = localVelocity.Y;
+        return float.IsFinite(surge) && float.IsFinite(sway) && float.IsFinite(heave);
+    }
+
+    private static float ResolveVelocityHoldMaximumSpeed(CockpitInputHandlerComponent? instance, float configuredMaximumSpeed)
+    {
+        float configured = TranslationVelocityController.NormalizeMaximumSpeed(configuredMaximumSpeed);
+        if (instance is null) return configured;
+
+        try
+        {
+            object? limits = VelocityLimitsField?.GetValue(instance);
+            if (TryReadVelocityLimit(limits, out float gameMaximumSpeed))
+            {
+                return Math.Min(configured, gameMaximumSpeed);
+            }
+        }
+        catch (Exception ex)
+        {
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Could not read SE2 velocity limits; using configured Velocity Hold limit. {ex.Message}");
+        }
+
+        return configured;
+    }
+
+    private static bool TryReadVelocityLimit(object? limits, out float maximumSpeed)
+    {
+        maximumSpeed = 0f;
+        if (limits is null) return false;
+        if (limits is float single && float.IsFinite(single) && single > 0f)
+        {
+            maximumSpeed = single;
+            return true;
+        }
+
+        Type type = limits.GetType();
+        foreach (string memberName in new[] { "LinearVelocityLimit", "LinearVelocity", "MaxLinearVelocity", "MaximumLinearVelocity", "MaxSpeed" })
+        {
+            object? value = type.GetProperty(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(limits)
+                ?? type.GetField(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(limits);
+            if (value is float candidate && float.IsFinite(candidate) && candidate > 0f)
+            {
+                maximumSpeed = candidate;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void MergeRotationDirections(

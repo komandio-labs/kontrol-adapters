@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Adds an independent `Velocity Hold` translation-control option. It maps the
+  current shaped translation axis to a local target velocity and uses
+  axis-scaled proportional feedback, while retaining `Direct Thrust` as the
+  default unchanged mapping.
+- Adds a configurable 1–300 m/s target-speed cap (300 m/s / 1080 km/h by
+  default) and uses a lower private SE2 velocity limit when available.
+- Adds focused controller and settings tests. SE2 dampener interaction remains
+  pending interactive game validation; this local package is not a published
+  compatibility claim.
+
 ## 0.2.0 — local validation build
 
 - Changes forward/reverse, strafe left/right, and lift up/down from closed-loop

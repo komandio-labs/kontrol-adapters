@@ -105,6 +105,82 @@ public class CockpitInputPatchTests
         down.ShouldBe(0.75f);
     }
 
+    [TestCase(0.2f, 0f, 0.2f)]
+    [TestCase(0.9f, 0f, 0.9f)]
+    [TestCase(0.2f, 30f, 0.1f)]
+    [TestCase(0.2f, 60f, 0f)]
+    [TestCase(0.2f, 120f, -0.2f)]
+    [TestCase(-0.2f, 60f, -0.2f)]
+    [TestCase(0.2f, -300f, 0.2f)]
+    public void ComputeVelocityHoldAxis_UsesLiveSignedVelocityFeedback(float input, float actualVelocity, float expectedOutput)
+    {
+        TranslationVelocityController.ComputeAxis(input, actualVelocity, 300f).ShouldBe(expectedOutput, 0.0001f);
+    }
+
+    [Test]
+    public void ComputeVelocityHoldThrust_SplitsSignedAxesWithoutOpposingCommands()
+    {
+        var (forward, backward, right, left, up, down) = CockpitInputPatch.ComputeVelocityHoldThrust(
+            surge: -0.5f, sway: 0.5f, heave: -0.5f,
+            actualSurge: 0f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f);
+
+        forward.ShouldBe(0f);
+        backward.ShouldBe(0.5f);
+        right.ShouldBe(0.5f);
+        left.ShouldBe(0f);
+        up.ShouldBe(0f);
+        down.ShouldBe(0.5f);
+        (forward > 0f && backward > 0f).ShouldBeFalse();
+        (right > 0f && left > 0f).ShouldBeFalse();
+        (up > 0f && down > 0f).ShouldBeFalse();
+    }
+
+    [Test]
+    public void ComputeVelocityHoldThrust_RecalculatesTargetOnEveryUpdate()
+    {
+        var first = CockpitInputPatch.ComputeVelocityHoldThrust(0.2f, 0f, 0f, 0f, 0f, 0f, 300f);
+        var changed = CockpitInputPatch.ComputeVelocityHoldThrust(0.8f, 0f, 0f, 0f, 0f, 0f, 300f);
+        var reducedWhileMoving = CockpitInputPatch.ComputeVelocityHoldThrust(0.2f, 0f, 0f, 180f, 0f, 0f, 300f);
+
+        first.fwd.ShouldBe(0.2f, 0.0001f);
+        changed.fwd.ShouldBe(0.8f, 0.0001f);
+        reducedWhileMoving.fwd.ShouldBe(0f);
+        reducedWhileMoving.back.ShouldBe(0.2f, 0.0001f);
+    }
+
+    [Test]
+    public void ComputeVelocityHoldThrust_NeutralInputSubmitsNoAdapterThrust()
+    {
+        var (forward, backward, right, left, up, down) = CockpitInputPatch.ComputeVelocityHoldThrust(
+            0f, 0f, 0f, 100f, -100f, 50f, 300f);
+
+        forward.ShouldBe(0f);
+        backward.ShouldBe(0f);
+        right.ShouldBe(0f);
+        left.ShouldBe(0f);
+        up.ShouldBe(0f);
+        down.ShouldBe(0f);
+    }
+
+    [Test]
+    public void VelocityHoldMaximumSpeed_Converts300MetersPerSecondTo1080KilometersPerHour()
+    {
+        TranslationVelocityController.KilometersPerHour(300f).ShouldBe(1080f, 0.001f);
+    }
+
+    [Test]
+    public void VelocityHoldController_HasNoDampenerStateAndDoesNotChangeItsOutputForDampenerPolicy()
+    {
+        // Dampener preference remains game-owned; Velocity Hold only owns its
+        // signed translation command, so ON/OFF use the same controller output.
+        float commandWithDampenersOn = TranslationVelocityController.ComputeAxis(0.5f, 75f, 300f);
+        float commandWithDampenersOff = TranslationVelocityController.ComputeAxis(0.5f, 75f, 300f);
+
+        commandWithDampenersOn.ShouldBe(0.25f, 0.0001f);
+        commandWithDampenersOff.ShouldBe(commandWithDampenersOn, 0.0001f);
+    }
+
     [TestCase("ToggleDampeners")]
     [TestCase("ToggleLights")]
     [TestCase("ToggleParkingBrakes")]
