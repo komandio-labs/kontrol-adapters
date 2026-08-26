@@ -1,21 +1,45 @@
 # Kontrol Adapters
 
-Kontrol is a Windows application for playing supported PC games with additional
-physical input devices: joysticks, throttles, button boxes, wheels, pedals, and
-custom controllers. It lets a player configure those devices alongside the
-usual keyboard, mouse, and game controller.
+This repo is the public, open-source extension layer for
+[Kontrol](https://www.komandio.com/kontrol). It contains the C# SDK,
+game-specific adapters, compatibility metadata, and
+developer and publishing tools used to connect physical input hardware to
+supported PC games.
 
-This repository contains the game-specific adapters and public SDK used by the
-[Kontrol app](https://www.komandio.com/kontrol/). The app discovers
-devices, lets the player create mappings and profiles, and manages the game
-session. An adapter makes that input meaningful to one game: it receives
-normalized input from the Kontrol host over local IPC, translates it to that
-game's runtime input model, and can return telemetry, status, and diagnostics.
+An adapter makes hardware input meaningful to one game. It receives normalized
+input from the Kontrol host over local IPC, translates it to that game's native
+runtime input model, and can return telemetry, status, and diagnostics. The SDK
+defines the contracts, IPC structures, settings, and metadata that make this
+boundary reliable and extensible.
+
+This repository is intended for developers who want to inspect how an
+integration works, build or test an adapter, or contribute support for another
+simulation title. Adapter source, manifests, tests, and documentation live
+together so each integration can document its own game-version compatibility
+and limitations.
 
 Where a game adapter supports it, this is native game control rather than a
 simple keyboard-key remap. The adapter speaks to the game's own input model, so
 physical controls can be represented as game actions with game-specific
 semantics.
+
+## The free Kontrol app
+
+[Kontrol](https://www.komandio.com/kontrol) is a free Windows application
+developed by Komandio Labs. It lets supported PC games use additional physical
+input devices such as joysticks, throttles, button boxes, wheels, pedals, and
+custom controllers alongside a keyboard, mouse, or game controller.
+
+Kontrol discovers connected devices, lets players configure mappings and
+profiles, and manages the game session. It is designed for simulation hardware
+including full 6-DoF dual-stick (HOSAS) setups, HOTAS controls, throttles, and
+rudder pedals. The official no-charge release does not require an account,
+product key, license activation, device binding, or payment information.
+
+The app uses the SDK and adapters in this repository to communicate with a
+supported game. The host handles device polling, configuration, mappings, and
+the session runtime; an adapter handles the game-specific translation. You can
+[get Kontrol on itch.io](https://komandio-labs.itch.io/kontrol).
 
 ## How it fits together
 
@@ -47,25 +71,29 @@ release commands are provided by `scripts/kontrol_adapters.py`.
 ```powershell
 git clone https://github.com/komandio-labs/kontrol-adapters.git
 Set-Location kontrol-adapters
-python ./scripts/kontrol_adapters.py sync-se2
 dotnet build Kontrol.Adapters.slnx
 dotnet test Kontrol.Adapters.slnx
 ```
 
-The SE2 preparation script copies game-owned reference assemblies from a local Steam installation into an ignored versioned directory. Game binaries are never committed or redistributed by this repository.
+These commands cover the repository's SDK, tooling, adapters, and sandbox. Some
+adapters require locally installed game references or other prerequisites. Read
+an adapter's README before building or validating that integration; the
+[Space Engineers 2 adapter README](src/Adapters/SpaceEngineers2/README.md)
+documents its local-reference setup, compatibility checks, and game-specific
+validation workflow.
 
-Validate repository metadata and run a targeted adapter check with the local-first tooling:
+Validate repository metadata and run a targeted adapter check with the
+local-first tooling:
 
 ```powershell
 python ./scripts/kontrol_adapters.py validate
 python ./scripts/kontrol_adapters.py test --adapter dummyadapter
-python ./scripts/kontrol_adapters.py test --adapter spaceengineers2
 ```
 
-Create an unpublished local package only for an explicitly selected adapter:
+Create an unpublished local package for an explicitly selected adapter:
 
 ```powershell
-python ./scripts/kontrol_adapters.py pack --adapter dummyadapter --version 1.0.0
+python ./scripts/kontrol_adapters.py pack --adapter <adapter-id> --version <version>
 ```
 
 Packages are written to ignored `artifacts/` and are never uploaded by these
