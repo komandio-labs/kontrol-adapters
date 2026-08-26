@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,6 +26,14 @@ ADAPTERS = {
 SE2_ASSEMBLIES = (
     "Game2.Client.dll", "Game2.Simulation.dll", "VRage.Core.dll", "VRage.Core.Game.dll",
     "VRage.DCS.dll", "VRage.Library.dll", "VRage.Physics.dll", "VRage.Input.dll",
+)
+SE2_COMPATIBILITY_ASSEMBLIES = ("Game2.Client.dll", "VRage.Core.dll", "VRage.Library.dll")
+SE2_IPC_CHANNELS = (
+    r"Local\Kontrol_Input_space-engineers-2",
+    r"Local\Kontrol_Settings_space-engineers-2",
+    r"Local\Kontrol_Telemetry_space-engineers-2",
+    r"Local\Kontrol_Logs_space-engineers-2",
+    r"Local\Kontrol_AdapterStatus_space-engineers-2",
 )
 
 
@@ -101,6 +110,7 @@ def sync_se2(game_directory: str | None) -> Path:
     if not version:
         raise RuntimeError(f"Could not normalize the SE2 product version '{product}'.")
     adapter_root, _, _ = adapter_paths("spaceengineers2")
+    adapter_id = manifest("spaceengineers2")["adapterId"]
     reference_root = adapter_root / "references"
     destination = reference_root / version
     destination.mkdir(parents=True, exist_ok=True)
@@ -111,8 +121,8 @@ def sync_se2(game_directory: str | None) -> Path:
         evidence[name] = inspect_assembly(destination_file)
     inspection = {
         "schemaVersion": 1,
-        "adapterId": "SE2",
-        "gameDirectory": str(game2),
+        "adapterId": adapter_id,
+        "gameDirectory": r"<SE2 installation>\Game2",
         "productVersion": version,
         "inspectedAtUtc": datetime.now(timezone.utc).isoformat(),
         "relevantAssemblies": evidence,
@@ -139,8 +149,8 @@ def test_se2(game_directory: str | None, skip_sync: bool) -> None:
     inspection = reference / "inspection.json"
     if not inspection.is_file():
         raise RuntimeError(f"SE2 inspection evidence was not found: {inspection}")
-    tool("validate", "adapter", "--adapter", "spaceengineers2")
-    tool("validate", "compatibility", "--adapter", "spaceengineers2", "--inspection", str(inspection))
+    tool("validate", "adapter", "--adapter", "space-engineers-2")
+    tool("validate", "compatibility", "--adapter", "space-engineers-2", "--inspection", str(inspection))
     run("dotnet", "build", str(project), "-c", "Debug")
     run("dotnet", "test", str(tests), "-c", "Debug")
     checklist = reference / "manual-checklist.md"
@@ -174,8 +184,118 @@ def test_adapter(slug: str, game_directory: str | None, skip_sync: bool) -> None
     run("dotnet", "test", str(tests), "-c", "Debug")
 
 
+def se2_compatibility_records() -> list[tuple[Path, dict]]:
+    adapter_root, _, _ = adapter_paths("spaceengineers2")
+    records: list[tuple[Path, dict]] = []
+    for path in sorted((adapter_root / "compatibility" / "game-builds").glob("*.json")):
+        records.append((path, json.loads(path.read_text(encoding="utf-8"))))
+    if not records:
+        raise RuntimeError("No SE2 compatibility records were found.")
+    return records
+
+
+def validate_se2_consistency() -> None:
+    adapter_root, _, _ = adapter_paths("spaceengineers2")
+    package = manifest("spaceengineers2")
+    project_manifest = json.loads((adapter_root / "Kontrol.Adapters.SpaceEngineers2" / "adapter.manifest.json").read_text(encoding="utf-8"))
+    readme = (adapter_root / "README.md").read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    if package["adapterId"] != project_manifest["id"] or package["slug"] != project_manifest["slug"]:
+        errors.append("SE2 package.json and adapter.manifest.json identify different adapters.")
+    if package["adapterVersion"] != project_manifest["version"]:
+        errors.append("SE2 package.json and adapter.manifest.json have different adapter versions.")
+    if package["gameProductVersion"] != project_manifest["gameProductVersion"]:
+        errors.append("SE2 package.json and adapter.manifest.json have different game baselines.")
+
+    harmony_project = (adapter_root / "Kontrol.Adapters.SpaceEngineers2" / "Kontrol.Adapters.SpaceEngineers2.csproj").read_text(encoding="utf-8")
+    harmony_match = re.search(r'Include="Lib\.Harmony" Version="([^"]+)"', harmony_project)
+    expected_readme_values = {
+        "Adapter version": f"`{package['adapterVersion']}`",
+        "Current validated game version": f"`{package['gameProductVersion']}`",
+        "SDK contract version": f"`{package['sdkVersion']}`",
+        "Adapter input schema": f"Version `{package['inputSchemaVersion']}`",
+        "Adapter target framework": f"`{package['targetFramework']}`",
+        "Harmony package": f"`Lib.Harmony {harmony_match.group(1)}`" if harmony_match else "",
+        "Steam application ID": f"`{project_manifest['steamAppId']}`",
+    }
+    for label, value in expected_readme_values.items():
+        if not value or f"| {label} | {value} |" not in readme:
+            errors.append(f"SE2 README is missing current metadata for '{label}'.")
+
+    for channel in SE2_IPC_CHANNELS:
+        if channel not in readme:
+            errors.append(f"SE2 README is missing the actual IPC channel '{channel}'.")
+    if "Local\\Kontrol_Input_SE2" in readme or "Local\\Kontrol_Telemetry_SE2" in readme:
+        errors.append("SE2 README contains obsolete _SE2 IPC channel names.")
+    for obsolete in ("checked-in reference assemblies", "`V` by default"):
+        if obsolete in readme:
+            errors.append(f"SE2 README contains obsolete wording: {obsolete}.")
+
+    records = se2_compatibility_records()
+    record_fingerprints: dict[str, dict[tuple[str, str], set[str]]] = {}
+    for path, record in records:
+        version = record.get("game", {}).get("productVersion")
+        if path.stem != version:
+            errors.append(f"Compatibility record '{path}' does not match its product version.")
+        if record.get("adapterId") != package["adapterId"] or record.get("slug") != package["slug"]:
+            errors.append(f"Compatibility record '{path}' identifies a different adapter.")
+        if record.get("adapterVersion") != package["adapterVersion"]:
+            errors.append(f"Compatibility record '{path}' does not match adapter version {package['adapterVersion']}.")
+        game = record.get("game", {})
+        assemblies = game.get("relevantAssemblies", {})
+        if set(assemblies) != set(SE2_COMPATIBILITY_ASSEMBLIES):
+            errors.append(f"Compatibility record '{path}' must contain exactly the manifest compatibility assemblies.")
+        for name in SE2_COMPATIBILITY_ASSEMBLIES:
+            evidence = assemblies.get(name, {})
+            if evidence.get("fileVersion") != version:
+                errors.append(f"Compatibility record '{path}' has a mismatched file version for '{name}'.")
+            try:
+                uuid.UUID(evidence.get("mvid", ""))
+            except (ValueError, AttributeError):
+                errors.append(f"Compatibility record '{path}' has an invalid MVID for '{name}'.")
+            fingerprint = (str(evidence.get("sha256", "")).upper(), str(evidence.get("mvid", "")).lower())
+            record_fingerprints.setdefault(name, {}).setdefault(fingerprint, set()).add(str(version))
+
+        validation = record.get("validation", {})
+        date = validation.get("date")
+        result = validation.get("result")
+        row = f"| {date} | `{version}` | `{game.get('steamBuildId')}` | `{record.get('adapterVersion')}` | {result} |"
+        if row not in readme:
+            errors.append(f"SE2 README compatibility history is missing the row for '{version}'.")
+
+        reference = adapter_root / "references" / str(version)
+        if reference.is_dir():
+            inspection_path = reference / "inspection.json"
+            if not inspection_path.is_file():
+                errors.append(f"Local SE2 reference folder '{reference}' is missing inspection.json.")
+            else:
+                inspection = json.loads(inspection_path.read_text(encoding="utf-8"))
+                if inspection.get("productVersion") != version:
+                    errors.append(f"Local inspection '{inspection_path}' has a mismatched product version.")
+                if inspection.get("gameDirectory") != r"<SE2 installation>\Game2":
+                    errors.append(f"Local inspection '{inspection_path}' contains a machine-specific game path.")
+                inspected = inspection.get("relevantAssemblies", {})
+                for name in SE2_COMPATIBILITY_ASSEMBLIES:
+                    expected = assemblies.get(name, {})
+                    actual = inspected.get(name, {})
+                    for field in ("fileVersion", "sha256", "mvid"):
+                        if str(expected.get(field, "")).lower() != str(actual.get(field, "")).lower():
+                            errors.append(f"Compatibility record '{path}' does not match local inspection for {name} ({field}).")
+
+    for name, fingerprints in record_fingerprints.items():
+        for fingerprint, versions in fingerprints.items():
+            if len(versions) > 1 and fingerprint[0]:
+                errors.append(f"Assembly '{name}' uses one fingerprint for multiple game versions: {', '.join(sorted(versions))}.")
+
+    if errors:
+        raise RuntimeError("SE2 compatibility consistency validation failed:\n" + "\n".join(f"- {error}" for error in errors))
+    print(f"SE2 compatibility consistency validation passed for {len(records)} record(s).")
+
+
 def validate_repository() -> None:
     tool("validate", "repository")
+    validate_se2_consistency()
     run("dotnet", "test", str(ROOT / "tools" / "Kontrol.AdapterTool.Tests" / "Kontrol.AdapterTool.Tests.csproj"))
     run("dotnet", "test", str(ROOT / "src" / "Adapters" / "DummyAdapter" / "Kontrol.Adapters.DummyAdapter.Tests" / "Kontrol.Adapters.DummyAdapter.Tests.csproj"))
     tracked = run("git", "ls-files", capture=True).splitlines()

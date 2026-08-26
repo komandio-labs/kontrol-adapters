@@ -36,9 +36,9 @@ Historical baseline validation was performed against SE2 `2.3.0.2798` on
 - Removed the SE2 assembly-hook deployment path. Kontrol no longer rewrites
   `VRage.Library.dll`; use Process Injection or the native SE2 plugin loader.
 
-## 1.0.0 — local release baseline
+## Historical development baseline
 
-- Added versioned release manifest, compatibility record, and local inspection workflow.
+- Added the versioned release manifest, compatibility record, and local inspection workflow.
 - Separated the shared adapter runtime from the SE2 plugin and CoreCLR startup-hook entry points.
 
 ## 2026-07-30 — schema version 5

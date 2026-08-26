@@ -11,6 +11,7 @@ description: Diagnose, implement, test, and maintain the Kontrol Space Engineers
 2. Read `src/Adapters/SpaceEngineers2/README.md`, its changelog, manifest, compatibility records, and current adapter source/tests.
 3. Treat the README and code as the authoritative current runtime map. Use [references/runtime-map.md](references/runtime-map.md) only as a diagnostic routing checklist.
 4. Inspect current logs and working-tree changes before changing code.
+5. Treat `scripts/kontrol_adapters.py validate` as the required consistency gate for SE2 documentation and compatibility evidence.
 
 ## Diagnose by boundary
 
@@ -69,9 +70,17 @@ Run:
 
 ```text
 python scripts/kontrol_adapters.py test --adapter spaceengineers2
+python scripts/kontrol_adapters.py validate
 ```
 
 This must discover or synchronize the local game references, record inspection evidence, validate metadata, build the adapter, and run SE2 tests. Complete the generated manual checklist before changing a compatibility record to `tested`.
+The repository validation also checks that the SE2 README matches current
+adapter/SDK/game metadata and IPC names, that every compatibility-history row
+matches a committed record, and that any locally available ignored reference
+folder matches its record's file versions, hashes, and MVIDs. Run it after every
+SE2 adapter or compatibility-record change; a missing local historical reference
+folder is allowed, but a present folder with mismatched inspection evidence is a
+failure.
 
 Build and test every changed project. Report failures immediately. After validation, check Git status for proprietary or generated files and update README/changelog/compatibility evidence as appropriate. Do not publish; use `$kontrol-adapter-release` for release work.
 

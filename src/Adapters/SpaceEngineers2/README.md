@@ -76,8 +76,10 @@ if any selected assembly fails to decompile.
 
 This document is the technical reference for the Kontrol input schema and
 the private Space Engineers 2 (SE2) APIs used by the adapter. Specific tested
-game versions and assembly fingerprints are declared in `package.json` and
-individual records in `compatibility/game-builds/*.json`.
+game versions and assembly fingerprints are declared in `package.json` and the
+individual records in `compatibility/game-builds/*.json`. The checked-in
+`adapter.manifest.json` is the package/runtime manifest; local reference
+assemblies and their inspection files are ignored by Git.
 
 The code remains the source of truth. This document records why the symbols are
 used, their expected signatures and behavior, and what must be verified when
@@ -89,12 +91,15 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| SDK contract version | `1.0.0` |
+| Adapter version | `0.1.0` |
+| Current validated game version | `2.4.0.86` |
+| SDK contract version | `1.1.1` |
 | Adapter input schema | Version `5` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
 | Compatibility records | `compatibility/game-builds/*.json` |
-| Adapter manifest | `package.json` |
+| Package metadata | `package.json` |
+| Runtime/package manifest | `Kontrol.Adapters.SpaceEngineers2/adapter.manifest.json` |
 
 When a new Space Engineers 2 build is released:
 1. Synchronize references locally with `python ./scripts/kontrol_adapters.py sync-se2`.
@@ -183,7 +188,8 @@ Harmony hooks and direct calls:
 | Method | Expected signature | Kontrol use |
 | --- | --- | --- |
 | `UpdateRotationData` | `void UpdateRotationData(ref AngularReticleLocalData localData, Optional<T> debugSettings)` | Prefix temporarily merges axes for physical ship steering; postfix restores native fields |
-| `UpdateControlData` | `void UpdateControlData()` | Explicit prefix reads action state; adapter also invokes it to commit each effective cockpit state, including neutral |
+| `ComputeReticlePositioning` | `void ComputeReticlePositioning()` | Native Reticle Steering temporarily merges input; Direct Angular Flight skips the native reticle integration |
+| `UpdateControlData` | `void UpdateControlData()` | Prefix reads action state; Native Reticle Steering invokes the method to commit the merged cockpit state |
 
 The Harmony field injection depends on these private instance fields:
 
@@ -210,6 +216,13 @@ symbols exist. Confirm where `UpdateControlData()` submits `_movementInputs`, an
 confirm that `UpdateRotationData` still consumes the directional look fields
 before Kontrol restores the native snapshot.
 
+Direct Angular Flight additionally depends on the cockpit's private grid entity,
+observer transform, gyro-mode switch, velocity-limit data, and angular-control
+data path. It bypasses SE2's native rotation/reticle jobs, commits translation
+through the grid entity, and writes a closed-loop target angular velocity. Verify
+those data paths and the `SwitchGyroMode(bool)` signature whenever that mode is
+changed or a new game build is adopted.
+
 ### Cockpit actions
 
 The following non-public instance methods must have this exact shape:
@@ -232,7 +245,7 @@ new version retains the names but changes their semantics.
 
 ### Camera Mode Switch
 
-SE2 registers its native Toggle Camera input (currently `V` by default) in:
+SE2 registers its native Toggle Camera input through:
 
 ```text
 Keen.Game2.Client.GameSystems.CameraSystems.CameraSystemComponent
@@ -249,10 +262,9 @@ void ToggleCameraView()
 Kontrol patches `CameraSystemComponent.Init()` to retain the active camera
 system instance. It consumes schema bit 13 from the same continuous cockpit
 input-commit path used for the other semantic actions, then invokes
-`ToggleCameraView()` on that cached instance. This is deliberate:
-`UpdateCameraControl()` is event-driven and cannot reliably consume an action
-which exists only in Kontrol. The implementation still uses SE2's semantic
-camera operation rather than synthesizing the `V` key.
+`ToggleCameraView()` on that cached instance. This is deliberate: the adapter
+uses SE2's semantic camera operation rather than synthesizing a keyboard key or
+depending on the user's native key binding.
 
 When updating SE2 references, verify that `CameraSystemComponent.Init()` still
 runs for the active camera system, that `ToggleCameraView()` remains the handler registered for
@@ -280,14 +292,11 @@ Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers.AutomatedW
     void Shoot(bool value, ControlActivation activation)
 ```
 
-For block weapons, `PrimaryAction` currently forwards to
-`BlockToolControllableBaseComponent.RequestActivatePrimaryAction(bool)`, while
-`SecondaryAction` forwards to `RequestActivateSecondaryAction(bool)`. On
-`WeaponBlockToolControllableComponent`, the secondary path calls
-`ActivateSecondaryActionImpl(bool)` and raises SE2's internal
-`RequestReload(bool)` signal. This is the cockpit weapon action currently bound
-to the right mouse button. For an automated weapon, `Shoot` forwards to
-`AutomatedWeaponBlockToolControllableComponent.RequestShootTurret(bool)`.
+The adapter invokes these handler methods and relies on SE2 to forward them to
+the selected controllable or weapon. The current game implementation includes
+primary and secondary block-tool forwarding and an automated-weapon shoot path;
+inspect those downstream calls when validating a new build rather than treating
+them as adapter-owned APIs.
 
 Both the activation lifecycle and the primary/secondary forwarding methods must
 be checked after an SE2 update. A renamed method is obvious; a handler that no
@@ -299,10 +308,11 @@ breaking change.
 The adapter uses the following named shared-memory channels:
 
 ```text
-Local\Kontrol_Input_SE2
-Local\Kontrol_Telemetry_SE2
-Local\Kontrol_Logs_SE2
-Local\Kontrol_AdapterStatus_SE2
+Local\Kontrol_Input_space-engineers-2
+Local\Kontrol_Settings_space-engineers-2
+Local\Kontrol_Telemetry_space-engineers-2
+Local\Kontrol_Logs_space-engineers-2
+Local\Kontrol_AdapterStatus_space-engineers-2
 ```
 
 `InputFrame` contains schema version, Input Control state, 32 analog slots, a
@@ -355,14 +365,18 @@ adapter's fallback `adapter-debug.log` remains opt-in.
    `RequestActivateSecondaryAction`, `RequestReload`, `Shoot`,
    `RequestShootTurret`, `CameraSystemComponent`, `UpdateCameraControl`, and
    `ToggleCameraView`.
-5. Replace the checked-in reference assemblies only after reviewing the change.
-   Keep every reference at the same SE2 version; do not mix game builds.
-6. Update the adapter code and this document together. Preserve existing schema
+5. Replace the local ignored reference assemblies only after reviewing the
+   change. Keep every reference at the same SE2 version; do not mix game builds.
+6. Run `python scripts/kontrol_adapters.py validate` to verify metadata,
+   compatibility records, README history, and any locally available inspection
+   fingerprints.
+7. Update the adapter code and this document together. Preserve existing schema
    indices. Append new inputs and bump the schema version only when necessary.
-7. Build the full solution and run all tests as required by the repository
+8. Build the full solution and run all tests as required by the repository
    `AGENTS.md`.
-8. Run the manual compatibility matrix below with adapter debug logging enabled.
-9. Add a row to Compatibility history describing the result and any adaptation.
+9. Run the manual compatibility matrix below with adapter debug logging enabled.
+10. Add or update the compatibility record and the matching row in Compatibility
+    history describing the result and any adaptation.
 
 ### Required manual compatibility matrix
 
@@ -398,15 +412,19 @@ adapter's fallback `adapter-debug.log` remains opt-in.
 | Primary fire does nothing | Active handler lifecycle and selected block weapon handler type |
 | Primary fire remains active | `End` value, release forwarding, and active-handler deactivation |
 | Reload does nothing | `SecondaryAction`, `RequestActivateSecondaryAction`, and the selected weapon's `RequestReload` signal |
-| Camera Mode Switch does nothing | `CameraSystemComponent.UpdateCameraControl()`, `ToggleCameraView()`, and schema bit 13 edge detection |
+| Camera Mode Switch does nothing | `CameraSystemComponent.Init()`, `ToggleCameraView()`, the cached active camera instance, and schema bit 13 edge detection |
 | Native mouse/keyboard stops working | Native snapshot restore and OR/maximum merge behavior |
 | Controls work but telemetry fails | `_observedBlock`, `Grid.Entity`, and entity data component types |
 
 ## Compatibility history
 
-| Date | SE2 version | Schema | Result | Notes |
-| --- | --- | ---: | --- | --- |
-| 2026-07-30 | `2.3.0.2798` | 3 | Partially compatible | Axes and cockpit toggles worked; newly captured Exit grid and Primary fire bindings were saved but not published to the runtime worker |
-| 2026-07-30 | `2.3.0.2798` | 4 | Automated validation passed; manual game validation pending | Live capture now publishes an immutable runtime snapshot; added held Reload through the block weapon secondary/right-mouse path; full solution build and 34 tests passed |
-| 2026-07-30 | `2.3.0.2798` | 5 | Automated validation passed; manual game validation pending | Added semantic Camera Mode Switch through `CameraSystemComponent.ToggleCameraView()` on the global camera update path; full solution build and 36 tests passed |
-| 2026-07-31 | `2.3.0.2798` | 5 | Manual validation passed | Native Plugin Parameter and Process Injection both loaded, connected, and delivered working controls; full solution build succeeded with 51 automated tests passed |
+Each row below mirrors a committed record under
+`compatibility/game-builds/`. The record is authoritative for fingerprints,
+Steam build, validation date, and result; this table is a discoverable summary
+and is checked by `scripts/kontrol_adapters.py validate`.
+
+| Date | SE2 version | Steam build | Adapter version | Result |
+| --- | --- | --- | --- | --- |
+| 2026-08-15 | `2.3.0.2798` | `24225481` | `0.1.0` | tested |
+| 2026-08-19 | `2.4.0.77` | `24225482` | `0.1.0` | tested |
+| 2026-08-24 | `2.4.0.86` | `24225486` | `0.1.0` | tested |
