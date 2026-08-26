@@ -2,21 +2,14 @@
 
 ## Unreleased
 
-## 0.2.0-beta.4 — proportional translation
+## 0.2.0 — local validation build
 
 - Changes forward/reverse, strafe left/right, and lift up/down from closed-loop
   target-velocity control to direct proportional thrust in both SE2 flight
   modes. The host's shaped analog magnitude is now submitted unchanged to the
   corresponding SE2 thrust direction.
-
-## 0.2.0-beta.3 — diagnostic build
-
-- Adds rate-limited input tracing for the translation path: accepted IPC analog
-  values, normalized values, current cockpit-local velocity, target velocity,
-  and the thrust directions submitted to SE2.
-- This package is intentionally untested in-game. It is for the pending manual
-  throttle/strafe investigation and must not be interpreted as compatibility
-  evidence.
+- Retains rate-limited input tracing for the pending manual validation. This
+  local build is not a published compatibility claim.
 
 ## 0.1.0 — first stable release
 
