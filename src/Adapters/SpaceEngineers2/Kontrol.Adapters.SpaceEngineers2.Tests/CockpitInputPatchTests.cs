@@ -80,53 +80,29 @@ public class CockpitInputPatchTests
     }
 
     [Test]
-    public void ComputeAxisThrottle_UnderSpeed_ReturnsPositiveThrottle()
+    public void ComputeProportionalThrust_PreservesPartialPositiveInput()
     {
-        // Target: 50 m/s (50% stick at 100 m/s max), Current: 0 m/s
-        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 0f);
-        pos.ShouldBe(1.0f); // Max acceleration thrust
-        neg.ShouldBe(0f);
+        var (forward, backward, right, left, up, down) = CockpitInputPatch.ComputeProportionalThrust(0.5f, 0.25f, 0.75f);
+
+        forward.ShouldBe(0.5f);
+        backward.ShouldBe(0f);
+        right.ShouldBe(0.25f);
+        left.ShouldBe(0f);
+        up.ShouldBe(0.75f);
+        down.ShouldBe(0f);
     }
 
     [Test]
-    public void ComputeAxisThrottle_ApproachingTargetSpeed_ScalesDownThrottle()
+    public void ComputeProportionalThrust_PreservesPartialNegativeInput()
     {
-        // Target: 50 m/s, Current: 48 m/s (error = 2 m/s, rampBand = 5 m/s)
-        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 48f);
-        pos.ShouldBe(0.4f, 0.01f);
-        neg.ShouldBe(0f);
-    }
+        var (forward, backward, right, left, up, down) = CockpitInputPatch.ComputeProportionalThrust(-0.5f, -0.25f, -0.75f);
 
-    [Test]
-    public void ComputeAxisThrottle_TargetSpeedReached_ReturnsZeroThrottleToCruise()
-    {
-        // Target: 50 m/s, Current: 50 m/s (within 0.5 m/s deadband)
-        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 50f);
-        pos.ShouldBe(0f);
-        neg.ShouldBe(0f);
-    }
-
-    [Test]
-    public void ComputeAxisThrottle_OverSpeed_ReturnsNegativeBrakingThrottle()
-    {
-        // Target: 50 m/s, Current: 70 m/s (error = -20 m/s) -> Brake
-        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(0.5f, 50f, 70f);
-        pos.ShouldBe(0f);
-        neg.ShouldBe(1.0f);
-    }
-
-    [Test]
-    public void ComputeAxisThrottle_ReverseCommand_MaintainsReverseSpeed()
-    {
-        // Target: -50 m/s (-50% stick), Current: 0 m/s
-        var (pos, neg) = CockpitInputPatch.ComputeAxisThrottle(-0.5f, -50f, 0f);
-        pos.ShouldBe(0f);
-        neg.ShouldBe(1.0f);
-
-        // Target: -50 m/s, Current: -50 m/s -> Steady cruise
-        var (steadyPos, steadyNeg) = CockpitInputPatch.ComputeAxisThrottle(-0.5f, -50f, -50f);
-        steadyPos.ShouldBe(0f);
-        steadyNeg.ShouldBe(0f);
+        forward.ShouldBe(0f);
+        backward.ShouldBe(0.5f);
+        right.ShouldBe(0f);
+        left.ShouldBe(0.25f);
+        up.ShouldBe(0f);
+        down.ShouldBe(0.75f);
     }
 
     [TestCase("ToggleDampeners")]

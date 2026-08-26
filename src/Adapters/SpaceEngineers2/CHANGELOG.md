@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.2.0-beta.4 — proportional translation
+
+- Changes forward/reverse, strafe left/right, and lift up/down from closed-loop
+  target-velocity control to direct proportional thrust in both SE2 flight
+  modes. The host's shaped analog magnitude is now submitted unchanged to the
+  corresponding SE2 thrust direction.
+
 ## 0.2.0-beta.3 — diagnostic build
 
 - Adds rate-limited input tracing for the translation path: accepted IPC analog

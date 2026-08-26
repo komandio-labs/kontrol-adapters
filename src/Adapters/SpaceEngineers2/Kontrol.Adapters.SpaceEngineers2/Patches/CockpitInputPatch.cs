@@ -461,8 +461,9 @@ public static class CockpitInputPatch
                 float nativeLookLeft = (float?)LookLeftField?.GetValue(instance) ?? 0f;
                 float nativeLookRight = (float?)LookRightField?.GetValue(instance) ?? 0f;
 
-                // Closed-loop velocity throttle for translation (Surge / Sway / Heave)
-                var (fwd, back, right, left, up, down) = ComputeTargetVelocityThrottle(surge, sway, heave, instance, observedBlock);
+                // Translation is direct, proportional thrust. The host has already
+                // applied the configured deadzone and response curve.
+                var (fwd, back, right, left, up, down) = ComputeProportionalThrust(surge, sway, heave);
                 WriteTranslationTrace("DirectAngularFlight", in control, surge, sway, heave, fwd, back, right, left, up, down, instance, observedBlock);
 
                 // Build translation from Kontrol IPC, then merge native keyboard values via Math.Max
@@ -573,7 +574,7 @@ public static class CockpitInputPatch
         ref MovementInputs movementInputs, in InputFrame control, float surge, float sway, float heave, float roll,
         CockpitInputHandlerComponent? instance = null, CubeBlockComponent? observedBlock = null)
     {
-        var (fwd, back, right, left, up, down) = ComputeTargetVelocityThrottle(surge, sway, heave, instance, observedBlock);
+        var (fwd, back, right, left, up, down) = ComputeProportionalThrust(surge, sway, heave);
         WriteTranslationTrace("NativeReticleSteering", in control, surge, sway, heave, fwd, back, right, left, up, down, instance, observedBlock);
         movementInputs.Forward = Math.Max(movementInputs.Forward, fwd);
         movementInputs.Backward = Math.Max(movementInputs.Backward, back);
@@ -594,7 +595,7 @@ public static class CockpitInputPatch
         if (now < _nextTranslationTraceTick) return;
         _nextTranslationTraceTick = now + 250;
 
-        float currentSurge = 0f, currentSway = 0f, currentHeave = 0f, maxSpeed = 100f;
+        float currentSurge = 0f, currentSway = 0f, currentHeave = 0f;
         var gridEntity = observedBlock?.Grid?.Entity;
         if (gridEntity?.Data.Has<Keen.VRage.Physics.Data.RigidBodyData>() == true)
         {
@@ -608,86 +609,21 @@ public static class CockpitInputPatch
             currentHeave = localVelocity.Y;
         }
 
-        if (VelocityLimitsField?.GetValue(instance) is IVelocityLimitProvider limits && limits.LinearVelocityLimit > 0f)
-            maxSpeed = limits.LinearVelocityLimit;
-
         SpaceEngineers2AdapterDiagnostics.WriteDebug(
-            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; target velocity surge={surge * maxSpeed:F2}, sway={sway * maxSpeed:F2}, heave={heave * maxSpeed:F2}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; submitted thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
+            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; submitted proportional thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
     }
 
-    internal static (float positive, float negative) ComputeAxisThrottle(
-        float input, float targetSpeed, float currentSpeed, float deadband = 0.5f, float rampBand = 5.0f)
+    internal static (float fwd, float back, float right, float left, float up, float down) ComputeProportionalThrust(
+        float surge, float sway, float heave)
     {
-        if (MathF.Abs(input) < 0.001f)
-        {
-            // Neutral stick: let SE2 dampeners bring speed to zero
-            return (0f, 0f);
-        }
+        surge = NormalizeAxis(surge);
+        sway = NormalizeAxis(sway);
+        heave = NormalizeAxis(heave);
 
-        float error = targetSpeed - currentSpeed;
-        if (MathF.Abs(error) < deadband)
-        {
-            // Within target speed deadband: zero voluntary thrust (cruise steady at commanded speed)
-            return (0f, 0f);
-        }
-
-        if (error > 0f)
-        {
-            // Need positive acceleration along this axis
-            float throttle = Math.Clamp(error / rampBand, 0.05f, 1.0f);
-            return (throttle, 0f);
-        }
-        else
-        {
-            // Need negative acceleration (braking/reversing) along this axis
-            float throttle = Math.Clamp(-error / rampBand, 0.05f, 1.0f);
-            return (0f, throttle);
-        }
-    }
-
-    internal static (float fwd, float back, float right, float left, float up, float down) ComputeTargetVelocityThrottle(
-        float surge, float sway, float heave,
-        CockpitInputHandlerComponent? instance,
-        CubeBlockComponent? observedBlock)
-    {
-        var gridEntity = observedBlock?.Grid?.Entity;
-        if (gridEntity == null || !gridEntity.Data.Has<Keen.VRage.Physics.Data.RigidBodyData>())
-        {
-            return (
-                Math.Max(surge, 0f), Math.Max(-surge, 0f),
-                Math.Max(sway, 0f), Math.Max(-sway, 0f),
-                Math.Max(heave, 0f), Math.Max(-heave, 0f)
-            );
-        }
-
-        var rigidBody = gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>();
-        var observerChild = (ChildTransformComponent?)ObserverChildTransformField?.GetValue(instance);
-        var observerOrientation = observerChild?.Data.Get<RelativeTransform>().Orientation
-            ?? observedBlock?.Data.GetRelativeTransform().Orientation
-            ?? Quaternion.Identity;
-
-        // Current world linear velocity transformed to observer/cockpit local coordinates
-        var invObserverOrientation = Quaternion.Inverse(observerOrientation);
-        Vector3 localVelocity = invObserverOrientation * rigidBody.LinearVelocity;
-
-        float currentSurgeVel = -localVelocity.Z; // VRage Forward is -Z
-        float currentSwayVel = localVelocity.X;   // Right is +X
-        float currentHeaveVel = localVelocity.Y;  // Up is +Y
-
-        var velocityLimits = (IVelocityLimitProvider?)VelocityLimitsField?.GetValue(instance);
-        float maxLinearSpeed = (velocityLimits != null && velocityLimits.LinearVelocityLimit > 0f)
-            ? velocityLimits.LinearVelocityLimit
-            : 100f;
-
-        float targetSurgeSpeed = surge * maxLinearSpeed;
-        float targetSwaySpeed = sway * maxLinearSpeed;
-        float targetHeaveSpeed = heave * maxLinearSpeed;
-
-        var (fwd, back) = ComputeAxisThrottle(surge, targetSurgeSpeed, currentSurgeVel);
-        var (right, left) = ComputeAxisThrottle(sway, targetSwaySpeed, currentSwayVel);
-        var (up, down) = ComputeAxisThrottle(heave, targetHeaveSpeed, currentHeaveVel);
-
-        return (fwd, back, right, left, up, down);
+        return (
+            Math.Max(surge, 0f), Math.Max(-surge, 0f),
+            Math.Max(sway, 0f), Math.Max(-sway, 0f),
+            Math.Max(heave, 0f), Math.Max(-heave, 0f));
     }
 
     private static void MergeRotationDirections(
