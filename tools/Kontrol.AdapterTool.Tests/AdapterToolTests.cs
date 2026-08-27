@@ -469,6 +469,14 @@ public class AdapterToolTests
     public void Pack_AutomaticallyExportsAndPackagesAdapterSchema()
     {
         string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        AdapterManifest se2 = AdapterRepository.GetManifest(root, "space-engineers-2");
+        string adapterRoot = AdapterRepository.AdapterRoot(se2);
+        string assemblyPath = Path.Combine(adapterRoot, Path.GetFileNameWithoutExtension(se2.EntryAssembly), "bin", "Debug", se2.TargetFramework, se2.EntryAssembly);
+        if (!File.Exists(assemblyPath))
+        {
+            Assert.Ignore("Requires a locally built Space Engineers 2 adapter; proprietary game references are not available on portable CI.");
+        }
+
         string tempZip = Path.Combine(Path.GetTempPath(), $"kontrol-pack-se2-{Guid.NewGuid():N}.zip");
         try
         {
