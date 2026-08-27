@@ -11,6 +11,8 @@
 - Adds focused controller and settings tests. SE2 dampener interaction remains
   pending interactive game validation; this local package is not a published
   compatibility claim.
+- Fixes Velocity Hold feedback on rotated grids/cockpits by converting SE2's
+  world-space rigid-body velocity through both the grid and observer frames.
 
 ## 0.2.0 — local validation build
 

@@ -173,11 +173,27 @@ public class CockpitInputPatchTests
     public void ComputeLocalTranslationVelocity_UsesTheControlFrameSignConvention()
     {
         var (surge, sway, heave) = CockpitInputPatch.ComputeLocalTranslationVelocity(
-            Quaternion.Identity, new Vector3(4f, 5f, -6f));
+            Quaternion.Identity, Quaternion.Identity, new Vector3(4f, 5f, -6f));
 
         surge.ShouldBe(6f);
         sway.ShouldBe(4f);
         heave.ShouldBe(5f);
+    }
+
+    [Test]
+    public void ComputeLocalTranslationVelocity_UndoesGridAndObserverOrientations()
+    {
+        Quaternion gridWorldOrientation = Quaternion.CreateFromYawPitchRoll(0.71f, -0.29f, 0.18f);
+        Quaternion observerOrientation = Quaternion.CreateFromYawPitchRoll(-0.34f, 0.23f, -0.41f);
+        var expectedInputVelocity = new Vector3(17f, -8f, -31f);
+        Vector3 worldVelocity = gridWorldOrientation * (observerOrientation * expectedInputVelocity);
+
+        var (surge, sway, heave) = CockpitInputPatch.ComputeLocalTranslationVelocity(
+            gridWorldOrientation, observerOrientation, worldVelocity);
+
+        surge.ShouldBe(31f, 0.001f);
+        sway.ShouldBe(17f, 0.001f);
+        heave.ShouldBe(-8f, 0.001f);
     }
 
     [Test]

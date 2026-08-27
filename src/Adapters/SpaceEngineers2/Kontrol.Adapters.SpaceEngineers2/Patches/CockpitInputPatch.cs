@@ -705,22 +705,26 @@ public static class CockpitInputPatch
         if (gridEntity?.Data.Has<Keen.VRage.Physics.Data.RigidBodyData>() != true) return false;
 
         var observerChild = (ChildTransformComponent?)ObserverChildTransformField?.GetValue(instance);
-        var orientation = observerChild?.Data.Get<RelativeTransform>().Orientation
+        var observerOrientation = observerChild?.Data.Get<RelativeTransform>().Orientation
             ?? observedBlock?.Data.GetRelativeTransform().Orientation
             ?? Quaternion.Identity;
+        var gridWorldOrientation = gridEntity.Data.GetWorldTransform().Orientation;
         (surge, sway, heave) = ComputeLocalTranslationVelocity(
-            orientation, gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>().LinearVelocity);
+            gridWorldOrientation,
+            observerOrientation,
+            gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>().LinearVelocity);
         return float.IsFinite(surge) && float.IsFinite(sway) && float.IsFinite(heave);
     }
 
     internal static (float surge, float sway, float heave) ComputeLocalTranslationVelocity(
-        Quaternion observerOrientation, Vector3 worldVelocity)
+        Quaternion gridWorldOrientation, Quaternion observerOrientation, Vector3 worldVelocity)
     {
-        // SE2's observer orientation transforms world velocity into the same
-        // local command frame passed to UpdateControlData. Inverting it reverses
-        // surge feedback, which leaves Velocity Hold permanently saturated.
-        Vector3 localVelocity = observerOrientation * worldVelocity;
-        return (-localVelocity.Z, localVelocity.X, localVelocity.Y);
+        // SE2 rotates cockpit/observer movement into grid-local space before
+        // applying it. RigidBodyData reports world velocity, so undo both
+        // transforms in reverse order to compare velocity in the input frame.
+        Vector3 gridVelocity = Quaternion.Inverse(gridWorldOrientation) * worldVelocity;
+        Vector3 inputVelocity = Quaternion.Inverse(observerOrientation) * gridVelocity;
+        return (-inputVelocity.Z, inputVelocity.X, inputVelocity.Y);
     }
 
     private static float ResolveVelocityHoldMaximumSpeed(CockpitInputHandlerComponent? instance, float configuredMaximumSpeed)
