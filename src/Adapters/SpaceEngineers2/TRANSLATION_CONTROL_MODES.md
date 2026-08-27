@@ -1,5 +1,12 @@
 # SE2 translation-control modes
 
+For the implementation handoff covering the intended physical/presentation
+split, six-axis behavior, dampeners, dynamic speed-limit discovery, thruster
+selection, sound, and Cruise Control invariants, see
+[`VELOCITY_HOLD_CONTROL_MODEL.md`](./VELOCITY_HOLD_CONTROL_MODEL.md). This
+document records the current adapter implementation details; the handoff
+document separates those details from the target behavior for the next change.
+
 This document specifies the meaning of the three translational axes in the
 Space Engineers 2 adapter: forward/reverse (surge), right/left (sway), and
 up/down (heave). It describes the default behavior and the optional
@@ -9,12 +16,16 @@ velocity-target behavior. Velocity Hold is the default.
 
 Velocity Hold is implemented as an adapter-side realtime setting named
 `translationControlMode`; it is independent of `flightModelMode` and defaults
-to `VelocityHold`. Its initial controller is the proportional controller below
-with `Kp = 1`, no integral term, and no slew limiter. `velocityHoldMaxTargetSpeed`
-is a validated `1`–`300 m/s` setting (default `300 m/s`, shown as `1080 km/h`).
-On SE2 2.4.0.86, the private `_velocityLimits` provider exposes
-`LinearVelocityLimit`; the adapter reads that positive limit reflectively and
-uses the lower of it and the configured target cap. A recognized legacy
+to `VelocityHold`. Its controller is an axis-scaled proportional controller
+with a realtime configurable response gain (default `Kp = 12`), no integral
+term, and no slew limiter. Ordinary
+Velocity Hold uses signed feedback: reducing a target below current velocity
+commands opposing physical thrust until the new target is reached.
+`velocityHoldMaxTargetSpeed` is an optional target cap;
+`0` means no adapter cap. The active grid's `SoftSpeedLimitData.Speed` is used
+first, then SE2's private `_velocityLimits.LinearVelocityLimit`; a `300 m/s`
+adapter fallback is used only when neither runtime value is available. A
+positive optional cap limits the discovered runtime value. A recognized legacy
 `LinearVelocity`, `MaxLinearVelocity`, `MaximumLinearVelocity`, or `MaxSpeed`
 member is accepted as a compatibility fallback.
 
@@ -28,11 +39,19 @@ during cockpit transition or telemetry loss, it safely falls back to Direct
 Thrust for that update rather than commanding a velocity target from guessed
 data.
 
-The adapter does not change the user's dampener preference. Its own controller
-can issue signed braking thrust for overspeed and reversal, but native dampener
-interaction at a nonzero target has not been manually validated on SE2 build
-2.4.0.86. This is a runtime-validation risk, not a claim that the game-native
-dampener behavior has been verified.
+The adapter does not change the user's dampener preference or add an arbitrary
+minimum thrust. A zero target therefore leaves braking/coasting to SE2's
+enabled/disabled dampener state. Nonzero targets remain on the physical
+Velocity Hold controller path. Native behavior in atmosphere, space, gravity,
+and lateral movement still requires manual validation on SE2 build 2.4.0.86.
+
+For effects and audio, the adapter separately stores the raw shaped axis as
+the SE2 entity-local vector `(sway, heave, -surge)`, rotated by the observer
+orientation. Client-only Harmony hooks substitute this vector only when SE2's
+thruster flame caches and thrust-audio checks read it. They never write
+`VoluntaryThrustData`, which remains the physical/dampener channel. The state
+is keyed by SE2's grid `DEntity` identity and cleared on input loss,
+cockpit/grid changes, reset, and shutdown.
 
 ## Scope and terminology
 
@@ -184,19 +203,16 @@ not a promise that every future build uses the same limit.
 ### Axis-scaled proportional control
 
 The required behavior is not only “higher input means higher target speed.” A
-higher input must also permit stronger acceleration. The controller therefore
-limits its output by the magnitude of the current axis:
+higher input must also permit stronger acceleration. Velocity Hold limits its
+signed output by the magnitude of the current axis:
 
 ```text
-u_i = clamp(
-    K_p × e_i / V_max,i,
-    -abs(x_i),
-    +abs(x_i)
-)
+u_i = clamp(K_p × e_i / V_max,i, -abs(x_i), +abs(x_i))
 ```
 
-`K_p` is dimensionless. With `K_p = 1`, a ship starting at zero velocity gets
-the requested axis magnitude as its initial command:
+`K_p` is dimensionless. A ship starting at zero velocity gets the requested
+axis magnitude as its initial command because the output is clamped to the axis
+magnitude:
 
 ```text
 v_i = 0 → u_i = x_i
@@ -206,18 +222,17 @@ As the ship approaches the target, the error shrinks and the thrust command
 shrinks. For positive forward input, the ideal no-disturbance behavior is:
 
 ```text
-u_i = x_i × (1 - v_i / v*_i)
+u_i = clamp(K_p × x_i × (1 - v_i / v*_i), -abs(x_i), +abs(x_i))
 ```
 
-when the ship is between zero and its positive target. The normalized equation
-above is preferable in implementation because it handles signed targets and
-output limits uniformly.
+when the ship is between zero and its positive target. The same signed
+equation applies to Cruise Control's positive-throttle handoff.
 
 Example for a 20% forward target (`v* = 60 m/s`):
 
 ```text
 current speed =   0 m/s → thrust ≈ 20%
-current speed =  30 m/s → thrust ≈ 10%
+current speed =  30 m/s → thrust ≈ 20% at the default response gain
 current speed =  60 m/s → thrust ≈  0%
 ```
 
@@ -225,7 +240,7 @@ Example for a 90% forward target (`v* = 270 m/s`):
 
 ```text
 current speed =   0 m/s → thrust ≈ 90%
-current speed = 135 m/s → thrust ≈ 45%
+current speed = 135 m/s → thrust ≈ 90% at the default response gain
 current speed = 270 m/s → thrust ≈  0%
 ```
 
@@ -242,19 +257,17 @@ create a persistent error. A small integral term can remove that error:
 ```text
 I_i[k] = I_i[k-1] + e_i[k] × Δt
 
-u_i = clamp(
-    K_p × e_i / V_max,i + K_i × I_i,
-    -abs(x_i),
-    +abs(x_i)
-)
+u_raw = K_p × e_i / V_max,i + K_i × I_i
+u_i = directionalClamp(u_raw, x_i)
 ```
 
 The integral accumulator must have anti-windup behavior. It should be clamped
-when thrust saturates and reset or decayed when the target changes direction,
-the axis returns to neutral, input control is disabled, or the controlled grid
-changes. A derivative term is not initially required because velocity is already
-measured directly and a derivative of that signal would amplify game-physics
-noise.
+when thrust saturates and reset or decayed when the target changes direction, the
+axis returns to neutral, input control is disabled, or the controlled grid
+changes. `directionalClamp` preserves the current axis direction for ordinary
+Velocity Hold; Cruise Control may use its signed clamp. A derivative term is not
+initially required because velocity is already measured directly and a derivative
+of that signal would amplify game-physics noise.
 
 ### Dynamic axis changes
 
@@ -266,13 +279,13 @@ axis moves 20% → 80%:
   target changes from 60 m/s to 240 m/s
   thrust rises toward the current 80% output limit
 
-axis moves 80% → 20%:
+axis moves 80% → 20% while moving faster than the new target:
   target drops from 240 m/s to 60 m/s
-  the controller removes or reverses thrust until velocity converges
+  the controller commands reverse physical thrust until the new target is reached
 
 axis crosses +20% → -20%:
   target changes sign
-  the controller brakes the existing motion, then drives reverse motion
+  the controller brakes through zero and continues toward the reverse target
 
 axis returns to 0%:
   target becomes zero
@@ -309,26 +322,21 @@ The adapter must preserve these signs when calculating `e_i` and when splitting
 
 ### Dampener policy
 
-Velocity Hold must define dampener behavior explicitly. A nonzero target must
-remain stable whether the user's dampener setting is enabled or disabled.
-Native dampeners must not interpret the adapter's temporary zero thrust at a
-nonzero target as a request to brake the ship to zero.
+Velocity Hold defines dampener behavior explicitly. A nonzero target must remain
+stable whether the user's dampener setting is enabled or disabled, while a
+positive throttle reduction must not create adapter-owned reverse thrust.
 
-There are three possible implementation strategies, in descending order of
+There are two possible implementation strategies, in descending order of
 control quality:
 
 1. Use a native SE2 desired-velocity/flight-assist path, if a stable API exists.
-2. Suppress native dampener braking while Velocity Hold owns translation, and
-   implement braking in the adapter's velocity controller.
-3. Use a hybrid deadband/hysteresis controller: submit a supported minimum
-   command below the target, release it above the target, and use dampeners to
-   brake. This produces a bounded speed ripple and is a compatibility fallback,
-   not an exact steady-speed solution.
-
-The minimum-command approach must not be used as the normal steady-state
-mathematics. A nonzero thrust in space is still acceleration. If dampeners are
-disabled, the controller must be able to output zero at the target and signed
-reverse thrust when braking is required.
+2. Suppress native dampener braking while ordinary Velocity Hold owns a
+   nonzero target, and use directional controller output for acceleration.
+The adapter deliberately does not fabricate a fixed minimum command: atmospheric
+drag and gravity require environment-specific force, not a universal constant.
+If dampeners are disabled, the controller still supplies signed feedback for a
+nonzero target; it outputs zero only at the target. A zero target remains
+SE2-owned, so dampeners off coasts and dampeners on brakes.
 
 For the user-facing preference, the intended semantics are:
 
@@ -364,9 +372,9 @@ altitude itself is not held.
 | Velocity feedback | Diagnostic only | Required every update |
 | At target speed | Still accelerates if input remains nonzero | Thrust tapers toward the required value |
 | Axis to center | Zero adapter thrust; SE2 may damp | Target velocity becomes zero |
-| Axis reversal | Immediate opposite thrust mapping | Brake/converge through a signed target change |
-| Dampeners off | Ship coasts when adapter thrust is zero | Controller must brake explicitly for a lower target |
-| Dampeners on | SE2 may brake after neutral input | Must not fight a nonzero target |
+| Axis reversal | Immediate opposite thrust mapping | Controller brakes through zero toward the new target |
+| Dampeners off | Ship coasts when adapter thrust is zero | Controller corrects nonzero targets; zero target coasts |
+| Dampeners on | SE2 may brake after neutral input | SE2 braking applies at a zero target; nonzero-target stability requires game validation |
 | Host protocol | Shaped signed axis | Same shaped signed axis |
 | Rotational mode dependency | None | None |
 

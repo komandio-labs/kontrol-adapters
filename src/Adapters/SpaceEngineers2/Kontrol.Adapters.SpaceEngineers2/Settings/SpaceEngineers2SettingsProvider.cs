@@ -105,29 +105,48 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             Description = "Independent of Flight Control Mode. Selects whether translation axes command thrust directly or target local ship velocity.",
             AllowedValues = new List<SettingOption>
             {
-                new("VelocityHold", "Velocity Hold (Default)", "Uses the current shaped axis value as a local target velocity and tapers thrust as that target is reached."),
+                new("VelocityHold", "Velocity Hold (Default)", "Uses the current shaped axis as a local speed target and applies bounded signed feedback to reach it."),
                 new("DirectThrust", "Direct Thrust", "Uses the current shaped axis value as proportional thrust.")
             }
         },
         new NumberSettingDescriptor
         {
             Key = "velocityHoldMaxTargetSpeed",
-            DisplayName = "Velocity Hold Maximum Target Speed",
+            DisplayName = "Velocity Hold Target-Speed Cap",
             Category = "Flight Controls",
             Icon = SettingIcon.Gauge,
             Layout = LayoutSpan.Full,
             UpdateScope = SettingUpdateScope.Realtime,
-            DefaultValue = 300f,
-            Min = 1f,
-            Max = 300f,
+            DefaultValue = 0f,
+            Min = 0f,
+            Max = 2000f,
             Step = 1f,
             Unit = "m/s",
             DisplayUnit = "km/h",
             DisplayMultiplier = 3.6f,
-            MinLabel = "3.6 km/h",
-            MidLabel = "540 km/h",
-            MaxLabel = "1080 km/h",
-            Description = "Caps Velocity Hold targets. The adapter also honors a lower SE2 velocity limit when that private value is available.",
+            MinLabel = "Runtime limit",
+            MidLabel = "3600 km/h",
+            MaxLabel = "7200 km/h",
+            Description = "Optional cap for Velocity Hold targets; 0 uses SE2's active grid soft limit or velocity-limit provider.",
+            VisibleWhen = new SettingCondition("translationControlMode", ExpectedValue: "VelocityHold")
+        },
+        new NumberSettingDescriptor
+        {
+            Key = "velocityHoldResponseGain",
+            DisplayName = "Velocity Hold Response",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Gauge,
+            Layout = LayoutSpan.Half,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = 12f,
+            Min = 1f,
+            Max = 20f,
+            Step = 1f,
+            Unit = "×",
+            MinLabel = "1 (Smooth)",
+            MidLabel = "12 (Responsive)",
+            MaxLabel = "20 (Aggressive)",
+            Description = "Scales Velocity Hold feedback. Higher values keep thrust strong until closer to the target speed.",
             VisibleWhen = new SettingCondition("translationControlMode", ExpectedValue: "VelocityHold")
         }
     };

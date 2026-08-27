@@ -26,6 +26,14 @@ public sealed class CruiseControlStateTests
             .ShouldBe(0f, .0001f);
     }
 
+    [Test]
+    public void CruiseVelocityHold_RemainsSignedWhenShipIsAboveItsPositiveTarget()
+    {
+        Patches.TranslationVelocityController.ComputeCruiseAxis(
+            input: .2f, actualVelocity: 300f, maximumTargetSpeedMetersPerSecond: 300f)
+            .ShouldBe(-.2f, .0001f);
+    }
+
     [TestCase(100f, 90f, 300f, .0333333f)]
     [TestCase(100f, 100f, 300f, 0f)]
     [TestCase(100f, 110f, 300f, 0f)]

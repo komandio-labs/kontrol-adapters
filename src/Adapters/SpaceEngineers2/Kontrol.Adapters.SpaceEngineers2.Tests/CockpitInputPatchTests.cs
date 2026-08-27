@@ -12,6 +12,7 @@ using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers.BlockTools;
 using Keen.Game2.Client.GameSystems.CameraSystems;
 using Keen.Game2.Simulation.WorldObjects.Movement;
+using Keen.Game2.Simulation.WorldObjects.CubeBlocks.Movement;
 using Keen.VRage.Library.Mathematics;
 
 namespace Kontrol.Adapters.SpaceEngineers2.Tests;
@@ -109,10 +110,11 @@ public class CockpitInputPatchTests
     [TestCase(0.9f, 0f, 0.9f)]
     [TestCase(0.2f, 30f, 0.1f)]
     [TestCase(0.2f, 60f, 0f)]
-    [TestCase(0.2f, 120f, -0.2f)]
+    [TestCase(0.2f, 120f, 0f)]
+    [TestCase(-0.2f, -120f, 0f)]
     [TestCase(-0.2f, 60f, -0.2f)]
     [TestCase(0.2f, -300f, 0.2f)]
-    public void ComputeVelocityHoldAxis_UsesLiveSignedVelocityFeedback(float input, float actualVelocity, float expectedOutput)
+    public void ComputeVelocityHoldAxis_AddsThrustOnlyTowardTheLiveVelocityTarget(float input, float actualVelocity, float expectedOutput)
     {
         TranslationVelocityController.ComputeAxis(input, actualVelocity, 300f).ShouldBe(expectedOutput, 0.0001f);
     }
@@ -137,7 +139,7 @@ public class CockpitInputPatchTests
     }
 
     [Test]
-    public void ComputeVelocityHoldThrust_RecalculatesTargetOnEveryUpdate()
+    public void ComputeVelocityHoldThrust_LeavesTargetReductionsToSe2Dampeners()
     {
         var first = CockpitInputPatch.ComputeVelocityHoldThrust(0.2f, 0f, 0f, 0f, 0f, 0f, 300f);
         var changed = CockpitInputPatch.ComputeVelocityHoldThrust(0.8f, 0f, 0f, 0f, 0f, 0f, 300f);
@@ -146,7 +148,47 @@ public class CockpitInputPatchTests
         first.fwd.ShouldBe(0.2f, 0.0001f);
         changed.fwd.ShouldBe(0.8f, 0.0001f);
         reducedWhileMoving.fwd.ShouldBe(0f);
-        reducedWhileMoving.back.ShouldBe(0.2f, 0.0001f);
+        reducedWhileMoving.back.ShouldBe(0f);
+    }
+
+    [Test]
+    public void VelocityHoldResponseGain_KeepsFullInputStrongUntilCloserToTheTarget()
+    {
+        var smooth = CockpitInputPatch.ComputeVelocityHoldThrust(
+            surge: 1f, sway: 0f, heave: 0f,
+            actualSurge: 272.2222f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f, responseGain: 1f);
+        var responsive = CockpitInputPatch.ComputeVelocityHoldThrust(
+            surge: 1f, sway: 0f, heave: 0f,
+            actualSurge: 272.2222f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f, responseGain: 12f);
+
+        smooth.fwd.ShouldBe(.0925927f, .0001f);
+        responsive.fwd.ShouldBe(1f, .0001f);
+    }
+
+    [Test]
+    public void VelocityHoldResponseGain_DoesNotCreateBrakingForASmallTargetReduction()
+    {
+        var output = CockpitInputPatch.ComputeVelocityHoldThrust(
+            surge: .95f, sway: 0f, heave: 0f,
+            actualSurge: 300f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f, responseGain: 12f);
+
+        output.fwd.ShouldBe(0f);
+        output.back.ShouldBe(0f);
+    }
+
+    [Test]
+    public void ComputeCruiseVelocityHoldThrust_PreservesSignedOverspeedCorrection()
+    {
+        var cruise = CockpitInputPatch.ComputeCruiseVelocityHoldThrust(
+            surge: 0.2f, sway: 0f, heave: 0f,
+            actualSurge: 120f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f);
+
+        cruise.fwd.ShouldBe(0f);
+        cruise.back.ShouldBe(0.2f, 0.0001f);
     }
 
     [Test]
@@ -206,6 +248,94 @@ public class CockpitInputPatchTests
 
         commandWithDampenersOn.ShouldBe(0.25f, 0.0001f);
         commandWithDampenersOff.ShouldBe(commandWithDampenersOn, 0.0001f);
+    }
+
+    [TestCase("DirectAngularFlight")]
+    [TestCase("NativeReticleSteering")]
+    public void VelocityHoldPositiveThrottleAtLowerTargetUsesDampenerPolicyInEitherFlightMode(string flightMode)
+    {
+        SetFlightModelMode(flightMode);
+
+        var output = CockpitInputPatch.ComputeVelocityHoldThrust(
+            surge: 0.2f, sway: 0f, heave: 0f,
+            actualSurge: 300f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f);
+
+        output.fwd.ShouldBe(0f);
+        output.back.ShouldBe(0f);
+    }
+
+    [Test]
+    public void VelocityHoldNeutralTarget_LeavesDampenerPolicyToSe2()
+    {
+        var output = CockpitInputPatch.ComputeVelocityHoldThrust(
+            surge: 0f, sway: 0f, heave: 0f,
+            actualSurge: 100f, actualSway: -100f, actualHeave: 50f,
+            maximumTargetSpeedMetersPerSecond: 300f);
+
+        output.ShouldBe((0f, 0f, 0f, 0f, 0f, 0f));
+    }
+
+    [TestCase(true, true, false)]
+    [TestCase(true, false, false)]
+    [TestCase(false, true, true)]
+    [TestCase(false, false, false)]
+    public void Neutralization_DoesNotSwitchDirectAngularFlightBackToReticle(
+        bool isDirectAngularFlight, bool originalTargetBasedGyro, bool expectedTargetBasedGyro)
+    {
+        CockpitInputPatch.ResolveGyroModeAfterNeutralization(
+            isDirectAngularFlight, originalTargetBasedGyro).ShouldBe(expectedTargetBasedGyro);
+    }
+
+    [TestCase(.5f, .25f, -.75f,  .25f, -.75f, -.5f)]
+    [TestCase(-.5f, -.25f, .75f, -.25f,  .75f,  .5f)]
+    public void Presentation_MapsAllSixTranslationDirectionsInSe2LocalCoordinates(
+        float surge, float sway, float heave, float expectedX, float expectedY, float expectedZ)
+    {
+        VoluntaryThrustData presentation = TranslationPresentationState.CreateForTests(
+            Quaternion.Identity, surge, sway, heave);
+
+        presentation.VoluntaryThrust.X.ShouldBe(expectedX, .0001f);
+        presentation.VoluntaryThrust.Y.ShouldBe(expectedY, .0001f);
+        presentation.VoluntaryThrust.Z.ShouldBe(expectedZ, .0001f);
+    }
+
+    [Test]
+    public void Presentation_RotatesTheRawObserverLocalVectorIntoTheGridFrame()
+    {
+        Quaternion observerOrientation = Quaternion.CreateFromYawPitchRoll(.7f, -.3f, .2f);
+        VoluntaryThrustData presentation = TranslationPresentationState.CreateForTests(
+            observerOrientation, surge: .4f, sway: -.2f, heave: .6f);
+
+        (presentation.VoluntaryThrust - observerOrientation * new Vector3(-.2f, .6f, -.4f)).Length()
+            .ShouldBe(0f, .0001f);
+    }
+
+    [Test]
+    public void Presentation_StateIsGridScopedAndResetsSafely()
+    {
+        TranslationPresentationState.SetForTests(42, Quaternion.Identity, .5f, 0f, 0f);
+        TranslationPresentationState.TryGet(42, out var matching).ShouldBeTrue();
+        matching.VoluntaryThrust.Z.ShouldBe(-.5f);
+        TranslationPresentationState.TryGet(43, out _).ShouldBeFalse();
+
+        TranslationPresentationState.Reset();
+        TranslationPresentationState.TryGet(42, out _).ShouldBeFalse();
+    }
+
+    [Test]
+    public void VelocityHoldMaximumSpeed_PrefersSoftGridLimitThenProviderThenAdapterFallback()
+    {
+        CockpitInputPatch.ResolveVelocityHoldMaximumSpeed(
+            new SoftSpeedLimitData { Speed = 180f }, new TestVelocityLimits { LinearVelocityLimit = 250f }, 0f)
+            .ShouldBe(180f);
+        CockpitInputPatch.ResolveVelocityHoldMaximumSpeed(
+            null, new TestVelocityLimits { LinearVelocityLimit = 500f }, 0f)
+            .ShouldBe(500f);
+        CockpitInputPatch.ResolveVelocityHoldMaximumSpeed(null, null, 0f)
+            .ShouldBe(TranslationVelocityController.DefaultMaximumTargetSpeedMetersPerSecond);
+        CockpitInputPatch.ResolveVelocityHoldMaximumSpeed(null, new TestVelocityLimits { LinearVelocityLimit = 500f }, 275f)
+            .ShouldBe(275f);
     }
 
     [TestCase("ToggleDampeners")]
@@ -625,6 +755,11 @@ public class CockpitInputPatchTests
         movementInputs.Left.ShouldBe(1.0f);
         movementInputs.Up.ShouldBe(1.0f);
         movementInputs.RollRight.ShouldBe(1.0f);
+    }
+
+    private sealed class TestVelocityLimits
+    {
+        public float LinearVelocityLimit { get; init; }
     }
 
     [Test]

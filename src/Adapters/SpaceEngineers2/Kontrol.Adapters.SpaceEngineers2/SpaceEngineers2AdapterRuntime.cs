@@ -97,6 +97,7 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        Patches.TranslationPresentationState.Reset();
         _heartbeatTimer.Dispose();
         _connectionReporter.Dispose();
         if (_harmony is not null) _harmony.UnpatchAll(_harmony.Id);

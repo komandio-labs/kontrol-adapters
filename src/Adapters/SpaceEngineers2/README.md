@@ -163,6 +163,18 @@ Negative throttle past the adapter's small jitter deadband acts as a brake and
 cancels Cruise Control. Double-click Set resets it. The +/-10 m/s actions adjust
 an active target without allowing reverse (negative) cruise speeds.
 
+Outside Cruise Control, ordinary Velocity Hold converges on each live
+translation target. Lowering a positive throttle below the current speed sends
+opposing physical thrust until the new target is reached. At a zero target, SE2 owns
+the dampener-on braking or dampener-off coasting decision; the adapter does not
+fabricate a fixed minimum-thrust guard. This policy is shared by Direct Angular
+Flight and Native Reticle Steering. Cruise Control's positive-throttle handoff
+remains on its existing signed Velocity Hold path.
+
+`Velocity Hold Response` defaults to `12×`, keeping a full forward command at
+full physical thrust until close to the speed target. Reduce it toward `1×` for
+a smoother approach or increase it toward `20×` for a more aggressive one.
+
 ### Native keyboard and mouse coexistence
 
 Kontrol is merged with SE2's native state; it is not a global input replacement.
