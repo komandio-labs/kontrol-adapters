@@ -16,13 +16,22 @@ public sealed class AdapterSettingsSnapshot
     public IReadOnlySet<string> ActiveKeys { get; }
     public IReadOnlyDictionary<string, NumberSettingPresentation> NumberPresentations { get; }
 
+    public AdapterSettingsSnapshot(
+        ulong sequenceNumber,
+        DateTime timestampUtc,
+        IReadOnlyDictionary<string, object?> values,
+        IReadOnlySet<string>? activeKeys = null)
+        : this(sequenceNumber, timestampUtc, values, activeKeys, null)
+    {
+    }
+
     [JsonConstructor]
     public AdapterSettingsSnapshot(
         ulong sequenceNumber,
         DateTime timestampUtc,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string>? activeKeys = null,
-        IReadOnlyDictionary<string, NumberSettingPresentation>? numberPresentations = null)
+        IReadOnlySet<string>? activeKeys,
+        IReadOnlyDictionary<string, NumberSettingPresentation>? numberPresentations)
     {
         SequenceNumber = sequenceNumber;
         TimestampUtc = timestampUtc;
@@ -118,8 +127,14 @@ public sealed class AdapterSettingsSnapshot
     public static AdapterSettingsSnapshot Create(
         IReadOnlyList<AdapterSettingDescriptor> descriptors,
         IReadOnlyDictionary<string, object?> rawValues,
-        ulong sequenceNumber = 1,
-        IReadOnlyDictionary<string, NumberSettingPresentation>? numberPresentationOverrides = null)
+        ulong sequenceNumber = 1) =>
+        Create(descriptors, rawValues, sequenceNumber, null);
+
+    public static AdapterSettingsSnapshot Create(
+        IReadOnlyList<AdapterSettingDescriptor> descriptors,
+        IReadOnlyDictionary<string, object?> rawValues,
+        ulong sequenceNumber,
+        IReadOnlyDictionary<string, NumberSettingPresentation>? numberPresentationOverrides)
     {
         var sanitized = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
 
