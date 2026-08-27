@@ -6,6 +6,7 @@ using NSubstitute;
 using Shouldly;
 using Kontrol.Sdk.IPC;
 using Kontrol.Adapters.SpaceEngineers2.Patches;
+using Kontrol.Sdk.Settings;
 using Kontrol.Adapters.SpaceEngineers2.Settings;
 using Kontrol.Sdk.Inputs;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers;
@@ -228,6 +229,20 @@ public class CockpitInputPatchTests
     }
 
     [Test]
+    public void SpeedUnitPresentation_GameDefaultResolvesObservedUnitForSettingsPresentation()
+    {
+        SpeedUnitPresentation.ResetForTests();
+        SpeedUnitPresentation.CaptureGameSpeedUnit(new TestGuiOptions { SpeedUnit = 1 });
+
+        var presentation = SpeedUnitPresentation.ResolveTargetSpeedPresentation("GameDefault", 300f);
+
+        presentation.Unit.ShouldBe(MeasurementUnit.KilometersPerHour);
+        presentation.Multiplier.ShouldBe(3.6f);
+        presentation.MidLabel.ShouldBe("1080 km/h");
+        presentation.Maximum.ShouldBe(300f);
+    }
+
+    [Test]
     public void ComputeLocalTranslationVelocity_UsesTheControlFrameSignConvention()
     {
         var (surge, sway, heave) = CockpitInputPatch.ComputeLocalTranslationVelocity(
@@ -360,7 +375,7 @@ public class CockpitInputPatchTests
     }
 
     [Test]
-    public void VelocityHoldMaximumSpeed_PrefersSoftGridLimitThenProviderThenAdapterFallback()
+    public void VelocityHoldMaximumSpeed_PrefersSoftGridLimitThenProviderAndNeverAssumesALimit()
     {
         CockpitInputPatch.ResolveVelocityHoldMaximumSpeed(
             new SoftSpeedLimitData { Speed = 180f }, new TestVelocityLimits { LinearVelocityLimit = 250f }, 0f)
@@ -369,7 +384,7 @@ public class CockpitInputPatchTests
             null, new TestVelocityLimits { LinearVelocityLimit = 500f }, 0f)
             .ShouldBe(500f);
         CockpitInputPatch.ResolveVelocityHoldMaximumSpeed(null, null, 0f)
-            .ShouldBe(TranslationVelocityController.DefaultMaximumTargetSpeedMetersPerSecond);
+            .ShouldBe(0f);
         CockpitInputPatch.ResolveVelocityHoldMaximumSpeed(null, new TestVelocityLimits { LinearVelocityLimit = 500f }, 275f)
             .ShouldBe(275f);
     }

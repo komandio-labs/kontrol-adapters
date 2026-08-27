@@ -7,7 +7,6 @@ namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 /// </summary>
 internal static class TranslationVelocityController
 {
-    internal const float DefaultMaximumTargetSpeedMetersPerSecond = 300f;
 
     internal static (float fwd, float back, float right, float left, float up, float down) ComputeDirectThrust(
         float surge, float sway, float heave) =>
@@ -70,6 +69,7 @@ internal static class TranslationVelocityController
         float input, float actualVelocity, float maximumTargetSpeedMetersPerSecond, float responseGain)
     {
         float maximumSpeed = NormalizeMaximumSpeed(maximumTargetSpeedMetersPerSecond);
+        if (maximumSpeed <= 0f) return 0f;
         float targetVelocity = input * maximumSpeed;
         float velocityError = targetVelocity - NormalizeVelocity(actualVelocity);
         // Response gain is deliberately one-sided. It keeps acceleration toward
@@ -89,6 +89,7 @@ internal static class TranslationVelocityController
         float input, float actualVelocity, float maximumTargetSpeedMetersPerSecond, float responseGain)
     {
         float maximumSpeed = NormalizeMaximumSpeed(maximumTargetSpeedMetersPerSecond);
+        if (maximumSpeed <= 0f) return 0f;
         float targetVelocity = input * maximumSpeed;
         float velocityError = targetVelocity - NormalizeVelocity(actualVelocity);
 
@@ -108,6 +109,7 @@ internal static class TranslationVelocityController
         float maximumTargetSpeedMetersPerSecond)
     {
         float maximumSpeed = NormalizeMaximumSpeed(maximumTargetSpeedMetersPerSecond);
+        if (maximumSpeed <= 0f) return 0f;
         float targetSpeed = float.IsFinite(targetSpeedMetersPerSecond)
             ? Math.Max(targetSpeedMetersPerSecond, 0f)
             : 0f;
@@ -124,6 +126,7 @@ internal static class TranslationVelocityController
         float maximumTargetSpeedMetersPerSecond)
     {
         float maximumSpeed = NormalizeMaximumSpeed(maximumTargetSpeedMetersPerSecond);
+        if (maximumSpeed <= 0f) return 0f;
         float cruiseAxis = Math.Clamp(
             float.IsFinite(cruiseTargetSpeedMetersPerSecond)
                 ? Math.Max(cruiseTargetSpeedMetersPerSecond, 0f) / maximumSpeed
@@ -141,7 +144,7 @@ internal static class TranslationVelocityController
     internal static float NormalizeMaximumSpeed(float maximumTargetSpeedMetersPerSecond) =>
         float.IsFinite(maximumTargetSpeedMetersPerSecond) && maximumTargetSpeedMetersPerSecond > 0f
             ? maximumTargetSpeedMetersPerSecond
-            : DefaultMaximumTargetSpeedMetersPerSecond;
+            : 0f;
 
     private static float SplitPositive(float value) => Math.Max(Normalize(value), 0f);
 

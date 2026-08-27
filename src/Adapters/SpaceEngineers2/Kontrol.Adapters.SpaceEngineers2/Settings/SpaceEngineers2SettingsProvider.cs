@@ -1,5 +1,6 @@
 using Kontrol.Sdk.Interfaces;
 using Kontrol.Sdk.Settings;
+using Kontrol.Adapters.SpaceEngineers2.Patches;
 
 namespace Kontrol.Adapters.SpaceEngineers2.Settings;
 
@@ -10,6 +11,7 @@ namespace Kontrol.Adapters.SpaceEngineers2.Settings;
 public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
 {
     public string AdapterId => "space-engineers-2";
+    public int SchemaVersion => 1;
 
     public IReadOnlyList<SettingCategoryGroup> Categories { get; } = new List<SettingCategoryGroup>
     {
@@ -63,7 +65,7 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             Min = 0.1f,
             Max = 5.0f,
             Step = 0.1f,
-            Unit = "rad/s²",
+            CanonicalUnit = MeasurementUnit.RadiansPerSecondSquared,
             MinLabel = "0.1 (Smooth Ramp)",
             MidLabel = "1.3 (Balanced)",
             MaxLabel = "5.0 (Instant)",
@@ -82,7 +84,7 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             Min = 0.1f,
             Max = 5.0f,
             Step = 0.1f,
-            Unit = "rad/s²",
+            CanonicalUnit = MeasurementUnit.RadiansPerSecondSquared,
             MinLabel = "0.1 (Long Glide)",
             MidLabel = "1.0 (Balanced)",
             MaxLabel = "5.0 (Quick Stop)",
@@ -101,8 +103,8 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             Min = 0.1f,
             Max = 3.0f,
             Step = 0.05f,
-            Unit = "rad/s",
-            DisplayUnit = "°/s",
+            CanonicalUnit = MeasurementUnit.RadiansPerSecond,
+            PresentationUnit = MeasurementUnit.DegreesPerSecond,
             DisplayMultiplier = 57.2957795f,
             MinLabel = "6 °/s",
             MidLabel = "49 °/s",
@@ -136,14 +138,21 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             UpdateScope = SettingUpdateScope.Realtime,
             DefaultValue = 0f,
             Min = 0f,
-            Max = 2000f,
+            Max = 0f,
             Step = 1f,
-            Unit = "m/s",
-            DisplayUnit = "km/h",
-            DisplayMultiplier = 3.6f,
+            RuntimeRange = true,
+            CanonicalUnit = MeasurementUnit.MetersPerSecond,
+            PresentationUnit = MeasurementUnit.MetersPerSecond,
+            PresentationSourceKey = "speedDisplayUnit",
+            PresentationVariants = new Dictionary<string, NumberSettingPresentation>
+            {
+                ["GameDefault"] = new() { Unit = MeasurementUnit.MetersPerSecond, Minimum = 0f, Maximum = 0f, Step = 1f, MinLabel = "Runtime limit", MidLabel = "Waiting for SE2 grid limit", MaxLabel = "Waiting for SE2 grid limit" },
+                ["KilometersPerHour"] = new() { Unit = MeasurementUnit.KilometersPerHour, Multiplier = 3.6f, Minimum = 0f, Maximum = 0f, Step = 1f, MinLabel = "Runtime limit", MidLabel = "Waiting for SE2 grid limit", MaxLabel = "Waiting for SE2 grid limit" },
+                ["MilesPerHour"] = new() { Unit = MeasurementUnit.MilesPerHour, Multiplier = 2.2369363f, Minimum = 0f, Maximum = 0f, Step = 1f, MinLabel = "Runtime limit", MidLabel = "Waiting for SE2 grid limit", MaxLabel = "Waiting for SE2 grid limit" }
+            },
             MinLabel = "Runtime limit",
-            MidLabel = "3600 km/h",
-            MaxLabel = "7200 km/h",
+            MidLabel = "Waiting for SE2 grid limit",
+            MaxLabel = "Waiting for SE2 grid limit",
             Description = "Optional cap for Velocity Hold targets; 0 uses SE2's active grid soft limit or velocity-limit provider.",
             VisibleWhen = new SettingCondition("translationControlMode", ExpectedValue: "VelocityHold")
         },
@@ -159,7 +168,7 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             Min = 1f,
             Max = 20f,
             Step = 1f,
-            Unit = "×",
+            CanonicalUnit = MeasurementUnit.Multiplier,
             MinLabel = "1 (Smooth)",
             MidLabel = "12 (Responsive)",
             MaxLabel = "20 (Aggressive)",
@@ -194,6 +203,17 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
 
     public AdapterSettingsSnapshot CreateSnapshot(IReadOnlyDictionary<string, object?> rawValues, ulong sequenceNumber = 1)
     {
-        return AdapterSettingsSnapshot.Create(Descriptors, rawValues, sequenceNumber);
+        var preference = rawValues.TryGetValue("speedDisplayUnit", out var rawPreference)
+            ? rawPreference?.ToString() ?? "GameDefault"
+            : "GameDefault";
+
+        return AdapterSettingsSnapshot.Create(
+            Descriptors,
+            rawValues,
+            sequenceNumber,
+            new Dictionary<string, NumberSettingPresentation>
+            {
+                ["velocityHoldMaxTargetSpeed"] = SpeedUnitPresentation.ResolveTargetSpeedPresentation(preference)
+            });
     }
 }

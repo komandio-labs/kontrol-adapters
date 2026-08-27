@@ -24,8 +24,9 @@ thrust when a target is below current velocity: Dampeners ON brakes and
 Dampeners OFF coasts. Cruise Control keeps its separate signed correction.
 `velocityHoldMaxTargetSpeed` is an optional target cap;
 `0` means no adapter cap. The active grid's `SoftSpeedLimitData.Speed` is used
-first, then SE2's private `_velocityLimits.LinearVelocityLimit`; a `300 m/s`
-adapter fallback is used only when neither runtime value is available. A
+first, then SE2's private `_velocityLimits.LinearVelocityLimit`. There is no
+adapter fallback: when neither runtime value is available, Velocity Hold waits
+for a game-defined limit rather than assuming one. A
 positive optional cap limits the discovered runtime value. A recognized legacy
 `LinearVelocity`, `MaxLinearVelocity`, `MaximumLinearVelocity`, or `MaxSpeed`
 member is accepted as a compatibility fallback.

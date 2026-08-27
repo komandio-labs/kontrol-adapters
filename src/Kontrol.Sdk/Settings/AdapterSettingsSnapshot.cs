@@ -14,24 +14,32 @@ public sealed class AdapterSettingsSnapshot
     public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     public IReadOnlyDictionary<string, object?> Values { get; }
     public IReadOnlySet<string> ActiveKeys { get; }
+    public IReadOnlyDictionary<string, NumberSettingPresentation> NumberPresentations { get; }
 
     [JsonConstructor]
     public AdapterSettingsSnapshot(
         ulong sequenceNumber,
         DateTime timestampUtc,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string>? activeKeys = null)
+        IReadOnlySet<string>? activeKeys = null,
+        IReadOnlyDictionary<string, NumberSettingPresentation>? numberPresentations = null)
     {
         SequenceNumber = sequenceNumber;
         TimestampUtc = timestampUtc;
         Values = new ReadOnlyDictionary<string, object?>(new Dictionary<string, object?>(values));
         ActiveKeys = activeKeys ?? new HashSet<string>(values.Keys);
+        NumberPresentations = new ReadOnlyDictionary<string, NumberSettingPresentation>(
+            new Dictionary<string, NumberSettingPresentation>(numberPresentations ?? new Dictionary<string, NumberSettingPresentation>(), StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>
     /// Checks if a setting key is currently active and applicable under active VisibleWhen conditions.
     /// </summary>
     public bool IsActive(string key) => ActiveKeys.Contains(key);
+
+    /// <summary>Gets adapter-resolved display metadata for a numeric setting.</summary>
+    public bool TryGetNumberPresentation(string key, out NumberSettingPresentation presentation) =>
+        NumberPresentations.TryGetValue(key, out presentation!);
 
     /// <summary>
     /// Safely gets a numeric value, falling back to defaultValue if missing, inactive, or invalid.
@@ -110,7 +118,8 @@ public sealed class AdapterSettingsSnapshot
     public static AdapterSettingsSnapshot Create(
         IReadOnlyList<AdapterSettingDescriptor> descriptors,
         IReadOnlyDictionary<string, object?> rawValues,
-        ulong sequenceNumber = 1)
+        ulong sequenceNumber = 1,
+        IReadOnlyDictionary<string, NumberSettingPresentation>? numberPresentationOverrides = null)
     {
         var sanitized = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
 
@@ -145,6 +154,38 @@ public sealed class AdapterSettingsSnapshot
             }
         }
 
-        return new AdapterSettingsSnapshot(sequenceNumber, DateTime.UtcNow, sanitized, activeKeys);
+        var presentations = new Dictionary<string, NumberSettingPresentation>(StringComparer.OrdinalIgnoreCase);
+        foreach (var number in descriptors.OfType<NumberSettingDescriptor>())
+        {
+            var presentation = new NumberSettingPresentation
+            {
+                Unit = number.PresentationUnit ?? number.CanonicalUnit,
+                Multiplier = number.DisplayMultiplier ?? 1f,
+                MinLabel = number.MinLabel,
+                MidLabel = number.MidLabel,
+                MaxLabel = number.MaxLabel
+            };
+
+            if (!string.IsNullOrWhiteSpace(number.PresentationSourceKey)
+                && number.PresentationVariants is not null
+                && sanitized.TryGetValue(number.PresentationSourceKey, out var sourceValue)
+                && sourceValue is not null
+                && number.PresentationVariants.TryGetValue(sourceValue.ToString() ?? string.Empty, out var variant))
+            {
+                presentation = variant;
+            }
+
+            presentations[number.Key] = presentation;
+        }
+
+        if (numberPresentationOverrides is not null)
+        {
+            foreach (var (key, presentation) in numberPresentationOverrides)
+            {
+                presentations[key] = presentation;
+            }
+        }
+
+        return new AdapterSettingsSnapshot(sequenceNumber, DateTime.UtcNow, sanitized, activeKeys, presentations);
     }
 }

@@ -1,4 +1,5 @@
 using Kontrol.Adapters.SpaceEngineers2.Settings;
+using Kontrol.Adapters.SpaceEngineers2.Patches;
 using Kontrol.Sdk.Settings;
 using NUnit.Framework;
 using Shouldly;
@@ -137,7 +138,7 @@ public class SpaceEngineers2SettingsTests
             ["directAngularAcceleration"] = 1500f, // Above max -> clamped to 5.0
             ["directAngularDeceleration"] = -10f, // Below min -> clamped to 0.1
             ["directAngularMaxRate"] = 100f, // Above max -> clamped to 3.0
-            ["velocityHoldMaxTargetSpeed"] = 5000f, // Above max -> clamped to 2000
+            ["velocityHoldMaxTargetSpeed"] = 5000f, // Runtime range: retained until SE2 supplies its live cap
             ["velocityHoldResponseGain"] = 100f // Above max -> clamped to 20
         };
 
@@ -146,7 +147,7 @@ public class SpaceEngineers2SettingsTests
         snapshot.GetNumber("directAngularAcceleration").ShouldBe(5.0f);
         snapshot.GetNumber("directAngularDeceleration").ShouldBe(0.1f);
         snapshot.GetNumber("directAngularMaxRate").ShouldBe(3.0f);
-        snapshot.GetNumber("velocityHoldMaxTargetSpeed").ShouldBe(2000f);
+        snapshot.GetNumber("velocityHoldMaxTargetSpeed").ShouldBe(5000f);
         snapshot.GetNumber("velocityHoldResponseGain").ShouldBe(20f);
     }
 
@@ -158,5 +159,35 @@ public class SpaceEngineers2SettingsTests
         descriptor.Key.ShouldBe("speedDisplayUnit");
         descriptor.AllowedValues!.Select(option => option.Value).ShouldBe([
             "GameDefault", "KilometersPerHour", "MilesPerHour"]);
+    }
+
+    [TestCase("KilometersPerHour", MeasurementUnit.KilometersPerHour, 3.6f)]
+    [TestCase("MilesPerHour", MeasurementUnit.MilesPerHour, 2.2369363f)]
+    [TestCase("GameDefault", MeasurementUnit.MetersPerSecond, 1f)]
+    public void SpeedDisplayUnit_ResolvesFinalPresentationPerParameter(
+        string preference,
+        MeasurementUnit expectedUnit,
+        float expectedMultiplier)
+    {
+        SpeedUnitPresentation.ResetForTests();
+        var snapshot = _provider.CreateSnapshot(new Dictionary<string, object?>
+        {
+            ["speedDisplayUnit"] = preference
+        });
+
+        snapshot.TryGetNumberPresentation("velocityHoldMaxTargetSpeed", out var presentation).ShouldBeTrue();
+        presentation.Unit.ShouldBe(expectedUnit);
+        presentation.Multiplier.ShouldBe(expectedMultiplier, 0.00001f);
+        presentation.Maximum.ShouldBe(0f);
+        presentation.MidLabel.ShouldBe("Waiting for SE2 grid limit");
+    }
+
+    [Test]
+    public void NumericDescriptors_UseWellKnownUnits()
+    {
+        ((NumberSettingDescriptor)_provider.Descriptors.Single(d => d.Key == "velocityHoldMaxTargetSpeed"))
+            .CanonicalUnit.ShouldBe(MeasurementUnit.MetersPerSecond);
+        ((NumberSettingDescriptor)_provider.Descriptors.Single(d => d.Key == "directAngularMaxRate"))
+            .PresentationUnit.ShouldBe(MeasurementUnit.DegreesPerSecond);
     }
 }

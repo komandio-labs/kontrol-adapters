@@ -856,7 +856,9 @@ public static class CockpitInputPatch
         }
 
         object? velocityLimits = instance is null ? null : VelocityLimitsField?.GetValue(instance);
-        return ResolveVelocityHoldMaximumSpeed(softLimit, velocityLimits, configuredMaximumSpeed);
+        float maximum = ResolveVelocityHoldMaximumSpeed(softLimit, velocityLimits, configuredMaximumSpeed);
+        VelocityHoldSpeedLimitState.Set(maximum);
+        return maximum;
     }
 
     internal static float ResolveVelocityHoldMaximumSpeed(
@@ -878,12 +880,10 @@ public static class CockpitInputPatch
         }
         catch (Exception ex)
         {
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Could not read SE2 velocity limits; using configured Velocity Hold limit. {ex.Message}");
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Could not read SE2 velocity limits; Velocity Hold is unavailable. {ex.Message}");
         }
 
-        return hasConfiguredCap
-            ? configuredCap
-            : TranslationVelocityController.DefaultMaximumTargetSpeedMetersPerSecond;
+        return 0f;
     }
 
     private static bool TryReadVelocityLimit(object? limits, out float maximumSpeed)
@@ -1073,7 +1073,16 @@ public static class CockpitInputPatch
         telemetryDict["Dampeners"] = damp ? "Enabled" : "Disabled";
 
         var telemetry = new TelemetryData();
-        string json = System.Text.Json.JsonSerializer.Serialize(telemetryDict);
+        var telemetryFrame = new Kontrol.Sdk.Telemetry.AdapterTelemetryFrame
+        {
+            Values = telemetryDict,
+            NumberPresentations = new Dictionary<string, Kontrol.Sdk.Settings.NumberSettingPresentation>
+            {
+                ["velocityHoldMaxTargetSpeed"] = SpeedUnitPresentation.ResolveTargetSpeedPresentation(
+                    SpaceEngineers2SettingsManager.Instance.SpeedDisplayUnit)
+            }
+        };
+        string json = System.Text.Json.JsonSerializer.Serialize(telemetryFrame);
         telemetry.SetJson(json);
         TelemetryChannel.Write(ref telemetry);
     }

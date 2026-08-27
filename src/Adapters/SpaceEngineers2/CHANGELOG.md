@@ -2,8 +2,13 @@
 
 ## Unreleased
 
-- Adds the first `Speed Display Units` setting: Game Default (SE2 HUD), Metric
-  (`km/h`), or Imperial (`mph`) for adapter speed telemetry.
+- Removes the Velocity Hold adapter speed constants. The cap slider now uses
+  only the active SE2 grid's runtime speed limit and remains unavailable until
+  that game-defined limit can be observed.
+- Adds typed adapter-resolved numeric presentation units. `Speed Display Units`
+  now resolves the final unit for each SE2 speed parameter, including telemetry
+  and the Velocity Hold Target-Speed Cap slider: Game Default (SE2 HUD), Metric
+  (`km/h`), or Imperial (`mph`). Canonical physics values remain `m/s`.
 - Makes hands-off Cruise Control show its calculated hold thrust through the
   thruster animation/audio presentation channel. Manual throttle continues to
   show the raw shaped joystick axis, and presentation remains separate from
