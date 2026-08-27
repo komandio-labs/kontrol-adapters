@@ -20,6 +20,23 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
     {
         new StringSettingDescriptor
         {
+            Key = "speedDisplayUnit",
+            DisplayName = "Speed Display Units",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Gauge,
+            Layout = LayoutSpan.Full,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = "GameDefault",
+            Description = "Selects units for adapter speed telemetry. Game Default follows SE2's HUD setting when available.",
+            AllowedValues = new List<SettingOption>
+            {
+                new("GameDefault", "Game Default (Default)", "Follows the speed unit selected in Space Engineers 2's HUD."),
+                new("KilometersPerHour", "Metric (km/h)", "Displays speed in kilometres per hour."),
+                new("MilesPerHour", "Imperial (mph)", "Displays speed in miles per hour.")
+            }
+        },
+        new StringSettingDescriptor
+        {
             Key = "flightModelMode",
             DisplayName = "Flight Control Mode",
             Category = "Flight Controls",

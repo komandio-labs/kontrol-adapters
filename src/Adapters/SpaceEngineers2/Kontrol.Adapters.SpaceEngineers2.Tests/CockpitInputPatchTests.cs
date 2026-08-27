@@ -212,6 +212,22 @@ public class CockpitInputPatchTests
     }
 
     [Test]
+    public void SpeedUnitPresentation_FormatsMetricAndImperialTelemetry()
+    {
+        SpeedUnitPresentation.Format(100f, "KilometersPerHour").ShouldBe("360.0 km/h");
+        SpeedUnitPresentation.Format(100f, "MilesPerHour").ShouldBe("223.7 mph");
+    }
+
+    [Test]
+    public void SpeedUnitPresentation_GameDefaultUsesTheObservedSe2HudUnit()
+    {
+        SpeedUnitPresentation.ResetForTests();
+        SpeedUnitPresentation.CaptureGameSpeedUnit(new TestGuiOptions { SpeedUnit = 2 });
+
+        SpeedUnitPresentation.Format(100f, "GameDefault").ShouldBe("223.7 mph");
+    }
+
+    [Test]
     public void ComputeLocalTranslationVelocity_UsesTheControlFrameSignConvention()
     {
         var (surge, sway, heave) = CockpitInputPatch.ComputeLocalTranslationVelocity(
@@ -321,6 +337,26 @@ public class CockpitInputPatchTests
 
         TranslationPresentationState.Reset();
         TranslationPresentationState.TryGet(42, out _).ShouldBeFalse();
+    }
+
+    [Test]
+    public void Presentation_CruiseControlShowsItsPhysicalHoldCommandWhenTheJoystickIsCentered()
+    {
+        var presentation = CockpitInputPatch.ResolvePresentationAxes(
+            cruiseActive: true, rawSurge: 0f, rawSway: 0f, rawHeave: 0f,
+            forward: .37f, backward: 0f, right: 0f, left: 0f, up: 0f, down: 0f);
+
+        presentation.ShouldBe((.37f, 0f, 0f));
+    }
+
+    [Test]
+    public void Presentation_CruiseControlKeepsRawJoystickPresentationDuringManualOverride()
+    {
+        var presentation = CockpitInputPatch.ResolvePresentationAxes(
+            cruiseActive: true, rawSurge: .4f, rawSway: 0f, rawHeave: 0f,
+            forward: .8f, backward: 0f, right: 0f, left: 0f, up: 0f, down: 0f);
+
+        presentation.ShouldBe((.4f, 0f, 0f));
     }
 
     [Test]
@@ -760,6 +796,11 @@ public class CockpitInputPatchTests
     private sealed class TestVelocityLimits
     {
         public float LinearVelocityLimit { get; init; }
+    }
+
+    private sealed class TestGuiOptions
+    {
+        public int SpeedUnit { get; init; }
     }
 
     [Test]

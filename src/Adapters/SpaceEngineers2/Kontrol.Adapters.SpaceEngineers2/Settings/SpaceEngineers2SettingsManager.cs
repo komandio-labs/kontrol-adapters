@@ -38,6 +38,7 @@ public sealed class SpaceEngineers2SettingsManager : IDisposable
     public SpaceEngineers2SettingsProvider Provider => _provider;
     public AdapterSettingsSnapshot CurrentSnapshot => _currentSnapshot;
 
+    public string SpeedDisplayUnit => _currentSnapshot.GetString("speedDisplayUnit", "GameDefault");
     public string FlightModelMode => _currentSnapshot.GetString("flightModelMode", "DirectAngularFlight");
     public bool IsNativeReticleSteering => string.Equals(FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
     public bool IsDirectAngularFlight => string.Equals(FlightModelMode, "DirectAngularFlight", StringComparison.OrdinalIgnoreCase);

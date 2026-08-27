@@ -39,6 +39,7 @@ public class SpaceEngineers2SettingsTests
         var snapshot = _provider.GetDefaultSnapshot();
 
         snapshot.ShouldNotBeNull();
+        snapshot.GetString("speedDisplayUnit").ShouldBe("GameDefault");
         snapshot.GetString("flightModelMode").ShouldBe("DirectAngularFlight");
         snapshot.GetString("translationControlMode").ShouldBe("VelocityHold");
         snapshot.GetNumber("velocityHoldMaxTargetSpeed").ShouldBe(0f);
@@ -99,6 +100,7 @@ public class SpaceEngineers2SettingsTests
     public void DescriptorOrder_GroupsRotationalPropertiesWithFlightControlModeBeforeTranslationControl()
     {
         _provider.Descriptors.Select(descriptor => descriptor.Key).ShouldBe([
+            "speedDisplayUnit",
             "flightModelMode",
             "directAngularAcceleration",
             "directAngularDeceleration",
@@ -146,5 +148,15 @@ public class SpaceEngineers2SettingsTests
         snapshot.GetNumber("directAngularMaxRate").ShouldBe(3.0f);
         snapshot.GetNumber("velocityHoldMaxTargetSpeed").ShouldBe(2000f);
         snapshot.GetNumber("velocityHoldResponseGain").ShouldBe(20f);
+    }
+
+    [Test]
+    public void SpeedDisplayUnit_OffersGameDefaultMetricAndImperialOptions()
+    {
+        var descriptor = (StringSettingDescriptor)_provider.Descriptors.First();
+
+        descriptor.Key.ShouldBe("speedDisplayUnit");
+        descriptor.AllowedValues!.Select(option => option.Value).ShouldBe([
+            "GameDefault", "KilometersPerHour", "MilesPerHour"]);
     }
 }

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Adds the first `Speed Display Units` setting: Game Default (SE2 HUD), Metric
+  (`km/h`), or Imperial (`mph`) for adapter speed telemetry.
+- Makes hands-off Cruise Control show its calculated hold thrust through the
+  thruster animation/audio presentation channel. Manual throttle continues to
+  show the raw shaped joystick axis, and presentation remains separate from
+  Cruise state and SE2 physics data.
 - Lets SE2 dampeners handle ordinary Velocity Hold target reductions. The
   adapter no longer sends opposing movement thrust below the selected target:
   Dampeners ON brakes and Dampeners OFF coasts. Cruise Control retains its

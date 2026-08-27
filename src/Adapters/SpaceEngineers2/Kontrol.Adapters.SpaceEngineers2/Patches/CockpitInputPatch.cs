@@ -470,7 +470,6 @@ public static class CockpitInputPatch
             if (gridEntity != null && observerChild != null)
             {
                 var observerOrientation = observerChild.Data.Get<RelativeTransform>().Orientation;
-                TranslationPresentationState.Set(gridEntity.DEntity, observerOrientation, surge, sway, heave);
 
                 // Read SE2's native keyboard/mouse fields so they work alongside the joystick
                 var nativeMovement = (MovementInputs?)MovementInputsField?.GetValue(instance) ?? default;
@@ -484,6 +483,10 @@ public static class CockpitInputPatch
                 var settings = SpaceEngineers2SettingsManager.Instance;
                 var (fwd, back, right, left, up, down) = ComputeTranslationThrust(
                     settings, surge, sway, heave, instance, observedBlock, out var maximumTargetSpeed);
+                var (presentationSurge, presentationSway, presentationHeave) = ResolvePresentationAxes(
+                    CruiseControl.IsActive, surge, sway, heave, fwd, back, right, left, up, down);
+                TranslationPresentationState.Set(
+                    gridEntity.DEntity, observerOrientation, presentationSurge, presentationSway, presentationHeave);
                 WriteTranslationTrace(
                     $"DirectAngularFlight/{settings.TranslationControlMode}", in control, surge, sway, heave,
                     fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
@@ -623,16 +626,19 @@ public static class CockpitInputPatch
         var gridEntity = observedBlock?.Grid?.Entity;
         var observerOrientation = observerChild?.Data.Get<RelativeTransform>().Orientation
             ?? observedBlock?.Data.GetRelativeTransform().Orientation;
+        var (fwd, back, right, left, up, down) = ComputeTranslationThrust(
+            settings, surge, sway, heave, instance, observedBlock, out var maximumTargetSpeed);
         if (gridEntity is not null && observerOrientation is { } orientation)
         {
-            TranslationPresentationState.Set(gridEntity.DEntity, orientation, surge, sway, heave);
+            var (presentationSurge, presentationSway, presentationHeave) = ResolvePresentationAxes(
+                CruiseControl.IsActive, surge, sway, heave, fwd, back, right, left, up, down);
+            TranslationPresentationState.Set(
+                gridEntity.DEntity, orientation, presentationSurge, presentationSway, presentationHeave);
         }
         else
         {
             TranslationPresentationState.Reset();
         }
-        var (fwd, back, right, left, up, down) = ComputeTranslationThrust(
-            settings, surge, sway, heave, instance, observedBlock, out var maximumTargetSpeed);
         WriteTranslationTrace(
             $"NativeReticleSteering/{settings.TranslationControlMode}", in control, surge, sway, heave,
             fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
@@ -682,6 +688,22 @@ public static class CockpitInputPatch
             Math.Max(surge, 0f), Math.Max(-surge, 0f),
             Math.Max(sway, 0f), Math.Max(-sway, 0f),
             Math.Max(heave, 0f), Math.Max(-heave, 0f));
+    }
+
+    internal static (float surge, float sway, float heave) ResolvePresentationAxes(
+        bool cruiseActive, float rawSurge, float rawSway, float rawHeave,
+        float forward, float backward, float right, float left, float up, float down)
+    {
+        // During a hands-off Cruise Control hold, no raw joystick axis exists
+        // to drive presentation. Show the already-calculated control command
+        // instead, without feeding it back into physics or Cruise state.
+        if (cruiseActive && MathF.Abs(rawSurge) <= CruiseThrottleDeadband &&
+            MathF.Abs(rawSway) <= CruiseThrottleDeadband && MathF.Abs(rawHeave) <= CruiseThrottleDeadband)
+        {
+            return (forward - backward, right - left, up - down);
+        }
+
+        return (rawSurge, rawSway, rawHeave);
     }
 
     internal static (float fwd, float back, float right, float left, float up, float down) ComputeVelocityHoldThrust(
@@ -1042,7 +1064,8 @@ public static class CockpitInputPatch
             float linSpeed = (float)Math.Sqrt(linVel.X * linVel.X + linVel.Y * linVel.Y + linVel.Z * linVel.Z);
             float angSpeed = (float)Math.Sqrt(angVel.X * angVel.X + angVel.Y * angVel.Y + angVel.Z * angVel.Z);
 
-            telemetryDict["Linear Speed"] = $"{linSpeed:F1} m/s";
+            telemetryDict["Linear Speed"] = SpeedUnitPresentation.Format(
+                linSpeed, SpaceEngineers2SettingsManager.Instance.SpeedDisplayUnit);
             telemetryDict["Angular Speed"] = $"{angSpeed:F2} rad/s";
         }
 

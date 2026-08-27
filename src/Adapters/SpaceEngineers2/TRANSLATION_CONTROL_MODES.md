@@ -18,9 +18,10 @@ Velocity Hold is implemented as an adapter-side realtime setting named
 `translationControlMode`; it is independent of `flightModelMode` and defaults
 to `VelocityHold`. Its controller is an axis-scaled proportional controller
 with a realtime configurable response gain (default `Kp = 12`), no integral
-term, and no slew limiter. Ordinary
-Velocity Hold uses signed feedback: reducing a target below current velocity
-commands opposing physical thrust until the new target is reached.
+term, and no slew limiter. The response gain applies while accelerating toward
+the selected target. Ordinary Velocity Hold does not submit opposing physical
+thrust when a target is below current velocity: Dampeners ON brakes and
+Dampeners OFF coasts. Cruise Control keeps its separate signed correction.
 `velocityHoldMaxTargetSpeed` is an optional target cap;
 `0` means no adapter cap. The active grid's `SoftSpeedLimitData.Speed` is used
 first, then SE2's private `_velocityLimits.LinearVelocityLimit`; a `300 m/s`
@@ -51,7 +52,11 @@ orientation. Client-only Harmony hooks substitute this vector only when SE2's
 thruster flame caches and thrust-audio checks read it. They never write
 `VoluntaryThrustData`, which remains the physical/dampener channel. The state
 is keyed by SE2's grid `DEntity` identity and cleared on input loss,
-cockpit/grid changes, reset, and shutdown.
+cockpit/grid changes, reset, and shutdown. While Cruise Control is actively
+holding speed with the translation axes centered, presentation instead shows
+Cruise's already-computed physical hold command; manual throttle continues to
+show the raw shaped axis. This presentation-only exception never changes Cruise
+targets, state, or SE2 physics data.
 
 ## Scope and terminology
 

@@ -371,6 +371,12 @@ Kontrol reload changed to True/False through '...'.
 Kontrol invoked SE2 Camera Mode Switch through 'ToggleCameraView'.
 ```
 
+`Speed Display Units` is the first SE2 adapter setting. It controls the unit
+used for adapter-provided linear-speed telemetry: `Game Default` follows the
+SE2 HUD's observed speed-unit option, while Metric and Imperial force `km/h`
+and `mph` respectively. It does not alter SE2's physics, HUD configuration, or
+Velocity Hold's internal m/s calculations.
+
 Normal adapter logs travel over IPC and are persisted by the Kontrol host. The
 adapter's fallback `adapter-debug.log` remains opt-in.
 
