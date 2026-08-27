@@ -30,6 +30,7 @@ CANONICAL_ADAPTER_SLUGS = {
 SE2_ASSEMBLIES = (
     "Game2.Client.dll", "Game2.Simulation.dll", "VRage.Core.dll", "VRage.Core.Game.dll",
     "VRage.DCS.dll", "VRage.Library.dll", "VRage.Physics.dll", "VRage.Input.dll",
+    "Avalonia.Base.dll", "Avalonia.Controls.dll", "VRage.UI.dll", "VRage.UI.Shared.dll",
 )
 SE2_COMPATIBILITY_ASSEMBLIES = ("Game2.Client.dll", "VRage.Core.dll", "VRage.Library.dll")
 SE2_IPC_CHANNELS = (
@@ -313,21 +314,21 @@ def validate_repository() -> None:
         raise RuntimeError("Tracked forbidden artifacts:\n" + "\n".join(forbidden))
 
 
-def package(slug: str, version: str, game_directory: str | None, output: str | None, overwrite: bool) -> None:
+def package(slug: str, version: str, game_directory: str | None, output: str | None, overwrite: bool, configuration: str) -> None:
     slug = canonical_adapter_slug(slug)
     data = manifest(slug)
     if data["adapterVersion"] != version:
         raise RuntimeError(f"Requested version {version} does not match manifest version {data['adapterVersion']}.")
     test_adapter(slug, game_directory, False)
     _, project, _ = adapter_paths(slug)
-    run("dotnet", "build", str(project), "-c", "Release")
+    run("dotnet", "build", str(project), "-c", configuration)
     destination = Path(output).resolve() if output else ROOT / "artifacts" / f"kontrol-adapter-{slug}-{version}-win-x64.zip"
-    arguments = ["pack", "--adapter", slug, "--configuration", "Release", "--output", str(destination)]
+    arguments = ["pack", "--adapter", slug, "--configuration", configuration, "--output", str(destination)]
     if overwrite:
         arguments.extend(["--overwrite", "true"])
     tool(*arguments)
     tool("verify-package", "--package", str(destination))
-    print(f"Created local package: {destination}")
+    print(f"Created local {configuration} package: {destination}")
 
 
 def main() -> int:
@@ -346,6 +347,8 @@ def main() -> int:
     pack.add_argument("--game-directory")
     pack.add_argument("--output")
     pack.add_argument("--overwrite", action="store_true")
+    pack.add_argument("--configuration", choices=("Debug", "Release"), default="Debug",
+                      help="Build configuration. Defaults to Debug for local development; Release is required for publishing.")
     verify = commands.add_parser("verify-package")
     verify.add_argument("--package", required=True)
     descriptor = commands.add_parser("release-descriptor")
@@ -370,7 +373,7 @@ def main() -> int:
         if args.command == "validate": validate_repository()
         elif args.command == "sync-se2": sync_se2(args.game_directory)
         elif args.command == "test": test_adapter(args.adapter, args.game_directory, args.skip_sync)
-        elif args.command == "pack": package(args.adapter, args.version, args.game_directory, args.output, args.overwrite)
+        elif args.command == "pack": package(args.adapter, args.version, args.game_directory, args.output, args.overwrite, args.configuration)
         elif args.command == "verify-package": tool("verify-package", "--package", args.package)
         elif args.command == "release-descriptor": tool("release", "create", "--adapter", args.adapter, "--package", args.package, "--package-url", args.package_url, "--tag", args.tag, "--commit", args.commit, "--output", args.output, "--channel", args.channel)
         elif args.command == "catalog-build":

@@ -37,6 +37,53 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
                 new("MilesPerHour", "Imperial (mph)", "Displays speed in miles per hour.")
             }
         },
+        new BooleanSettingDescriptor
+        {
+            Key = "showCruiseControlHudIndicator",
+            DisplayName = "Show Cruise Control HUD Indicator",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Gauge,
+            Layout = LayoutSpan.Full,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = true,
+            Description = "Shows the cruise-control target-speed indicator in the SE2 cockpit HUD while Cruise Control is active."
+        },
+        new NumberSettingDescriptor
+        {
+            Key = "cruiseControlHudOffsetX",
+            DisplayName = "Cruise Control HUD Horizontal Offset",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Gauge,
+            Layout = LayoutSpan.Half,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = 0f,
+            Min = -500f,
+            Max = 500f,
+            Step = 1f,
+            CanonicalUnit = MeasurementUnit.None,
+            MinLabel = "-500 (Left)",
+            MidLabel = "0 (Default)",
+            MaxLabel = "500 (Right)",
+            Description = "Moves the cruise-control indicator horizontally from its native SPD-relative position, in HUD pixels."
+        },
+        new NumberSettingDescriptor
+        {
+            Key = "cruiseControlHudOffsetY",
+            DisplayName = "Cruise Control HUD Vertical Offset",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Gauge,
+            Layout = LayoutSpan.Half,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = 0f,
+            Min = -500f,
+            Max = 500f,
+            Step = 1f,
+            CanonicalUnit = MeasurementUnit.None,
+            MinLabel = "-500 (Up)",
+            MidLabel = "0 (Default)",
+            MaxLabel = "500 (Down)",
+            Description = "Moves the cruise-control indicator vertically from its native SPD-relative position, in HUD pixels."
+        },
         new StringSettingDescriptor
         {
             Key = "flightModelMode",

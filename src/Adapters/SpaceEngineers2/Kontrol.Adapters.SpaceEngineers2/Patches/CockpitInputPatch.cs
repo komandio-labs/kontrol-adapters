@@ -100,7 +100,13 @@ public static class CockpitInputPatch
     private static bool _missingObservedBlockReported;
     private static ulong _previousTriggeredActions;
     private static long _nextTranslationTraceTick;
+    private static bool? _lastObservedTargetBasedGyro;
+    private static string? _lastObservedFlightModel;
     private static readonly CruiseControlState CruiseControl = new();
+    private static readonly CruiseAdjustmentRepeater CruiseAdjustmentRepeater = new();
+
+    internal static bool IsCruiseControlActiveForHud => CruiseControl.IsActive;
+    internal static float CruiseControlTargetSpeedForHud => CruiseControl.TargetSpeedMetersPerSecond;
 
     private static void EnsureChannels()
     {
@@ -142,8 +148,12 @@ public static class CockpitInputPatch
             _lastOverrideActiveState = false;
             _lastObservedBlock = null;
             _nextTranslationTraceTick = 0;
+            _lastObservedTargetBasedGyro = null;
+            _lastObservedFlightModel = null;
             CruiseControl.Reset();
+            CruiseAdjustmentRepeater.Reset();
             TranslationPresentationState.Reset();
+            CruiseControlHudManager.Clear();
         }
     }
 
@@ -279,10 +289,16 @@ public static class CockpitInputPatch
             ApplyLiveSettings();
             var settings = SpaceEngineers2SettingsManager.Instance;
 
-            if (!TryReadControlFrame(out var control)) return true;
+            if (!TryReadControlFrame(out var control))
+            {
+                CruiseControlHudManager.HideTransient();
+                return true;
+            }
             bool inputEnabled = control.IsInputEnabled != 0;
             var observedBlock = (CubeBlockComponent?)ObservedBlockField?.GetValue(__instance);
             ProcessTriggeredActions(__instance, inputEnabled ? control.TriggeredActions : 0, observedBlock);
+            ProcessCruiseControlAdjustmentHold(inputEnabled ? control.DiscreteStates : 0UL);
+            CruiseControlHudManager.Refresh(inputEnabled && observedBlock is not null);
             ActiveToolActionPatch.ApplyPrimaryFire(inputEnabled && (control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload(inputEnabled && (control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -341,7 +357,10 @@ public static class CockpitInputPatch
             if (observedBlock != _lastObservedBlock)
             {
                 _lastObservedBlock = observedBlock;
+                _lastObservedTargetBasedGyro = null;
+                _lastObservedFlightModel = null;
                 CruiseControl.Reset();
+                CruiseAdjustmentRepeater.Reset();
                 TranslationPresentationState.Reset();
                 SpaceEngineers2AdapterDiagnostics.WriteDebug(observedBlock is null
                     ? "SE2 cleared the observed cockpit block."
@@ -351,6 +370,8 @@ public static class CockpitInputPatch
             if (!TryReadControlFrame(out var control))
             {
                 TranslationPresentationState.Reset();
+                CruiseAdjustmentRepeater.Reset();
+                CruiseControlHudManager.HideTransient();
                 return;
             }
 
@@ -364,6 +385,8 @@ public static class CockpitInputPatch
             if (!isInputEnabled)
             {
                 TranslationPresentationState.Reset();
+                CruiseAdjustmentRepeater.Reset();
+                CruiseControlHudManager.Hide();
                 if (_wasKontrolActiveInCockpit)
                 {
                     NeutralizeCockpitInput(instance);
@@ -372,6 +395,7 @@ public static class CockpitInputPatch
             }
 
             _wasKontrolActiveInCockpit = true;
+            TraceFlightModeObservation(instance, observedBlock, isInputEnabled, "NativeReticle frame");
 
             try
             {
@@ -380,6 +404,7 @@ public static class CockpitInputPatch
                 {
                     SwitchGyroModeMethod?.Invoke(instance, [true]);
                     SpaceEngineers2AdapterDiagnostics.WriteDebug("Ensured cockpit gyro mode is target-based for Native Reticle Steering.");
+                    TraceFlightModeObservation(instance, observedBlock, isInputEnabled, "NativeReticle enforced target-based gyro");
                 }
             }
             catch { }
@@ -392,6 +417,8 @@ public static class CockpitInputPatch
             float heave = NormalizeAxis(control.AnalogValues[5]);
 
             ProcessTriggeredActions(instance, control.TriggeredActions, observedBlock as CubeBlockComponent);
+            ProcessCruiseControlAdjustmentHold(control.DiscreteStates);
+            CruiseControlHudManager.Refresh(observedBlock is not null);
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -415,9 +442,17 @@ public static class CockpitInputPatch
         {
             EnsureChannels();
 
-            if (!TryReadControlFrame(out var control) || control.IsInputEnabled == 0)
+            if (!TryReadControlFrame(out var control))
             {
                 TranslationPresentationState.Reset();
+                CruiseControlHudManager.HideTransient();
+                return false;
+            }
+
+            if (control.IsInputEnabled == 0)
+            {
+                TranslationPresentationState.Reset();
+                CruiseControlHudManager.Hide();
                 if (_wasKontrolActiveInCockpit)
                 {
                     NeutralizeCockpitInput(instance);
@@ -435,7 +470,10 @@ public static class CockpitInputPatch
             if (observedBlock != _lastObservedBlock)
             {
                 _lastObservedBlock = observedBlock;
+                _lastObservedTargetBasedGyro = null;
+                _lastObservedFlightModel = null;
                 CruiseControl.Reset();
+                CruiseAdjustmentRepeater.Reset();
                 TranslationPresentationState.Reset();
                 SpaceEngineers2AdapterDiagnostics.WriteDebug(observedBlock is null
                     ? "SE2 cleared the observed cockpit block."
@@ -451,6 +489,11 @@ public static class CockpitInputPatch
                 SwitchGyroModeMethod?.Invoke(instance, [false]);
                 _wasKontrolActiveInCockpit = true;
                 SpaceEngineers2AdapterDiagnostics.WriteDebug($"Switched cockpit gyro mode to angular (saved desired target-based={_originalDesiredTargetBasedGyro}).");
+                TraceFlightModeObservation(instance, observedBlock, inputEnabled: true, "DirectAngular enforced angular gyro");
+            }
+            else
+            {
+                TraceFlightModeObservation(instance, observedBlock, inputEnabled: true, "DirectAngular frame");
             }
 
             float pitch = NormalizeAxis(control.AnalogValues[0]);
@@ -461,6 +504,8 @@ public static class CockpitInputPatch
             float heave = NormalizeAxis(control.AnalogValues[5]);
 
             ProcessTriggeredActions(instance, control.TriggeredActions, observedBlock);
+            ProcessCruiseControlAdjustmentHold(control.DiscreteStates);
+            CruiseControlHudManager.Refresh(observedBlock is not null);
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -578,7 +623,9 @@ public static class CockpitInputPatch
         try
         {
             CruiseControl.Reset();
+            CruiseAdjustmentRepeater.Reset();
             TranslationPresentationState.Reset();
+            CruiseControlHudManager.Hide();
             if (!_wasKontrolActiveInCockpit) return;
             _wasKontrolActiveInCockpit = false;
 
@@ -606,6 +653,7 @@ public static class CockpitInputPatch
                 _originalDesiredTargetBasedGyro);
             SwitchGyroModeMethod?.Invoke(instance, [targetBasedGyro]);
             SpaceEngineers2AdapterDiagnostics.WriteDebug($"Restored cockpit gyro mode to: {targetBasedGyro}.");
+            TraceFlightModeObservation(instance, observedBlock, inputEnabled: false, "Input neutralization");
         }
         catch (Exception ex)
         {
@@ -766,12 +814,35 @@ public static class CockpitInputPatch
         }
 
         if (CruiseControl.IsActive && MathF.Abs(surge) <= CruiseThrottleDeadband &&
-            TryGetLocalVelocity(instance, observedBlock, out var cruiseSurge, out _, out _))
+            TryGetLocalVelocity(instance, observedBlock, out var cruiseSurge, out var cruiseSway, out var cruiseHeave))
         {
             maximumTargetSpeed = ResolveVelocityHoldMaximumSpeed(instance, settings.VelocityHoldMaxTargetSpeed);
             float forward = TranslationVelocityController.ComputeMinimumForwardSpeedThrust(
                 CruiseControl.TargetSpeedMetersPerSecond, cruiseSurge, maximumTargetSpeed);
-            return (forward, 0f, 0f, 0f, 0f, 0f);
+            var fastRetarget = CruiseControl.IsFastRetargeting
+                ? TranslationVelocityController.ComputeCruiseFastRetargetThrust(
+                    CruiseControl.TargetSpeedMetersPerSecond, cruiseSurge, maximumTargetSpeed)
+                : (fwd: 0f, back: 0f);
+            if (CruiseControl.IsFastRetargeting && fastRetarget.fwd == 0f && fastRetarget.back == 0f)
+            {
+                CruiseControl.CompleteFastRetarget();
+            }
+
+            if (!settings.IsVelocityHoldTranslation)
+            {
+                var lateral = ComputeProportionalThrust(0f, sway, heave);
+                return (Math.Max(forward, fastRetarget.fwd), fastRetarget.back,
+                    lateral.right, lateral.left, lateral.up, lateral.down);
+            }
+
+            var cruiseAndLateral = TranslationVelocityController.ComputeCruiseForwardWithVelocityHoldLateralThrust(
+                CruiseControl.TargetSpeedMetersPerSecond,
+                sway, heave,
+                cruiseSurge, cruiseSway, cruiseHeave,
+                maximumTargetSpeed,
+                settings.VelocityHoldResponseGain);
+            return (Math.Max(cruiseAndLateral.fwd, fastRetarget.fwd), fastRetarget.back,
+                cruiseAndLateral.right, cruiseAndLateral.left, cruiseAndLateral.up, cruiseAndLateral.down);
         }
 
         if (CruiseControl.IsActive && surge > CruiseThrottleDeadband)
@@ -1001,6 +1072,27 @@ public static class CockpitInputPatch
     private static float NormalizeAxis(float value) =>
         float.IsFinite(value) ? Math.Clamp(value, -1f, 1f) : 0f;
 
+    private static void TraceFlightModeObservation(
+        CockpitInputHandlerComponent instance,
+        object? observedBlock,
+        bool inputEnabled,
+        string path)
+    {
+        bool? targetBasedGyro = TargetBasedGyroField?.GetValue(instance) is bool value ? value : null;
+        string selectedFlightModel = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
+        if (_lastObservedTargetBasedGyro == targetBasedGyro &&
+            string.Equals(_lastObservedFlightModel, selectedFlightModel, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastObservedTargetBasedGyro = targetBasedGyro;
+        _lastObservedFlightModel = selectedFlightModel;
+        SpaceEngineers2AdapterDiagnostics.WriteDebug(
+            $"[FlightModeTrace] path={path}; selected={selectedFlightModel}; targetBasedGyro={targetBasedGyro?.ToString() ?? "unavailable"}; " +
+            $"inputEnabled={inputEnabled}; kontrolCockpitActive={_wasKontrolActiveInCockpit}; cockpit={observedBlock?.GetType().Name ?? "none"}." );
+    }
+
     private static void ApplyLiveSettings()
     {
         EnsureChannels();
@@ -1014,10 +1106,12 @@ public static class CockpitInputPatch
             var prevMode = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
             SpaceEngineers2SettingsManager.Instance.ApplySettings(values, (ulong)DateTime.UtcNow.Ticks);
             _lastSettingsJson = json;
+            CruiseControlHudManager.Refresh();
             var newMode = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
             if (!string.Equals(prevMode, newMode, StringComparison.OrdinalIgnoreCase))
             {
-                SpaceEngineers2AdapterDiagnostics.Write($"Flight model switched: {prevMode} -> {newMode}");
+                SpaceEngineers2AdapterDiagnostics.Write(
+                    $"[FlightModeTrace] Settings IPC changed selected flight model: {prevMode} -> {newMode}; payloadLength={json.Length}.");
                 _currentCockpitAngularVelocity = Vector3.Zero;
             }
         }
@@ -1142,23 +1236,45 @@ public static class CockpitInputPatch
             else
             {
                 CruiseSetResult result = CruiseControl.SetOrReset(currentSurge, Environment.TickCount64);
-                SpaceEngineers2AdapterDiagnostics.WriteDebug(result is CruiseSetResult.Set
-                    ? $"Cruise Control set to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s."
-                    : "Cruise Control reset by double-click.");
+                SpaceEngineers2AdapterDiagnostics.WriteDebug(result switch
+                {
+                    CruiseSetResult.Set => $"Cruise Control set to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s.",
+                    CruiseSetResult.Reset => "Cruise Control reset by double-click.",
+                    _ => "Cruise Control Set ignored because forward speed must be greater than zero."
+                });
             }
         }
 
-        if ((newActions & (1UL << CruiseIncreaseActionBit)) != 0)
-        {
-            CruiseControl.IncreaseTarget();
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Cruise Control target increased to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s.");
-        }
+        // Refresh immediately after set/reset/adjust actions. The normal
+        // control-frame refresh remains in place for brake cancellation and
+        // cockpit/input lifecycle transitions.
+        CruiseControlHudManager.Refresh(observedBlock is not null && instance is not null);
+    }
 
-        if ((newActions & (1UL << CruiseDecreaseActionBit)) != 0)
-        {
-            CruiseControl.DecreaseTarget();
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Cruise Control target decreased to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s.");
-        }
+    private static void ProcessCruiseControlAdjustmentHold(ulong discreteStates)
+    {
+        bool increaseHeld = (discreteStates & (1UL << CruiseIncreaseActionBit)) != 0;
+        bool decreaseHeld = (discreteStates & (1UL << CruiseDecreaseActionBit)) != 0;
+        float adjustment = CruiseAdjustmentRepeater.Update(increaseHeld, decreaseHeld, Environment.TickCount64);
+        if (adjustment == 0f) return;
+
+        // The input schema defines these as state-delivered controls. Do not
+        // also consume their legacy triggered-action bits: that would apply an
+        // extra increment alongside the held-state increment. The values below
+        // are expressed in the current HUD/presentation unit (1, then 5, then
+        // 10), then converted for the m/s-based controller.
+        float metersPerSecondAdjustment = SpeedUnitPresentation.ConvertDisplayedSpeedToMetersPerSecond(
+            adjustment, SpaceEngineers2SettingsManager.Instance.SpeedDisplayUnit);
+        AdjustCruiseTarget(metersPerSecondAdjustment);
+    }
+
+    private static void AdjustCruiseTarget(float delta)
+    {
+        if (!CruiseControl.AdjustTarget(delta)) return;
+
+        string direction = delta > 0f ? "increased" : "decreased";
+        SpaceEngineers2AdapterDiagnostics.WriteDebug(
+            $"Cruise Control target {direction} by {MathF.Abs(delta):F0} m/s to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s; fast retarget enabled.");
     }
 
     private static void InvokeButtonAction(object instance, MethodInfo method, bool value)

@@ -134,8 +134,8 @@ schema version so saved user mappings continue to refer to the same controls.
 | 12 | `DiscreteStates` bit 12 | `weapons.reload` | Momentary | Held while the physical button is held | Active block-weapon secondary/right-mouse handler, with press and release |
 | 13 | `TriggeredActions` bit 13 | `camera.mode_switch` | Trigger | Rising edge, host-latched for 150 ms | `CameraSystemComponent.ToggleCameraView()` on the camera update path |
 | 14 | `TriggeredActions` bit 14 | `flight.cruise_control_set` | Trigger | Rising edge | Captures current non-negative forward speed as the Cruise Control target; double-click resets Cruise Control |
-| 15 | `TriggeredActions` bit 15 | `flight.cruise_control_increase` | Trigger | Rising edge | Increases the active Cruise Control target by 10 m/s |
-| 16 | `TriggeredActions` bit 16 | `flight.cruise_control_decrease` | Trigger | Rising edge | Decreases the active Cruise Control target by 10 m/s, clamped at 0 m/s |
+| 15 | `DiscreteStates` bit 15 | `flight.cruise_control_increase` | Momentary | Held button; repeats after a short delay | Increases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps |
+| 16 | `DiscreteStates` bit 16 | `flight.cruise_control_decrease` | Momentary | Held button; repeats after a short delay | Decreases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps; never below 0 |
 
 ### Host-side analog shaping
 
@@ -160,8 +160,13 @@ throttle-derived target speed and the captured cruise target. It therefore does
 not lower a cruise target or apply direct thrust past it; returning throttle to
 its neutral deadband resumes minimum-speed maintenance.
 Negative throttle past the adapter's small jitter deadband acts as a brake and
-cancels Cruise Control. Double-click Set resets it. The +/-10 m/s actions adjust
-an active target without allowing reverse (negative) cruise speeds.
+cancels Cruise Control. Double-click Set resets it. Set ignores zero or reverse
+forward speed. The Cruise increase/decrease buttons change an active target by
+1 currently displayed speed unit on press; holding them repeats after a short
+delay and escalates through 1, 5, and 10 displayed-unit steps without allowing
+reverse cruise speeds. Each explicit
+button adjustment temporarily commands full available forward/reverse thrust to
+reach its new target, then resumes normal Cruise maintenance.
 
 Outside Cruise Control, ordinary Velocity Hold converges on each live
 translation target. Lowering a positive throttle below the current speed sends
@@ -249,6 +254,25 @@ data path. It bypasses SE2's native rotation/reticle jobs, commits translation
 through the grid entity, and writes a closed-loop target angular velocity. Verify
 those data paths and the `SwitchGyroMode(bool)` signature whenever that mode is
 changed or a new game build is adopted.
+
+### Cockpit HUD cruise indicator
+
+The optional Cruise Control indicator is rendered by a custom Avalonia
+`Control` added to the native `HUDSpeedometer` template. The adapter patches
+`Keen.Game2.Client.UI.HUD.Movement.HUDSpeedometer.OnApplyTemplate(TemplateAppliedEventArgs)`,
+selects only the template instance with the `Flight` class, and attaches the
+overlay as a sibling of the native `PART_Tachometer` under `PART_Root`.
+Positioning is calculated from the live `PART_Tachometer` bounds, with the
+configured X/Y offsets applied in HUD logical pixels; it is therefore tied to
+SE2's SPD control instead of a fixed screen coordinate. The overlay remains
+attached across `CockpitHUDScreen.Clean()`/camera-view transitions and is
+rendered only while its parent Flight HUD is displayed. Transient missing input
+frames do not hide it. It is hidden unless all of these are true: the player
+has an active cockpit input frame, Cruise Control is active, and
+`showCruiseControlHudIndicator` is enabled. Its target
+text is resolved through
+the same `SpeedUnitPresentation` path as adapter telemetry, including SE2's
+`m/s`, `km/h`, and `mph` modes.
 
 ### Cockpit actions
 
@@ -377,6 +401,14 @@ Linear Speed telemetry and the Velocity Hold Target-Speed Cap slider. `Game
 Default` follows the SE2 HUD's observed speed-unit option, while Metric and
 Imperial force `km/h` and `mph` respectively. It does not alter SE2's physics,
 HUD configuration, or Velocity Hold's canonical `m/s` calculations.
+
+The default-on `Show Cruise Control HUD Indicator` setting adds a small
+Avalonia-drawn cruise target gauge above SE2's native SPD speedometer while the
+player is in a cockpit and Cruise Control is active. Its target text follows
+`Speed Display Units`, including `m/s`, `km/h`, and `mph`. The indicator can be
+disabled with `showCruiseControlHudIndicator`; `cruiseControlHudOffsetX` and
+`cruiseControlHudOffsetY` provide bounded HUD-pixel adjustments relative to the
+native SPD control.
 
 Normal adapter logs travel over IPC and are persisted by the Kontrol host. The
 adapter's fallback `adapter-debug.log` remains opt-in.

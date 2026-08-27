@@ -28,8 +28,8 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         new("weapons.reload", "Reload", "Reload the currently selected weapon (secondary/right-mouse action)", "Weapons", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary),
         new("camera.mode_switch", "Camera Mode Switch", "Switch between the available SE2 camera modes", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
         new("flight.cruise_control_set", "Cruise Control Set", "Set the current forward speed as the cruise target. Double-click to reset Cruise Control.", "Flight controls", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button]),
-        new("flight.cruise_control_increase", "Cruise Control +10 m/s", "Increase the active Cruise Control target by 10 m/s.", "Flight controls", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button]),
-        new("flight.cruise_control_decrease", "Cruise Control -10 m/s", "Decrease the active Cruise Control target by 10 m/s without going below 0 m/s.", "Flight controls", 60, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button])
+        new("flight.cruise_control_increase", "Cruise Control increase", "Increase Cruise Control by 1 displayed speed unit; hold to repeat and accelerate through 5 and 10 displayed-unit steps.", "Flight controls", 50, InputSignalKind.Discrete, DiscreteBehavior.Momentary, AllowedSourceKinds: [InputSourceKind.Button], ActionBehavior: DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
+        new("flight.cruise_control_decrease", "Cruise Control decrease", "Decrease Cruise Control by 1 displayed speed unit; hold to repeat and accelerate through 5 and 10 displayed-unit steps without going below 0.", "Flight controls", 60, InputSignalKind.Discrete, DiscreteBehavior.Momentary, AllowedSourceKinds: [InputSourceKind.Button], ActionBehavior: DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State)
     ]);
     public DeploymentMethodInformation GetDeploymentInformation(GameLaunchMethod method) => method switch
     {

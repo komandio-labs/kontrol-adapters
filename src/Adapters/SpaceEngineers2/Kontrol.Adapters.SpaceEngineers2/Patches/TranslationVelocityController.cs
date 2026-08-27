@@ -36,6 +36,30 @@ internal static class TranslationVelocityController
             surge, sway, heave, actualSurge, actualSway, actualHeave,
             maximumTargetSpeedMetersPerSecond);
 
+    /// <summary>
+    /// Combines Cruise Control's forward-only minimum-speed hold with manual
+    /// Velocity Hold movement on the lateral axes. Cruise never owns strafe or
+    /// lift, so those axes must remain responsive while it is active.
+    /// </summary>
+    internal static (float fwd, float back, float right, float left, float up, float down) ComputeCruiseForwardWithVelocityHoldLateralThrust(
+        float cruiseTargetSpeedMetersPerSecond,
+        float sway, float heave,
+        float actualSurge, float actualSway, float actualHeave,
+        float maximumTargetSpeedMetersPerSecond,
+        float responseGain = 1f)
+    {
+        float forward = ComputeMinimumForwardSpeedThrust(
+            cruiseTargetSpeedMetersPerSecond,
+            actualSurge,
+            maximumTargetSpeedMetersPerSecond);
+        var lateral = ComputeVelocityHoldThrust(
+            0f, sway, heave,
+            actualSurge, actualSway, actualHeave,
+            maximumTargetSpeedMetersPerSecond,
+            responseGain);
+        return (Math.Max(forward, lateral.fwd), lateral.back, lateral.right, lateral.left, lateral.up, lateral.down);
+    }
+
     internal static float ComputeAxis(
         float input, float actualVelocity, float maximumTargetSpeedMetersPerSecond, float responseGain = 1f) =>
         ComputeAccelerationAxis(Normalize(input), actualVelocity, maximumTargetSpeedMetersPerSecond, responseGain);
@@ -118,6 +142,29 @@ internal static class TranslationVelocityController
         // Cruise Control is a minimum-speed controller: it adds forward thrust
         // below the target and never commands reverse thrust to slow down.
         return Math.Clamp((targetSpeed - actualSpeed) / maximumSpeed, 0f, 1f);
+    }
+
+    /// <summary>
+    /// Applies an explicit Cruise Control target adjustment as a fastest-safe
+    /// retarget: full available forward or reverse command until the target is
+    /// reached. Ordinary throttle changes do not use this path.
+    /// </summary>
+    internal static (float fwd, float back) ComputeCruiseFastRetargetThrust(
+        float targetSpeedMetersPerSecond,
+        float actualForwardSpeedMetersPerSecond,
+        float maximumTargetSpeedMetersPerSecond)
+    {
+        float maximumSpeed = NormalizeMaximumSpeed(maximumTargetSpeedMetersPerSecond);
+        if (maximumSpeed <= 0f) return (0f, 0f);
+
+        float targetSpeed = Math.Clamp(
+            float.IsFinite(targetSpeedMetersPerSecond) ? targetSpeedMetersPerSecond : 0f,
+            0f,
+            maximumSpeed);
+        float error = targetSpeed - NormalizeVelocity(actualForwardSpeedMetersPerSecond);
+        if (MathF.Abs(error) <= .25f) return (0f, 0f);
+
+        return error > 0f ? (1f, 0f) : (0f, 1f);
     }
 
     internal static float ComputeCruiseForwardVelocityHoldAxis(

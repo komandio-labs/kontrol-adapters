@@ -192,6 +192,72 @@ public class CockpitInputPatchTests
         cruise.back.ShouldBe(0.2f, 0.0001f);
     }
 
+    [TestCase(0.5f, 0f, 0.5f, 0f, 0f, 0f)]
+    [TestCase(-0.5f, 0f, 0f, 0.5f, 0f, 0f)]
+    [TestCase(0f, 0.5f, 0f, 0f, 0.5f, 0f)]
+    [TestCase(0f, -0.5f, 0f, 0f, 0f, 0.5f)]
+    public void CruiseControl_LeavesAllManualLateralVelocityHoldAxesResponsive(
+        float sway, float heave,
+        float expectedRight, float expectedLeft, float expectedUp, float expectedDown)
+    {
+        var thrust = TranslationVelocityController.ComputeCruiseForwardWithVelocityHoldLateralThrust(
+            cruiseTargetSpeedMetersPerSecond: 80f,
+            sway, heave,
+            actualSurge: 80f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f,
+            responseGain: 12f);
+
+        thrust.fwd.ShouldBe(0f);
+        thrust.back.ShouldBe(0f);
+        thrust.right.ShouldBe(expectedRight, 0.0001f);
+        thrust.left.ShouldBe(expectedLeft, 0.0001f);
+        thrust.up.ShouldBe(expectedUp, 0.0001f);
+        thrust.down.ShouldBe(expectedDown, 0.0001f);
+    }
+
+    [Test]
+    public void CruiseControl_CombinesForwardHoldWithManualLateralVelocityHold()
+    {
+        var thrust = TranslationVelocityController.ComputeCruiseForwardWithVelocityHoldLateralThrust(
+            cruiseTargetSpeedMetersPerSecond: 90f,
+            sway: 0.5f, heave: 0f,
+            actualSurge: 60f, actualSway: 0f, actualHeave: 0f,
+            maximumTargetSpeedMetersPerSecond: 300f,
+            responseGain: 1f);
+
+        thrust.fwd.ShouldBe(0.1f, 0.0001f);
+        thrust.back.ShouldBe(0f);
+        thrust.right.ShouldBe(0.5f, 0.0001f);
+        thrust.left.ShouldBe(0f);
+        thrust.up.ShouldBe(0f);
+        thrust.down.ShouldBe(0f);
+    }
+
+    [TestCase(80f, 90f, 1f, 0f)]
+    [TestCase(100f, 90f, 0f, 1f)]
+    [TestCase(89.8f, 90f, 0f, 0f)]
+    public void CruiseControlExplicitTargetAdjustment_RetargetsAtFullAvailableThrust(
+        float actualSpeed, float targetSpeed, float expectedForward, float expectedBackward)
+    {
+        var thrust = TranslationVelocityController.ComputeCruiseFastRetargetThrust(
+            targetSpeed, actualSpeed, maximumTargetSpeedMetersPerSecond: 300f);
+
+        thrust.fwd.ShouldBe(expectedForward);
+        thrust.back.ShouldBe(expectedBackward);
+    }
+
+    [Test]
+    public void CruiseControlExplicitTargetAdjustment_ClampsPhysicalRetargetToTheRuntimeLimit()
+    {
+        var thrust = TranslationVelocityController.ComputeCruiseFastRetargetThrust(
+            targetSpeedMetersPerSecond: 1_000f,
+            actualForwardSpeedMetersPerSecond: 300f,
+            maximumTargetSpeedMetersPerSecond: 300f);
+
+        thrust.fwd.ShouldBe(0f);
+        thrust.back.ShouldBe(0f);
+    }
+
     [Test]
     public void ComputeVelocityHoldThrust_NeutralInputSubmitsNoAdapterThrust()
     {
@@ -219,6 +285,16 @@ public class CockpitInputPatchTests
         SpeedUnitPresentation.Format(100f, "MilesPerHour").ShouldBe("223.7 mph");
     }
 
+    [TestCase("KilometersPerHour", "1080 km/h")]
+    [TestCase("MilesPerHour", "671 mph")]
+    [TestCase("GameDefault", "300 m/s")]
+    public void SpeedUnitPresentation_FormatsHudCruiseTargetInAllSupportedUnits(string preference, string expected)
+    {
+        SpeedUnitPresentation.ResetForTests();
+
+        SpeedUnitPresentation.FormatHudTarget(300f, preference).ShouldBe(expected);
+    }
+
     [Test]
     public void SpeedUnitPresentation_GameDefaultUsesTheObservedSe2HudUnit()
     {
@@ -226,6 +302,28 @@ public class CockpitInputPatchTests
         SpeedUnitPresentation.CaptureGameSpeedUnit(new TestGuiOptions { SpeedUnit = 2 });
 
         SpeedUnitPresentation.Format(100f, "GameDefault").ShouldBe("223.7 mph");
+    }
+
+    [TestCase("GameDefault", 1f)]
+    [TestCase("KilometersPerHour", 1f / 3.6f)]
+    [TestCase("MilesPerHour", 1f / 2.2369363f)]
+    public void SpeedUnitPresentation_ConvertsOneDisplayedCruiseStepToControllerUnits(
+        string preference, float expectedMetersPerSecond)
+    {
+        SpeedUnitPresentation.ResetForTests();
+
+        SpeedUnitPresentation.ConvertDisplayedSpeedToMetersPerSecond(1f, preference)
+            .ShouldBe(expectedMetersPerSecond, 0.0001f);
+    }
+
+    [Test]
+    public void SpeedUnitPresentation_GameDefaultConvertsCruiseStepUsingObservedSe2HudUnit()
+    {
+        SpeedUnitPresentation.ResetForTests();
+        SpeedUnitPresentation.CaptureGameSpeedUnit(new TestGuiOptions { SpeedUnit = 1 });
+
+        SpeedUnitPresentation.ConvertDisplayedSpeedToMetersPerSecond(1f, "GameDefault")
+            .ShouldBe(1f / 3.6f, 0.0001f);
     }
 
     [Test]
@@ -240,6 +338,30 @@ public class CockpitInputPatchTests
         presentation.Multiplier.ShouldBe(3.6f);
         presentation.MidLabel.ShouldBe("1080 km/h");
         presentation.Maximum.ShouldBe(300f);
+    }
+
+    [Test]
+    public void CruiseHudTemplate_AttachesOnlyToTheCompleteFlightSpeedometerTemplate()
+    {
+        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: true, rootFound: true, tachometerFound: true)
+            .ShouldBeTrue();
+        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: false, rootFound: true, tachometerFound: true)
+            .ShouldBeFalse();
+        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: true, rootFound: false, tachometerFound: true)
+            .ShouldBeFalse();
+        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: true, rootFound: true, tachometerFound: false)
+            .ShouldBeFalse();
+    }
+
+    [Test]
+    public void CruiseHudOverlay_ClampsTheIndicatorInsideTheVisibleParentBounds()
+    {
+        CruiseControlHudOverlay.ClampToVisibleBounds(requested: -40d, contentLength: 32d, availableLength: 100d)
+            .ShouldBe(0d);
+        CruiseControlHudOverlay.ClampToVisibleBounds(requested: 90d, contentLength: 32d, availableLength: 100d)
+            .ShouldBe(68d);
+        CruiseControlHudOverlay.ClampToVisibleBounds(requested: 12d, contentLength: 32d, availableLength: 100d)
+            .ShouldBe(12d);
     }
 
     [Test]
@@ -442,6 +564,10 @@ public class CockpitInputPatchTests
         schema.Inputs[14].Category.ShouldBe("Flight controls");
         schema.Inputs[15].Id.ShouldBe("flight.cruise_control_increase");
         schema.Inputs[16].Id.ShouldBe("flight.cruise_control_decrease");
+        schema.Inputs[15].EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Momentary);
+        schema.Inputs[15].EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.State);
+        schema.Inputs[16].EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Momentary);
+        schema.Inputs[16].EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.State);
     }
 
     [Test]

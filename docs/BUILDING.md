@@ -46,6 +46,16 @@ Create a local, unpublished package for one adapter:
 python ./scripts/kontrol_adapters.py pack --adapter dummyadapter --version 1.0.0
 ```
 
+This defaults to a Debug package, so local diagnostic logs are available during
+adapter development. The equivalent explicit command is:
+
+```powershell
+python ./scripts/kontrol_adapters.py pack --adapter spaceengineers2 --version 0.2.0 --configuration Debug
+```
+
 The package is written to ignored `artifacts/`. The command validates the
 selected adapter, includes only its manifest allowlist, and rejects game DLLs,
 PDBs, build output, logs, and undeclared files.
+
+Debug packages are strictly local development artifacts. A publish candidate
+must always be rebuilt and packed explicitly with `--configuration Release`.

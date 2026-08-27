@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Makes Cruise Control Set ignore zero or reverse forward speed while retaining
+  double-click Reset. Cruise target adjustment buttons now change by 1 unit in
+  the player-selected speed presentation on press, repeat while held, and
+  accelerate through 5 and 10 displayed-unit steps. Explicit
+  adjustment retargets use full available forward/reverse thrust until the new
+  target is reached; easing ordinary throttle retains its existing behavior.
+- Restores manual strafe and lift while Cruise Control is active, and adds
+  transition-only `[FlightModeTrace]` diagnostics for unexpected Direct Angular
+  Flight/Native Reticle Steering changes.
+
+- Adds a default-on Cruise Control HUD indicator rendered as a sibling inside
+  SE2's native Avalonia `HUDSpeedometer` template. It appears only while the
+  player is actively controlling a cockpit and Cruise Control is enabled, and
+  displays the target in SE2's selected `m/s`, `km/h`, or `mph` unit. The
+  indicator can be disabled with `showCruiseControlHudIndicator` and moved with
+  the bounded `cruiseControlHudOffsetX` and `cruiseControlHudOffsetY` settings.
+  Its backplate now uses SE2's native `BeveledBorder` appearance and leaves a
+  fixed gap above the native SPD border. Cruise state changes refresh the HUD
+  immediately so re-enabling Cruise Control reliably restores the indicator.
+
 - Removes the Velocity Hold adapter speed constants. The cap slider now uses
   only the active SE2 grid's runtime speed limit and remains unavailable until
   that game-defined limit can be observed.

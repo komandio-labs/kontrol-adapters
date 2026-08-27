@@ -26,6 +26,39 @@ internal static class SpeedUnitPresentation
         };
     }
 
+    internal static string FormatHudTarget(float metersPerSecond, string preference)
+    {
+        int unit = ResolveSpeedUnit(preference);
+        float value = unit switch
+        {
+            KilometersPerHour => metersPerSecond * 3.6f,
+            MilesPerHour => metersPerSecond * 2.2369363f,
+            _ => metersPerSecond
+        };
+        string symbol = unit switch
+        {
+            KilometersPerHour => "km/h",
+            MilesPerHour => "mph",
+            _ => "m/s"
+        };
+        return $"{MathF.Round(value, MidpointRounding.AwayFromZero):0} {symbol}";
+    }
+
+    /// <summary>
+    /// Converts a Cruise Control adjustment expressed in the unit the player is
+    /// currently seeing into the controller's canonical metres-per-second unit.
+    /// </summary>
+    internal static float ConvertDisplayedSpeedToMetersPerSecond(float displayedSpeed, string preference)
+    {
+        float multiplier = ResolveSpeedUnit(preference) switch
+        {
+            KilometersPerHour => 3.6f,
+            MilesPerHour => 2.2369363f,
+            _ => 1f
+        };
+        return displayedSpeed / multiplier;
+    }
+
     internal static NumberSettingPresentation ResolveTargetSpeedPresentation(string preference) =>
         ResolveTargetSpeedPresentation(preference, VelocityHoldSpeedLimitState.Current);
 

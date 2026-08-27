@@ -57,13 +57,28 @@ public sealed class CruiseControlStateTests
     }
 
     [Test]
-    public void Set_ClampsReverseSpeedToZero()
+    [TestCase(0f)]
+    [TestCase(-42.5f)]
+    public void Set_IgnoresNonPositiveForwardSpeed(float speed)
     {
         var cruise = new Patches.CruiseControlState();
 
-        cruise.SetOrReset(-42.5f, nowTick: 1_000);
+        cruise.SetOrReset(speed, nowTick: 1_000).ShouldBe(Patches.CruiseSetResult.Ignored);
 
+        cruise.IsActive.ShouldBeFalse();
         cruise.TargetSpeedMetersPerSecond.ShouldBe(0f);
+    }
+
+    [Test]
+    public void Set_DoubleClickStillResetsCruiseEvenWhenTheCurrentSpeedIsZero()
+    {
+        var cruise = new Patches.CruiseControlState();
+        cruise.SetOrReset(42.5f, nowTick: 1_000).ShouldBe(Patches.CruiseSetResult.Set);
+
+        cruise.SetOrReset(0f, nowTick: 1_000 + Patches.CruiseControlState.DoubleClickWindowMilliseconds)
+            .ShouldBe(Patches.CruiseSetResult.Reset);
+
+        cruise.IsActive.ShouldBeFalse();
     }
 
     [Test]
@@ -93,18 +108,41 @@ public sealed class CruiseControlStateTests
     }
 
     [Test]
-    public void TargetAdjustments_UseTenMeterStepsAndNeverGoBelowZero()
+    public void TargetAdjustments_UseTheRequestedStepAndNeverGoBelowZero()
     {
         var cruise = new Patches.CruiseControlState();
         cruise.SetOrReset(15f, nowTick: 1_000);
 
-        cruise.IncreaseTarget();
-        cruise.TargetSpeedMetersPerSecond.ShouldBe(25f);
-        cruise.DecreaseTarget();
-        cruise.DecreaseTarget();
-        cruise.DecreaseTarget();
+        cruise.AdjustTarget(1f).ShouldBeTrue();
+        cruise.TargetSpeedMetersPerSecond.ShouldBe(16f);
+        cruise.IsFastRetargeting.ShouldBeTrue();
+        cruise.AdjustTarget(-10f).ShouldBeTrue();
+        cruise.AdjustTarget(-10f).ShouldBeTrue();
 
         cruise.TargetSpeedMetersPerSecond.ShouldBe(0f);
+    }
+
+    [Test]
+    public void AdjustmentRepeater_StartsAtOneThenAcceleratesToFiveAndTen()
+    {
+        var repeater = new Patches.CruiseAdjustmentRepeater();
+
+        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 0).ShouldBe(1f);
+        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 349).ShouldBe(0f);
+        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 350).ShouldBe(1f);
+        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 750).ShouldBe(5f);
+        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 1_500).ShouldBe(10f);
+    }
+
+    [Test]
+    public void AdjustmentRepeater_ResetsOnReleaseAndChangesDirectionImmediately()
+    {
+        var repeater = new Patches.CruiseAdjustmentRepeater();
+
+        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 0).ShouldBe(1f);
+        repeater.Update(increaseHeld: false, decreaseHeld: false, nowTick: 100).ShouldBe(0f);
+        repeater.Update(increaseHeld: false, decreaseHeld: true, nowTick: 200).ShouldBe(-1f);
+        repeater.Update(increaseHeld: true, decreaseHeld: true, nowTick: 300).ShouldBe(0f);
     }
 
     [Test]
