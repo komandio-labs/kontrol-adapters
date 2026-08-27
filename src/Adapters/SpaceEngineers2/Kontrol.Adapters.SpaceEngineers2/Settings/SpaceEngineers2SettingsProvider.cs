@@ -34,43 +34,6 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
                 new("NativeReticleSteering", "Native Reticle Steering", "Preserves Space Engineers 2's native virtual mouse-reticle steering and built-in crosshair dampening.")
             }
         },
-        new StringSettingDescriptor
-        {
-            Key = "translationControlMode",
-            DisplayName = "Translation Control",
-            Category = "Flight Controls",
-            Icon = SettingIcon.Spacecraft,
-            Layout = LayoutSpan.Full,
-            UpdateScope = SettingUpdateScope.Realtime,
-            DefaultValue = "DirectThrust",
-            Description = "Selects whether translation axes command thrust directly or target local ship velocity.",
-            AllowedValues = new List<SettingOption>
-            {
-                new("DirectThrust", "Direct Thrust (Default)", "Uses the current shaped axis value as proportional thrust."),
-                new("VelocityHold", "Velocity Hold", "Uses the current shaped axis value as a local target velocity and tapers thrust as that target is reached.")
-            }
-        },
-        new NumberSettingDescriptor
-        {
-            Key = "velocityHoldMaxTargetSpeed",
-            DisplayName = "Velocity Hold Maximum Target Speed",
-            Category = "Flight Controls",
-            Icon = SettingIcon.Gauge,
-            Layout = LayoutSpan.Full,
-            UpdateScope = SettingUpdateScope.Realtime,
-            DefaultValue = 300f,
-            Min = 1f,
-            Max = 300f,
-            Step = 1f,
-            Unit = "m/s",
-            DisplayUnit = "km/h",
-            DisplayMultiplier = 3.6f,
-            MinLabel = "3.6 km/h",
-            MidLabel = "540 km/h",
-            MaxLabel = "1080 km/h",
-            Description = "Caps Velocity Hold targets. The adapter also honors a lower SE2 velocity limit when that private value is available.",
-            VisibleWhen = new SettingCondition("translationControlMode", ExpectedValue: "VelocityHold")
-        },
         new NumberSettingDescriptor
         {
             Key = "directAngularAcceleration",
@@ -129,6 +92,43 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             MaxLabel = "172 °/s",
             Description = "Scales maximum target angular velocity achieved at 100% full stick deflection.",
             VisibleWhen = new SettingCondition("flightModelMode", ExpectedValue: "DirectAngularFlight")
+        },
+        new StringSettingDescriptor
+        {
+            Key = "translationControlMode",
+            DisplayName = "Translation Control",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Spacecraft,
+            Layout = LayoutSpan.Full,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = "DirectThrust",
+            Description = "Independent of Flight Control Mode. Selects whether translation axes command thrust directly or target local ship velocity.",
+            AllowedValues = new List<SettingOption>
+            {
+                new("DirectThrust", "Direct Thrust (Default)", "Uses the current shaped axis value as proportional thrust."),
+                new("VelocityHold", "Velocity Hold", "Uses the current shaped axis value as a local target velocity and tapers thrust as that target is reached.")
+            }
+        },
+        new NumberSettingDescriptor
+        {
+            Key = "velocityHoldMaxTargetSpeed",
+            DisplayName = "Velocity Hold Maximum Target Speed",
+            Category = "Flight Controls",
+            Icon = SettingIcon.Gauge,
+            Layout = LayoutSpan.Full,
+            UpdateScope = SettingUpdateScope.Realtime,
+            DefaultValue = 300f,
+            Min = 1f,
+            Max = 300f,
+            Step = 1f,
+            Unit = "m/s",
+            DisplayUnit = "km/h",
+            DisplayMultiplier = 3.6f,
+            MinLabel = "3.6 km/h",
+            MidLabel = "540 km/h",
+            MaxLabel = "1080 km/h",
+            Description = "Caps Velocity Hold targets. The adapter also honors a lower SE2 velocity limit when that private value is available.",
+            VisibleWhen = new SettingCondition("translationControlMode", ExpectedValue: "VelocityHold")
         }
     };
 

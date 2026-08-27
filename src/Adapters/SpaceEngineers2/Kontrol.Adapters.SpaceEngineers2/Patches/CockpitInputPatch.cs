@@ -611,8 +611,11 @@ public static class CockpitInputPatch
         float currentSurge = 0f, currentSway = 0f, currentHeave = 0f;
         TryGetLocalVelocity(instance, observedBlock, out currentSurge, out currentSway, out currentHeave);
 
+        string velocityHoldTrace = maximumTargetSpeed > 0f
+            ? $"; target velocity surge={surge * maximumTargetSpeed:F2}, sway={sway * maximumTargetSpeed:F2}, heave={heave * maximumTargetSpeed:F2}; error surge={surge * maximumTargetSpeed - currentSurge:F2}, sway={sway * maximumTargetSpeed - currentSway:F2}, heave={heave * maximumTargetSpeed - currentHeave:F2}"
+            : string.Empty;
         SpaceEngineers2AdapterDiagnostics.WriteDebug(
-            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; Vmax={maximumTargetSpeed:F1} m/s; submitted translation thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
+            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; Vmax={maximumTargetSpeed:F1} m/s{velocityHoldTrace}; submitted translation thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
     }
 
     internal static (float fwd, float back, float right, float left, float up, float down) ComputeProportionalThrust(
@@ -705,11 +708,19 @@ public static class CockpitInputPatch
         var orientation = observerChild?.Data.Get<RelativeTransform>().Orientation
             ?? observedBlock?.Data.GetRelativeTransform().Orientation
             ?? Quaternion.Identity;
-        Vector3 localVelocity = Quaternion.Inverse(orientation) * gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>().LinearVelocity;
-        surge = -localVelocity.Z;
-        sway = localVelocity.X;
-        heave = localVelocity.Y;
+        (surge, sway, heave) = ComputeLocalTranslationVelocity(
+            orientation, gridEntity.Data.Get<Keen.VRage.Physics.Data.RigidBodyData>().LinearVelocity);
         return float.IsFinite(surge) && float.IsFinite(sway) && float.IsFinite(heave);
+    }
+
+    internal static (float surge, float sway, float heave) ComputeLocalTranslationVelocity(
+        Quaternion observerOrientation, Vector3 worldVelocity)
+    {
+        // SE2's observer orientation transforms world velocity into the same
+        // local command frame passed to UpdateControlData. Inverting it reverses
+        // surge feedback, which leaves Velocity Hold permanently saturated.
+        Vector3 localVelocity = observerOrientation * worldVelocity;
+        return (-localVelocity.Z, localVelocity.X, localVelocity.Y);
     }
 
     private static float ResolveVelocityHoldMaximumSpeed(CockpitInputHandlerComponent? instance, float configuredMaximumSpeed)

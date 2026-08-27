@@ -91,6 +91,19 @@ public class SpaceEngineers2SettingsTests
     }
 
     [Test]
+    public void DescriptorOrder_GroupsRotationalPropertiesWithFlightControlModeBeforeTranslationControl()
+    {
+        _provider.Descriptors.Select(descriptor => descriptor.Key).ShouldBe([
+            "flightModelMode",
+            "directAngularAcceleration",
+            "directAngularDeceleration",
+            "directAngularMaxRate",
+            "translationControlMode",
+            "velocityHoldMaxTargetSpeed"
+        ]);
+    }
+
+    [Test]
     public void Validation_ShouldDetectInvalidValues_AndEnforceConstraints()
     {
         var invalidValues = new Dictionary<string, object?>

@@ -19,9 +19,11 @@ uses the lower of it and the configured target cap. A recognized legacy
 member is accepted as a compatibility fallback.
 
 The implementation uses the existing rigid-body measurement transformed into
-the cockpit/observer frame. If that measurement is unavailable during cockpit
-transition or telemetry loss, it safely falls back to Direct Thrust for that
-update rather than commanding a velocity target from guessed data.
+the cockpit/observer frame with SE2's observer orientation (`orientation ×
+worldVelocity`, not its inverse). It then preserves `surge = -Z`, `sway = X`,
+and `heave = Y`. If that measurement is unavailable during cockpit transition
+or telemetry loss, it safely falls back to Direct Thrust for that update rather
+than commanding a velocity target from guessed data.
 
 The adapter does not change the user's dampener preference. Its own controller
 can issue signed braking thrust for overspeed and reversal, but native dampener

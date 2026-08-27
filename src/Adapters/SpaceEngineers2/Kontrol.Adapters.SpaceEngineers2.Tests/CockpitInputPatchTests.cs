@@ -170,6 +170,17 @@ public class CockpitInputPatchTests
     }
 
     [Test]
+    public void ComputeLocalTranslationVelocity_UsesTheControlFrameSignConvention()
+    {
+        var (surge, sway, heave) = CockpitInputPatch.ComputeLocalTranslationVelocity(
+            Quaternion.Identity, new Vector3(4f, 5f, -6f));
+
+        surge.ShouldBe(6f);
+        sway.ShouldBe(4f);
+        heave.ShouldBe(5f);
+    }
+
+    [Test]
     public void VelocityHoldController_HasNoDampenerStateAndDoesNotChangeItsOutputForDampenerPolicy()
     {
         // Dampener preference remains game-owned; Velocity Hold only owns its
