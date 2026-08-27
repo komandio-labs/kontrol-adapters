@@ -11,7 +11,7 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     public ProcessInjectionEntryPoint GetProcessInjectionEntryPoint() => new(
         "Kontrol.Adapters.SpaceEngineers2.SpaceEngineers2StartupHook");
 
-    public AdapterInputSchema GetInputSchema() => new(6,
+    public AdapterInputSchema GetInputSchema() => new(8,
     [
         new("flight.pitch", "Pitch", "Nose up / nose down", "Flight controls", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Nose up", "Nose down")),
         new("flight.roll", "Roll", "Bank left / right", "Flight controls", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Bank left", "Bank right")),
@@ -26,7 +26,10 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         new("systems.exit_grid", "Exit grid", "Leave the controlled cockpit or seat", "Vehicle systems", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
         new("weapons.fire_primary", "Primary fire", "Fire the currently selected weapon", "Weapons", 10, InputSignalKind.Discrete, DiscreteBehavior.Momentary),
         new("weapons.reload", "Reload", "Reload the currently selected weapon (secondary/right-mouse action)", "Weapons", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary),
-        new("camera.mode_switch", "Camera Mode Switch", "Switch between the available SE2 camera modes", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger)
+        new("camera.mode_switch", "Camera Mode Switch", "Switch between the available SE2 camera modes", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
+        new("flight.cruise_control_set", "Cruise Control Set", "Set the current forward speed as the cruise target. Double-click to reset Cruise Control.", "Flight controls", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button]),
+        new("flight.cruise_control_increase", "Cruise Control +10 m/s", "Increase the active Cruise Control target by 10 m/s.", "Flight controls", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button]),
+        new("flight.cruise_control_decrease", "Cruise Control -10 m/s", "Decrease the active Cruise Control target by 10 m/s without going below 0 m/s.", "Flight controls", 60, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button])
     ]);
     public DeploymentMethodInformation GetDeploymentInformation(GameLaunchMethod method) => method switch
     {

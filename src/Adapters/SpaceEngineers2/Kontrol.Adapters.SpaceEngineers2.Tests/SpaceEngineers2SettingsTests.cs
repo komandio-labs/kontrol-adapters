@@ -40,7 +40,7 @@ public class SpaceEngineers2SettingsTests
 
         snapshot.ShouldNotBeNull();
         snapshot.GetString("flightModelMode").ShouldBe("DirectAngularFlight");
-        snapshot.GetString("translationControlMode").ShouldBe("DirectThrust");
+        snapshot.GetString("translationControlMode").ShouldBe("VelocityHold");
         snapshot.GetNumber("velocityHoldMaxTargetSpeed").ShouldBe(300f);
         snapshot.GetNumber("directAngularAcceleration").ShouldBe(1.3f);
         snapshot.GetNumber("directAngularDeceleration").ShouldBe(1.0f);
@@ -50,7 +50,9 @@ public class SpaceEngineers2SettingsTests
         snapshot.IsActive("directAngularAcceleration").ShouldBeTrue();
         snapshot.IsActive("directAngularDeceleration").ShouldBeTrue();
         snapshot.IsActive("directAngularMaxRate").ShouldBeTrue();
-        snapshot.IsActive("velocityHoldMaxTargetSpeed").ShouldBeFalse();
+        snapshot.IsActive("velocityHoldMaxTargetSpeed").ShouldBeTrue();
+        var translationMode = (StringSettingDescriptor)_provider.Descriptors.Single(descriptor => descriptor.Key == "translationControlMode");
+        translationMode.AllowedValues!.First()!.Value.ShouldBe("VelocityHold");
     }
 
     [Test]
@@ -71,7 +73,7 @@ public class SpaceEngineers2SettingsTests
         snapshot.IsActive("directAngularAcceleration").ShouldBeFalse();
         snapshot.IsActive("directAngularDeceleration").ShouldBeFalse();
         snapshot.IsActive("directAngularMaxRate").ShouldBeFalse();
-        snapshot.IsActive("velocityHoldMaxTargetSpeed").ShouldBeFalse();
+        snapshot.IsActive("velocityHoldMaxTargetSpeed").ShouldBeTrue();
     }
 
     [Test]

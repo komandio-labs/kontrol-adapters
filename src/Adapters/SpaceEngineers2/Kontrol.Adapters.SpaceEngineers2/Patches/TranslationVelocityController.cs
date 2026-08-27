@@ -36,6 +36,40 @@ internal static class TranslationVelocityController
         return Math.Clamp(proportionalOutput, -axisLimit, axisLimit);
     }
 
+    internal static float ComputeMinimumForwardSpeedThrust(
+        float targetSpeedMetersPerSecond,
+        float actualForwardSpeedMetersPerSecond,
+        float maximumTargetSpeedMetersPerSecond)
+    {
+        float maximumSpeed = NormalizeMaximumSpeed(maximumTargetSpeedMetersPerSecond);
+        float targetSpeed = float.IsFinite(targetSpeedMetersPerSecond)
+            ? Math.Max(targetSpeedMetersPerSecond, 0f)
+            : 0f;
+        float actualSpeed = NormalizeVelocity(actualForwardSpeedMetersPerSecond);
+
+        // Cruise Control is a minimum-speed controller: it adds forward thrust
+        // below the target and never commands reverse thrust to slow down.
+        return Math.Clamp((targetSpeed - actualSpeed) / maximumSpeed, 0f, 1f);
+    }
+
+    internal static float ComputeCruiseForwardVelocityHoldAxis(
+        float manualThrottle,
+        float cruiseTargetSpeedMetersPerSecond,
+        float maximumTargetSpeedMetersPerSecond)
+    {
+        float maximumSpeed = NormalizeMaximumSpeed(maximumTargetSpeedMetersPerSecond);
+        float cruiseAxis = Math.Clamp(
+            float.IsFinite(cruiseTargetSpeedMetersPerSecond)
+                ? Math.Max(cruiseTargetSpeedMetersPerSecond, 0f) / maximumSpeed
+                : 0f,
+            0f,
+            1f);
+
+        // Cruise is the floor. Positive throttle raises that floor only when
+        // its velocity target is higher than the captured cruise target.
+        return Math.Max(SplitPositive(manualThrottle), cruiseAxis);
+    }
+
     internal static float KilometersPerHour(float metersPerSecond) => metersPerSecond * 3.6f;
 
     internal static float NormalizeMaximumSpeed(float maximumTargetSpeedMetersPerSecond) =>

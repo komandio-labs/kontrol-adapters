@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Replaces the pending `Throttle Hold` action with Cruise Control. Set captures
+  the current forward speed; positive throttle temporarily overrides it;
+  negative throttle cancels it. Cruise targets can be adjusted by +/-10 m/s,
+  never go below zero, and double-clicking Set resets Cruise Control.
+- Refines Cruise Control's positive-throttle override under Velocity Hold: it
+  now targets the higher of the captured cruise speed and throttle-derived
+  speed, preventing both underspeed braking and direct-thrust overshoot.
+- Makes Velocity Hold the default translation mode and lists it before Direct
+  Thrust.
 - Adds an independent `Velocity Hold` translation-control option. It maps the
   current shaped translation axis to a local target velocity and uses
   axis-scaled proportional feedback, while retaining `Direct Thrust` as the

@@ -101,12 +101,12 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
             Icon = SettingIcon.Spacecraft,
             Layout = LayoutSpan.Full,
             UpdateScope = SettingUpdateScope.Realtime,
-            DefaultValue = "DirectThrust",
+            DefaultValue = "VelocityHold",
             Description = "Independent of Flight Control Mode. Selects whether translation axes command thrust directly or target local ship velocity.",
             AllowedValues = new List<SettingOption>
             {
-                new("DirectThrust", "Direct Thrust (Default)", "Uses the current shaped axis value as proportional thrust."),
-                new("VelocityHold", "Velocity Hold", "Uses the current shaped axis value as a local target velocity and tapers thrust as that target is reached.")
+                new("VelocityHold", "Velocity Hold (Default)", "Uses the current shaped axis value as a local target velocity and tapers thrust as that target is reached."),
+                new("DirectThrust", "Direct Thrust", "Uses the current shaped axis value as proportional thrust.")
             }
         },
         new NumberSettingDescriptor

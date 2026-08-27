@@ -93,8 +93,8 @@ maintaining the adapter across game updates.
 | Game binary directory | `<SE2 installation>\Game2` |
 | Adapter version | `0.2.0` |
 | Current validated game version | `2.4.0.86` |
-| SDK contract version | `1.1.1` |
-| Adapter input schema | Version `5` |
+| SDK contract version | `1.2.0` |
+| Adapter input schema | Version `8` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
 | Compatibility records | `compatibility/game-builds/*.json` |
@@ -133,6 +133,9 @@ schema version so saved user mappings continue to refer to the same controls.
 | 11 | `DiscreteStates` bit 11 | `weapons.fire_primary` | Momentary | Held while the physical button is held | Active weapon/tool primary handler, with press and release |
 | 12 | `DiscreteStates` bit 12 | `weapons.reload` | Momentary | Held while the physical button is held | Active block-weapon secondary/right-mouse handler, with press and release |
 | 13 | `TriggeredActions` bit 13 | `camera.mode_switch` | Trigger | Rising edge, host-latched for 150 ms | `CameraSystemComponent.ToggleCameraView()` on the camera update path |
+| 14 | `TriggeredActions` bit 14 | `flight.cruise_control_set` | Trigger | Rising edge | Captures current non-negative forward speed as the Cruise Control target; double-click resets Cruise Control |
+| 15 | `TriggeredActions` bit 15 | `flight.cruise_control_increase` | Trigger | Rising edge | Increases the active Cruise Control target by 10 m/s |
+| 16 | `TriggeredActions` bit 16 | `flight.cruise_control_decrease` | Trigger | Rising edge | Decreases the active Cruise Control target by 10 m/s, clamped at 0 m/s |
 
 ### Host-side analog shaping
 
@@ -147,6 +150,18 @@ sign(v) * ((abs(v) - d) / (1 - d)) ^ e      otherwise
 The adapter then rejects non-finite values and clamps the result to `[-1, 1]`.
 Consequently, a physical maximum remains exactly `-1` or `+1`. The SE2 adapter
 does not apply another response curve.
+
+### Cruise Control
+
+Cruise Control is a forward minimum-speed controller. `Cruise Control Set`
+captures the current forward speed regardless of throttle position. In the
+default Velocity Hold mode, positive throttle requests the higher of its
+throttle-derived target speed and the captured cruise target. It therefore does
+not lower a cruise target or apply direct thrust past it; returning throttle to
+its neutral deadband resumes minimum-speed maintenance.
+Negative throttle past the adapter's small jitter deadband acts as a brake and
+cancels Cruise Control. Double-click Set resets it. The +/-10 m/s actions adjust
+an active target without allowing reverse (negative) cruise speeds.
 
 ### Native keyboard and mouse coexistence
 

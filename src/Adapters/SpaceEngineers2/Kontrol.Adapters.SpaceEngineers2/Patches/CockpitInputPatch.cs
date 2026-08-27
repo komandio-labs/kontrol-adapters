@@ -18,6 +18,11 @@ namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 [HarmonyPatch]
 public static class CockpitInputPatch
 {
+    private const int CruiseSetActionBit = 14;
+    private const int CruiseIncreaseActionBit = 15;
+    private const int CruiseDecreaseActionBit = 16;
+    private const float CruiseThrottleDeadband = .02f;
+
     public readonly record struct NativeInputSnapshot(
         float PitchAnalog, float YawAnalog,
         float LookUp, float LookDown, float LookLeft, float LookRight,
@@ -95,6 +100,7 @@ public static class CockpitInputPatch
     private static bool _missingObservedBlockReported;
     private static ulong _previousTriggeredActions;
     private static long _nextTranslationTraceTick;
+    private static readonly CruiseControlState CruiseControl = new();
 
     private static void EnsureChannels()
     {
@@ -136,6 +142,7 @@ public static class CockpitInputPatch
             _lastOverrideActiveState = false;
             _lastObservedBlock = null;
             _nextTranslationTraceTick = 0;
+            CruiseControl.Reset();
         }
     }
 
@@ -273,7 +280,8 @@ public static class CockpitInputPatch
 
             if (!TryReadControlFrame(out var control)) return true;
             bool inputEnabled = control.IsInputEnabled != 0;
-            ProcessTriggeredActions(__instance, inputEnabled ? control.TriggeredActions : 0);
+            var observedBlock = (CubeBlockComponent?)ObservedBlockField?.GetValue(__instance);
+            ProcessTriggeredActions(__instance, inputEnabled ? control.TriggeredActions : 0, observedBlock);
             ActiveToolActionPatch.ApplyPrimaryFire(inputEnabled && (control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload(inputEnabled && (control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -332,6 +340,7 @@ public static class CockpitInputPatch
             if (observedBlock != _lastObservedBlock)
             {
                 _lastObservedBlock = observedBlock;
+                CruiseControl.Reset();
                 SpaceEngineers2AdapterDiagnostics.WriteDebug(observedBlock is null
                     ? "SE2 cleared the observed cockpit block."
                     : $"Player entered cockpit block ({observedBlock.GetType().Name}).");
@@ -375,7 +384,7 @@ public static class CockpitInputPatch
             float sway = NormalizeAxis(control.AnalogValues[4]);
             float heave = NormalizeAxis(control.AnalogValues[5]);
 
-            ProcessTriggeredActions(instance, control.TriggeredActions);
+            ProcessTriggeredActions(instance, control.TriggeredActions, observedBlock as CubeBlockComponent);
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -418,6 +427,7 @@ public static class CockpitInputPatch
             if (observedBlock != _lastObservedBlock)
             {
                 _lastObservedBlock = observedBlock;
+                CruiseControl.Reset();
                 SpaceEngineers2AdapterDiagnostics.WriteDebug(observedBlock is null
                     ? "SE2 cleared the observed cockpit block."
                     : $"Player entered cockpit block ({observedBlock.GetType().Name}).");
@@ -441,7 +451,7 @@ public static class CockpitInputPatch
             float sway = NormalizeAxis(control.AnalogValues[4]);
             float heave = NormalizeAxis(control.AnalogValues[5]);
 
-            ProcessTriggeredActions(instance, control.TriggeredActions);
+            ProcessTriggeredActions(instance, control.TriggeredActions, observedBlock);
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -550,6 +560,7 @@ public static class CockpitInputPatch
     {
         try
         {
+            CruiseControl.Reset();
             if (!_wasKontrolActiveInCockpit) return;
             _wasKontrolActiveInCockpit = false;
 
@@ -615,7 +626,7 @@ public static class CockpitInputPatch
             ? $"; target velocity surge={surge * maximumTargetSpeed:F2}, sway={sway * maximumTargetSpeed:F2}, heave={heave * maximumTargetSpeed:F2}; error surge={surge * maximumTargetSpeed - currentSurge:F2}, sway={sway * maximumTargetSpeed - currentSway:F2}, heave={heave * maximumTargetSpeed - currentHeave:F2}"
             : string.Empty;
         SpaceEngineers2AdapterDiagnostics.WriteDebug(
-            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw surge={control.AnalogValues[3]:F3}, sway={control.AnalogValues[4]:F3}, heave={control.AnalogValues[5]:F3}; normalized surge={surge:F3}, sway={sway:F3}, heave={heave:F3}; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; Vmax={maximumTargetSpeed:F1} m/s{velocityHoldTrace}; submitted translation thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
+            $"[InputTrace] Adapter accepted IPC mode={flightMode}; raw throttle={control.AnalogValues[3]:F3}, sway={sway:F3}, heave={heave:F3}; cruise active={CruiseControl.IsActive}; cruise target={CruiseControl.TargetSpeedMetersPerSecond:F2} m/s; current velocity surge={currentSurge:F2}, sway={currentSway:F2}, heave={currentHeave:F2}; Vmax={maximumTargetSpeed:F1} m/s{velocityHoldTrace}; submitted translation thrust forward={forward:F3}, backward={backward:F3}, right={right:F3}, left={left:F3}, up={up:F3}, down={down:F3}.");
     }
 
     internal static (float fwd, float back, float right, float left, float up, float down) ComputeProportionalThrust(
@@ -676,6 +687,41 @@ public static class CockpitInputPatch
         CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock,
         out float maximumTargetSpeed)
     {
+        if (CruiseControl.IsActive && surge < -CruiseThrottleDeadband)
+        {
+            CruiseControl.CancelForBrake();
+            SpaceEngineers2AdapterDiagnostics.WriteDebug("Cruise Control cancelled by reverse/brake throttle input.");
+        }
+
+        if (CruiseControl.IsActive && MathF.Abs(surge) <= CruiseThrottleDeadband &&
+            TryGetLocalVelocity(instance, observedBlock, out var cruiseSurge, out _, out _))
+        {
+            maximumTargetSpeed = ResolveVelocityHoldMaximumSpeed(instance, settings.VelocityHoldMaxTargetSpeed);
+            float forward = TranslationVelocityController.ComputeMinimumForwardSpeedThrust(
+                CruiseControl.TargetSpeedMetersPerSecond, cruiseSurge, maximumTargetSpeed);
+            return (forward, 0f, 0f, 0f, 0f, 0f);
+        }
+
+        if (CruiseControl.IsActive && surge > CruiseThrottleDeadband)
+        {
+            if (!settings.IsVelocityHoldTranslation)
+            {
+                maximumTargetSpeed = 0f;
+                return ComputeProportionalThrust(surge, sway, heave);
+            }
+
+            maximumTargetSpeed = ResolveVelocityHoldMaximumSpeed(instance, settings.VelocityHoldMaxTargetSpeed);
+            if (!TryGetLocalVelocity(instance, observedBlock, out var overrideSurge, out var overrideSway, out var overrideHeave))
+            {
+                return ComputeProportionalThrust(surge, sway, heave);
+            }
+
+            float cruiseAxis = TranslationVelocityController.ComputeCruiseForwardVelocityHoldAxis(
+                surge, CruiseControl.TargetSpeedMetersPerSecond, maximumTargetSpeed);
+            return ComputeVelocityHoldThrust(
+                cruiseAxis, sway, heave, overrideSurge, overrideSway, overrideHeave, maximumTargetSpeed);
+        }
+
         if (!settings.IsVelocityHoldTranslation)
         {
             maximumTargetSpeed = 0f;
@@ -939,11 +985,13 @@ public static class CockpitInputPatch
         TelemetryChannel.Write(ref telemetry);
     }
 
-    private static void ProcessTriggeredActions(object instance, ulong triggeredActions)
+    private static void ProcessTriggeredActions(object instance, ulong triggeredActions, CubeBlockComponent? observedBlock)
     {
         ulong newActions = triggeredActions & ~_previousTriggeredActions;
         _previousTriggeredActions = triggeredActions;
         if (newActions == 0) return;
+
+        ProcessCruiseControlActions(newActions, instance as CockpitInputHandlerComponent, observedBlock);
 
         SpaceEngineers2AdapterDiagnostics.WriteDebug($"Received Kontrol vehicle-system action bits: 0x{newActions:X}.");
         CameraActionPatch.ProcessCameraModeSwitch(newActions);
@@ -977,6 +1025,37 @@ public static class CockpitInputPatch
                 SpaceEngineers2AdapterDiagnostics.WriteError($"Kontrol could not invoke SE2 cockpit action '{methodName}'.");
                 SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 cockpit action '{methodName}' error: {ex}");
             }
+        }
+    }
+
+    private static void ProcessCruiseControlActions(
+        ulong newActions, CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock)
+    {
+        if ((newActions & (1UL << CruiseSetActionBit)) != 0)
+        {
+            if (!TryGetLocalVelocity(instance, observedBlock, out var currentSurge, out _, out _))
+            {
+                SpaceEngineers2AdapterDiagnostics.WriteDebug("Cruise Control Set ignored because current forward speed is unavailable.");
+            }
+            else
+            {
+                CruiseSetResult result = CruiseControl.SetOrReset(currentSurge, Environment.TickCount64);
+                SpaceEngineers2AdapterDiagnostics.WriteDebug(result is CruiseSetResult.Set
+                    ? $"Cruise Control set to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s."
+                    : "Cruise Control reset by double-click.");
+            }
+        }
+
+        if ((newActions & (1UL << CruiseIncreaseActionBit)) != 0)
+        {
+            CruiseControl.IncreaseTarget();
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Cruise Control target increased to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s.");
+        }
+
+        if ((newActions & (1UL << CruiseDecreaseActionBit)) != 0)
+        {
+            CruiseControl.DecreaseTarget();
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Cruise Control target decreased to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s.");
         }
     }
 

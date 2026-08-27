@@ -3,13 +3,13 @@
 This document specifies the meaning of the three translational axes in the
 Space Engineers 2 adapter: forward/reverse (surge), right/left (sway), and
 up/down (heave). It describes the default behavior and the optional
-velocity-target behavior.
+velocity-target behavior. Velocity Hold is the default.
 
 ## Implementation status
 
 Velocity Hold is implemented as an adapter-side realtime setting named
 `translationControlMode`; it is independent of `flightModelMode` and defaults
-to `DirectThrust`. Its initial controller is the proportional controller below
+to `VelocityHold`. Its initial controller is the proportional controller below
 with `Kp = 1`, no integral term, and no slew limiter. `velocityHoldMaxTargetSpeed`
 is a validated `1`–`300 m/s` setting (default `300 m/s`, shown as `1080 km/h`).
 On SE2 2.4.0.86, the private `_velocityLimits` provider exposes
@@ -38,7 +38,7 @@ dampener behavior has been verified.
 
 The translation-control mode is independent of the adapter's rotational flight
 mode (`DirectAngularFlight` or `NativeReticleSteering`). Both rotational modes
-currently use the same direct proportional translation mapping.
+use the same selected translation mapping.
 
 The host remains responsible for device reading and input shaping:
 
@@ -66,7 +66,7 @@ The word *thrust* below means the normalized magnitude submitted to SE2's
 `MovementInputs`, not a physical force in newtons. A value of `0.20` means the
 adapter requests 20% of the available movement thrust on that direction.
 
-## Mode A: Direct Thrust (current default)
+## Mode A: Direct Thrust (optional)
 
 ### Concept
 
@@ -141,7 +141,7 @@ that measurement is not part of the direct thrust command and cannot reduce
 the submitted thrust. Native keyboard movement is merged separately where the
 selected flight path supports it.
 
-## Mode B: Velocity Hold (optional)
+## Mode B: Velocity Hold (default)
 
 ### Concept
 
@@ -356,7 +356,7 @@ altitude itself is not held.
 
 ## Comparison
 
-| Question | Direct Thrust (current) | Velocity Hold (optional) |
+| Question | Direct Thrust (optional) | Velocity Hold (default) |
 | --- | --- | --- |
 | Meaning of axis | Instantaneous thrust magnitude | Desired local velocity |
 | 20% input | Approximately 20% thrust continuously | Target 20% of configured speed limit |
@@ -372,8 +372,7 @@ altitude itself is not held.
 
 ## Acceptance tests for Velocity Hold
 
-Before enabling the option by default, validate each axis in a controlled game
-build:
+Validate each axis in a controlled game build:
 
 1. At zero velocity, hold 20%, 80%, and 90%; verify initial thrust follows the
    corresponding input magnitude and target speed is approached without a
@@ -391,5 +390,4 @@ build:
 8. Confirm the controller handles changing mass, insufficient thrust, the game
    speed cap, loss of telemetry, cockpit exit, and input disable safely.
 
-The current Direct Thrust mode must retain its existing behavior and tests
-regardless of whether Velocity Hold is later implemented.
+Direct Thrust remains available for users who prefer its existing behavior.

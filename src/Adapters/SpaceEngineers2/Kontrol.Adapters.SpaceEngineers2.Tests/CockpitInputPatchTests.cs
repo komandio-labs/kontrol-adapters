@@ -239,7 +239,7 @@ public class CockpitInputPatchTests
     {
         var schema = new SpaceEngineers2Installer().GetInputSchema();
 
-        schema.Version.ShouldBe(6);
+        schema.Version.ShouldBe(8);
         schema.Inputs[10].Id.ShouldBe("systems.exit_grid");
         schema.Inputs[6].Id.ShouldBe("systems.dampeners");
         schema.Inputs[6].DiscreteBehavior.ShouldBe(DiscreteBehavior.Toggle);
@@ -254,6 +254,13 @@ public class CockpitInputPatchTests
         schema.Inputs[12].DiscreteBehavior.ShouldBe(DiscreteBehavior.Momentary);
         schema.Inputs[13].Id.ShouldBe("camera.mode_switch");
         schema.Inputs[13].DiscreteBehavior.ShouldBe(DiscreteBehavior.Trigger);
+        schema.Inputs[14].Id.ShouldBe("flight.cruise_control_set");
+        schema.Inputs[14].DiscreteBehavior.ShouldBe(DiscreteBehavior.Trigger);
+        schema.Inputs[14].EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Trigger);
+        schema.Inputs[14].EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.Event);
+        schema.Inputs[14].Category.ShouldBe("Flight controls");
+        schema.Inputs[15].Id.ShouldBe("flight.cruise_control_increase");
+        schema.Inputs[16].Id.ShouldBe("flight.cruise_control_decrease");
     }
 
     [Test]
