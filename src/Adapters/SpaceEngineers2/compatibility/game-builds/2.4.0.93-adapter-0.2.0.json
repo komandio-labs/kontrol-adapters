@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../../../schemas/compatibility-record-v1.schema.json",
+  "schemaVersion": 1,
+  "adapterId": "space-engineers-2",
+  "slug": "space-engineers-2",
+  "adapterVersion": "0.2.0",
+  "game": {
+    "product": "Space Engineers 2",
+    "productVersion": "2.4.0.93",
+    "steamBuildId": "24972061",
+    "relevantAssemblies": {
+      "Game2.Client.dll": {
+        "fileVersion": "2.4.0.93",
+        "sha256": "A7112EEFC83564325C67606D3691164B56D36EF343277BB4C21FB65692059FBE",
+        "mvid": "4f7d4986-abee-49db-bb71-1d0d43135138"
+      },
+      "VRage.Core.dll": {
+        "fileVersion": "2.4.0.93",
+        "sha256": "0DC53E54435497CF251A13C9B8C2CA871FEA4D28E0FC82AEE7AEC5A004AB5710",
+        "mvid": "2dd2c9fa-dae0-41f1-a823-b5b4e45411b0"
+      },
+      "VRage.Library.dll": {
+        "fileVersion": "2.4.0.93",
+        "sha256": "0729CE92BD8F32F5979E0C211C31C376507E44D04B85834C5EF40C0FB2D6A05B",
+        "mvid": "ff2e1fbb-6878-47e0-be5d-52eb82038fc7"
+      }
+    }
+  },
+  "validation": {
+    "date": "2026-08-28",
+    "result": "tested",
+    "automatedTests": "passed",
+    "manualChecklist": "passed",
+    "limitations": [
+      "Experimental integration against Space Engineers 2 private runtime APIs. Revalidate after every game update."
+    ]
+  }
+}

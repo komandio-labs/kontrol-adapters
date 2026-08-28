@@ -174,7 +174,10 @@ tested game build:
 ```
 
 Compatibility records are append-only, signed, and preserved through Git
-history or compatibility-scoped tags such as:
+history or compatibility-scoped tags. When more than one adapter
+version is validated against the same game build, keep one record per adapter
+version and use the filename form
+`<game-product-version>-adapter-<adapter-version>.json`:
 
 ```text
 compatibility/spaceengineers2/r12

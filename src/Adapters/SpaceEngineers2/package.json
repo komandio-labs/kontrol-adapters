@@ -10,7 +10,7 @@
   "inputSchemaVersion": 8,
   "targetFramework": "net9.0",
   "architectures": ["x64"],
-  "gameProductVersion": "2.4.0.86",
+  "gameProductVersion": "2.4.0.93",
   "relevantAssemblies": [
     "Game2.Client.dll",
     "VRage.Core.dll",

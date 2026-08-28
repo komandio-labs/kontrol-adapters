@@ -92,7 +92,7 @@ maintaining the adapter across game updates.
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
 | Adapter version | `0.2.0` |
-| Current validated game version | `2.4.0.86` |
+| Current validated game version | `2.4.0.93` |
 | SDK contract version | `1.2.0` |
 | Adapter input schema | Version `8` |
 | Adapter target framework | `net9.0` |
@@ -467,3 +467,5 @@ and is checked by `scripts/kontrol_adapters.py validate`.
 | 2026-08-15 | `2.3.0.2798` | `24225481` | `0.1.0` | tested |
 | 2026-08-19 | `2.4.0.77` | `24225482` | `0.1.0` | tested |
 | 2026-08-24 | `2.4.0.86` | `24225486` | `0.1.0` | tested |
+| 2026-08-28 | `2.4.0.93` | `24972061` | `0.1.0` | tested |
+| 2026-08-28 | `2.4.0.93` | `24972061` | `0.2.0` | tested |

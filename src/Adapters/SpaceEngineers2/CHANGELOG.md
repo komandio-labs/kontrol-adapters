@@ -2,11 +2,11 @@
 
 ## Unreleased
 
-## 0.2.0 — release candidate
+## 0.2.0 — 2026-08-28
 
 This release requires Kontrol SDK `1.2.0` and input schema `8`. The exact
-SE2 compatibility claim remains pending manual validation of the selected game
-build; this changelog does not by itself make an untested build supported.
+SE2 compatibility claim was manually validated against game build `2.4.0.93`
+(Steam build `24972061`).
 
 ### Translation controls
 
@@ -50,8 +50,8 @@ build; this changelog does not by itself make an untested build supported.
 ### Validation
 
 - Adds focused controller, settings, and compatibility validation tests.
-- The exact package must still complete the manual SE2 validation checklist
-  before it can carry a `Tested` compatibility claim.
+- The release package and the previously published 0.1.0 package both passed
+  the manual SE2 validation checklist on game build `2.4.0.93`.
 
 ## 0.1.0 — first stable release
 

@@ -12,7 +12,7 @@
   "defaultDeploymentMethod": "NativePluginParameter",
   "image": "icon.png",
   "version": "0.2.0",
-  "gameProductVersion": "2.4.0.86",
+  "gameProductVersion": "2.4.0.93",
   "relevantAssemblies": [
     "Game2.Client.dll",
     "Game2.Simulation.dll",

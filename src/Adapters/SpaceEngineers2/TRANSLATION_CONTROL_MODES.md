@@ -45,7 +45,7 @@ The adapter does not change the user's dampener preference or add an arbitrary
 minimum thrust. A zero target therefore leaves braking/coasting to SE2's
 enabled/disabled dampener state. Nonzero targets remain on the physical
 Velocity Hold controller path. Native behavior in atmosphere, space, gravity,
-and lateral movement still requires manual validation on SE2 build 2.4.0.86.
+and lateral movement was manually validated on SE2 build 2.4.0.93.
 
 For effects and audio, the adapter separately stores the raw shaped axis as
 the SE2 entity-local vector `(sway, heave, -surge)`, rotated by the observer

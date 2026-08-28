@@ -246,8 +246,10 @@ def validate_se2_consistency() -> None:
     record_fingerprints: dict[str, dict[tuple[str, str], set[str]]] = {}
     for path, record in records:
         version = record.get("game", {}).get("productVersion")
-        if path.stem != version:
-            errors.append(f"Compatibility record '{path}' does not match its product version.")
+        expected_stem = str(version)
+        allowed_stems = {expected_stem, f"{expected_stem}-adapter-{record.get('adapterVersion')}"}
+        if path.stem not in allowed_stems:
+            errors.append(f"Compatibility record '{path}' does not match its product version/adapter version.")
         if record.get("adapterId") != package["adapterId"] or record.get("slug") != package["slug"]:
             errors.append(f"Compatibility record '{path}' identifies a different adapter.")
         if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?", str(record.get("adapterVersion", ""))):
