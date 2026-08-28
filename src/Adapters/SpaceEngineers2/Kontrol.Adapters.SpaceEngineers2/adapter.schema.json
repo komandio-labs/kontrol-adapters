@@ -131,19 +131,6 @@
       "isReadOnly": false
     },
     {
-      "$type": "boolean",
-      "defaultValue": true,
-      "key": "showCruiseControlHudIndicator",
-      "displayName": "Show Cruise Control HUD Indicator",
-      "category": "Flight Controls",
-      "type": "Boolean",
-      "icon": "Gauge",
-      "description": "Shows the cruise-control target-speed indicator in the SE2 cockpit HUD while Cruise Control is active.",
-      "updateScope": "Realtime",
-      "layout": "Full",
-      "isReadOnly": false
-    },
-    {
       "$type": "string",
       "defaultValue": "VelocityHold",
       "allowedValues": [

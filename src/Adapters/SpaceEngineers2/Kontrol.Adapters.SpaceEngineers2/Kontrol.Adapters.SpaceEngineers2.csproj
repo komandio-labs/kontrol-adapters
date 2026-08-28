@@ -24,7 +24,7 @@
     <Description>Controls adapter and hardware integration plugin for Space Engineers 2.</Description>
     <Company>Komandio Labs</Company>
     <Authors>Komandio Labs</Authors>
-    <Copyright>Copyright © 2026 Komandio Labs. All rights reserved.</Copyright>
+    <Copyright>Copyright © 2026 Komandio Labs.</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- Fixes the Cruise Control indicator disappearing by extending SE2's existing
-  SPD beveled border with a native-layout `CRUISE <target>` row. It no longer
-  uses an independently positioned Canvas or custom-drawn overlay; cockpit-driven
-  visibility updates remain marshalled onto Avalonia's UI thread.
+- Removes the experimental Cruise Control HUD indicator, setting, template
+  hooks, and standalone POC after unsuccessful in-game validation. Cruise
+  Control input and physics behavior remain unchanged.
+
 - Keeps SE2's native per-frame thrust-audio velocity update active after
   joystick or keyboard translation release, allowing engine sound to fall with
   deceleration without changing raw-command thruster visuals or movement data.
@@ -18,14 +18,6 @@
 - Restores manual strafe and lift while Cruise Control is active, and adds
   transition-only `[FlightModeTrace]` diagnostics for unexpected Direct Angular
   Flight/Native Reticle Steering changes.
-
-- Adds a default-on Cruise Control HUD indicator rendered as a sibling inside
-  SE2's native Avalonia `HUDSpeedometer` template. It appears only while the
-  player is actively controlling a cockpit and Cruise Control is enabled, and
-  displays the target in SE2's selected `m/s`, `km/h`, or `mph` unit. The
-  indicator can be disabled with `showCruiseControlHudIndicator`. Cruise state
-  changes refresh the HUD immediately so re-enabling Cruise Control reliably
-  restores the indicator.
 
 - Removes the Velocity Hold adapter speed constants. The cap slider now uses
   only the active SE2 grid's runtime speed limit and remains unavailable until

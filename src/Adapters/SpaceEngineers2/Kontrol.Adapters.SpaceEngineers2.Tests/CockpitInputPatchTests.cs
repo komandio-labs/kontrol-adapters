@@ -341,36 +341,6 @@ public class CockpitInputPatchTests
     }
 
     [Test]
-    public void CruiseHudTemplate_ExtendsOnlyTheCompleteFlightSpeedometerTemplate()
-    {
-        CruiseControlHudTemplatePatch.ShouldAttach(
-                isFlightSpeedometer: true, tachometerFound: true, nativeContentFound: true, nativeSpeedTextFound: true)
-            .ShouldBeTrue();
-        CruiseControlHudTemplatePatch.ShouldAttach(
-                isFlightSpeedometer: false, tachometerFound: true, nativeContentFound: true, nativeSpeedTextFound: true)
-            .ShouldBeFalse();
-        CruiseControlHudTemplatePatch.ShouldAttach(
-                isFlightSpeedometer: true, tachometerFound: false, nativeContentFound: true, nativeSpeedTextFound: true)
-            .ShouldBeFalse();
-        CruiseControlHudTemplatePatch.ShouldAttach(
-                isFlightSpeedometer: true, tachometerFound: true, nativeContentFound: false, nativeSpeedTextFound: true)
-            .ShouldBeFalse();
-        CruiseControlHudTemplatePatch.ShouldAttach(
-                isFlightSpeedometer: true, tachometerFound: true, nativeContentFound: true, nativeSpeedTextFound: false)
-            .ShouldBeFalse();
-    }
-
-    [TestCase(true, true, true, true)]
-    [TestCase(false, true, true, false)]
-    [TestCase(true, false, true, false)]
-    [TestCase(true, true, false, false)]
-    public void CruiseHudVisibility_RequiresCockpitSettingAndCruiseState(
-        bool cockpitActive, bool settingEnabled, bool cruiseActive, bool expected)
-    {
-        CruiseControlHudManager.ShouldShow(cockpitActive, settingEnabled, cruiseActive).ShouldBe(expected);
-    }
-
-    [Test]
     public void ComputeLocalTranslationVelocity_UsesTheControlFrameSignConvention()
     {
         var (surge, sway, heave) = CockpitInputPatch.ComputeLocalTranslationVelocity(

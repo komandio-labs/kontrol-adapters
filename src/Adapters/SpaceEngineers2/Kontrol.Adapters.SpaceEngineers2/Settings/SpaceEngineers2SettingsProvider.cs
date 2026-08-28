@@ -37,17 +37,6 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
                 new("MilesPerHour", "Imperial (mph)", "Displays speed in miles per hour.")
             }
         },
-        new BooleanSettingDescriptor
-        {
-            Key = "showCruiseControlHudIndicator",
-            DisplayName = "Show Cruise Control HUD Indicator",
-            Category = "Flight Controls",
-            Icon = SettingIcon.Gauge,
-            Layout = LayoutSpan.Full,
-            UpdateScope = SettingUpdateScope.Realtime,
-            DefaultValue = true,
-            Description = "Shows the cruise-control target-speed indicator in the SE2 cockpit HUD while Cruise Control is active."
-        },
         new StringSettingDescriptor
         {
             Key = "flightModelMode",

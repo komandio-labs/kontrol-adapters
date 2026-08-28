@@ -153,7 +153,6 @@ public static class CockpitInputPatch
             CruiseControl.Reset();
             CruiseAdjustmentRepeater.Reset();
             TranslationPresentationState.Reset();
-            CruiseControlHudManager.Clear();
         }
     }
 
@@ -291,14 +290,12 @@ public static class CockpitInputPatch
 
             if (!TryReadControlFrame(out var control))
             {
-                CruiseControlHudManager.HideTransient();
                 return true;
             }
             bool inputEnabled = control.IsInputEnabled != 0;
             var observedBlock = (CubeBlockComponent?)ObservedBlockField?.GetValue(__instance);
             ProcessTriggeredActions(__instance, inputEnabled ? control.TriggeredActions : 0, observedBlock);
             ProcessCruiseControlAdjustmentHold(inputEnabled ? control.DiscreteStates : 0UL);
-            CruiseControlHudManager.Refresh(inputEnabled && observedBlock is not null);
             ActiveToolActionPatch.ApplyPrimaryFire(inputEnabled && (control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload(inputEnabled && (control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -371,7 +368,6 @@ public static class CockpitInputPatch
             {
                 TranslationPresentationState.Reset();
                 CruiseAdjustmentRepeater.Reset();
-                CruiseControlHudManager.HideTransient();
                 return;
             }
 
@@ -386,7 +382,6 @@ public static class CockpitInputPatch
             {
                 TranslationPresentationState.Reset();
                 CruiseAdjustmentRepeater.Reset();
-                CruiseControlHudManager.Hide();
                 if (_wasKontrolActiveInCockpit)
                 {
                     NeutralizeCockpitInput(instance);
@@ -418,7 +413,6 @@ public static class CockpitInputPatch
 
             ProcessTriggeredActions(instance, control.TriggeredActions, observedBlock as CubeBlockComponent);
             ProcessCruiseControlAdjustmentHold(control.DiscreteStates);
-            CruiseControlHudManager.Refresh(observedBlock is not null);
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -445,14 +439,12 @@ public static class CockpitInputPatch
             if (!TryReadControlFrame(out var control))
             {
                 TranslationPresentationState.Reset();
-                CruiseControlHudManager.HideTransient();
                 return false;
             }
 
             if (control.IsInputEnabled == 0)
             {
                 TranslationPresentationState.Reset();
-                CruiseControlHudManager.Hide();
                 if (_wasKontrolActiveInCockpit)
                 {
                     NeutralizeCockpitInput(instance);
@@ -505,7 +497,6 @@ public static class CockpitInputPatch
 
             ProcessTriggeredActions(instance, control.TriggeredActions, observedBlock);
             ProcessCruiseControlAdjustmentHold(control.DiscreteStates);
-            CruiseControlHudManager.Refresh(observedBlock is not null);
             ActiveToolActionPatch.ApplyPrimaryFire((control.DiscreteStates & (1UL << 11)) != 0);
             ActiveToolActionPatch.ApplyReload((control.DiscreteStates & (1UL << 12)) != 0);
 
@@ -624,7 +615,6 @@ public static class CockpitInputPatch
             CruiseControl.Reset();
             CruiseAdjustmentRepeater.Reset();
             TranslationPresentationState.Reset();
-            CruiseControlHudManager.Hide();
             if (!_wasKontrolActiveInCockpit) return;
             _wasKontrolActiveInCockpit = false;
 
@@ -1121,7 +1111,6 @@ public static class CockpitInputPatch
             var prevMode = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
             SpaceEngineers2SettingsManager.Instance.ApplySettings(values, (ulong)DateTime.UtcNow.Ticks);
             _lastSettingsJson = json;
-            CruiseControlHudManager.Refresh();
             var newMode = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
             if (!string.Equals(prevMode, newMode, StringComparison.OrdinalIgnoreCase))
             {
@@ -1244,6 +1233,11 @@ public static class CockpitInputPatch
     {
         if ((newActions & (1UL << CruiseSetActionBit)) != 0)
         {
+            SpaceEngineers2AdapterDiagnostics.WriteDebug(
+                $"[CruiseStateTrace] Set action received: actions=0x{newActions:X}; " +
+                $"instance={(instance is null ? "null" : instance.GetType().FullName)}; " +
+                $"observedBlock={(observedBlock is null ? "null" : observedBlock.GetType().FullName)}; " +
+                $"activeBefore={CruiseControl.IsActive}; targetBefore={CruiseControl.TargetSpeedMetersPerSecond:F2}.");
             if (!TryGetLocalVelocity(instance, observedBlock, out var currentSurge, out _, out _))
             {
                 SpaceEngineers2AdapterDiagnostics.WriteDebug("Cruise Control Set ignored because current forward speed is unavailable.");
@@ -1257,13 +1251,16 @@ public static class CockpitInputPatch
                     CruiseSetResult.Reset => "Cruise Control reset by double-click.",
                     _ => "Cruise Control Set ignored because forward speed must be greater than zero."
                 });
+                SpaceEngineers2AdapterDiagnostics.WriteDebug(
+                    $"[CruiseStateTrace] Set action applied: result={result}; currentSurge={currentSurge:F2}; " +
+                    $"activeAfter={CruiseControl.IsActive}; targetAfter={CruiseControl.TargetSpeedMetersPerSecond:F2}; " +
+                    $"fastRetarget={CruiseControl.IsFastRetargeting}.");
             }
         }
 
         // Refresh immediately after set/reset/adjust actions. The normal
         // control-frame refresh remains in place for brake cancellation and
         // cockpit/input lifecycle transitions.
-        CruiseControlHudManager.Refresh(observedBlock is not null && instance is not null);
     }
 
     private static void ProcessCruiseControlAdjustmentHold(ulong discreteStates)
