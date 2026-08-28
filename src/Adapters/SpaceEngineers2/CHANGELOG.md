@@ -31,9 +31,6 @@ build; this changelog does not by itself make an untested build supported.
   units, held-button repeat, accelerated step sizes, and a zero-speed floor.
 - Restores manual strafe and lift while Cruise Control is active and keeps
   Cruise's signed correction behavior separate from ordinary Velocity Hold.
-- Removes the experimental Cruise Control HUD indicator, setting, template
-  hooks, and standalone POC after unsuccessful in-game validation. Cruise
-  Control input and physics behavior remain available.
 
 ### Presentation, settings, and diagnostics
 
