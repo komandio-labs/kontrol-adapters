@@ -91,10 +91,10 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.1.0` |
+| Adapter version | `0.2.0` |
 | Current validated game version | `2.4.0.86` |
-| SDK contract version | `1.1.1` |
-| Adapter input schema | Version `5` |
+| SDK contract version | `1.2.0` |
+| Adapter input schema | Version `8` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
 | Compatibility records | `compatibility/game-builds/*.json` |
@@ -133,6 +133,9 @@ schema version so saved user mappings continue to refer to the same controls.
 | 11 | `DiscreteStates` bit 11 | `weapons.fire_primary` | Momentary | Held while the physical button is held | Active weapon/tool primary handler, with press and release |
 | 12 | `DiscreteStates` bit 12 | `weapons.reload` | Momentary | Held while the physical button is held | Active block-weapon secondary/right-mouse handler, with press and release |
 | 13 | `TriggeredActions` bit 13 | `camera.mode_switch` | Trigger | Rising edge, host-latched for 150 ms | `CameraSystemComponent.ToggleCameraView()` on the camera update path |
+| 14 | `TriggeredActions` bit 14 | `flight.cruise_control_set` | Trigger | Rising edge | Captures current non-negative forward speed as the Cruise Control target; double-click resets Cruise Control |
+| 15 | `DiscreteStates` bit 15 | `flight.cruise_control_increase` | Momentary | Held button; repeats after a short delay | Increases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps |
+| 16 | `DiscreteStates` bit 16 | `flight.cruise_control_decrease` | Momentary | Held button; repeats after a short delay | Decreases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps; never below 0 |
 
 ### Host-side analog shaping
 
@@ -147,6 +150,35 @@ sign(v) * ((abs(v) - d) / (1 - d)) ^ e      otherwise
 The adapter then rejects non-finite values and clamps the result to `[-1, 1]`.
 Consequently, a physical maximum remains exactly `-1` or `+1`. The SE2 adapter
 does not apply another response curve.
+
+### Cruise Control
+
+Cruise Control is a forward minimum-speed controller. `Cruise Control Set`
+captures the current forward speed regardless of throttle position. In the
+default Velocity Hold mode, positive throttle requests the higher of its
+throttle-derived target speed and the captured cruise target. It therefore does
+not lower a cruise target or apply direct thrust past it; returning throttle to
+its neutral deadband resumes minimum-speed maintenance.
+Negative throttle past the adapter's small jitter deadband acts as a brake and
+cancels Cruise Control. Double-click Set resets it. Set ignores zero or reverse
+forward speed. The Cruise increase/decrease buttons change an active target by
+1 currently displayed speed unit on press; holding them repeats after a short
+delay and escalates through 1, 5, and 10 displayed-unit steps without allowing
+reverse cruise speeds. Each explicit
+button adjustment temporarily commands full available forward/reverse thrust to
+reach its new target, then resumes normal Cruise maintenance.
+
+Outside Cruise Control, ordinary Velocity Hold converges on each live
+translation target. Lowering a positive throttle below the current speed sends
+opposing physical thrust until the new target is reached. At a zero target, SE2 owns
+the dampener-on braking or dampener-off coasting decision; the adapter does not
+fabricate a fixed minimum-thrust guard. This policy is shared by Direct Angular
+Flight and Native Reticle Steering. Cruise Control's positive-throttle handoff
+remains on its existing signed Velocity Hold path.
+
+`Velocity Hold Response` defaults to `12×`, keeping a full forward command at
+full physical thrust until close to the speed target. Reduce it toward `1×` for
+a smoother approach or increase it toward `20×` for a more aggressive one.
 
 ### Native keyboard and mouse coexistence
 
@@ -343,6 +375,13 @@ Kontrol primary fire changed to True/False through '...'.
 Kontrol reload changed to True/False through '...'.
 Kontrol invoked SE2 Camera Mode Switch through 'ToggleCameraView'.
 ```
+
+`Speed Display Units` is the first SE2 adapter setting. It resolves the final
+presentation unit independently for every SE2 speed parameter, including
+Linear Speed telemetry and the Velocity Hold Target-Speed Cap slider. `Game
+Default` follows the SE2 HUD's observed speed-unit option, while Metric and
+Imperial force `km/h` and `mph` respectively. It does not alter SE2's physics,
+HUD configuration, or Velocity Hold's canonical `m/s` calculations.
 
 Normal adapter logs travel over IPC and are persisted by the Kontrol host. The
 adapter's fallback `adapter-debug.log` remains opt-in.

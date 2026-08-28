@@ -24,7 +24,7 @@
     <Description>Controls adapter and hardware integration plugin for Space Engineers 2.</Description>
     <Company>Komandio Labs</Company>
     <Authors>Komandio Labs</Authors>
-    <Copyright>Copyright © 2026 Komandio Labs. All rights reserved.</Copyright>
+    <Copyright>Copyright © 2026 Komandio Labs.</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
@@ -64,6 +64,22 @@
     </Reference>
     <Reference Include="VRage.Physics">
       <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.Physics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Avalonia.Base">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\Avalonia.Base.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Avalonia.Controls">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\Avalonia.Controls.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VRage.UI">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VRage.UI.Shared">
+      <HintPath>$(SpaceEngineers2ReferencesDirectory)\VRage.UI.Shared.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

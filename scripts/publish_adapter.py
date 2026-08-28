@@ -92,7 +92,8 @@ def main() -> int:
         if game_directory:
             test.extend(["--game-directory", game_directory])
     run(*test)
-    run(sys.executable, str(HELPER), "pack", "--adapter", adapter, "--version", version, "--output", str(package))
+    run(sys.executable, str(HELPER), "pack", "--adapter", adapter, "--version", version,
+        "--configuration", "Release", "--output", str(package))
     print(f"\nThe verified local ZIP is ready:\n  {package}")
     confirm("Have you reviewed the local test result and package, and want to create a private GitHub Release?")
 

@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <KontrolSdkVersion>1.1.1</KontrolSdkVersion>
-    <KontrolSdkAssemblyVersion>1.1.1.0</KontrolSdkAssemblyVersion>
+    <KontrolSdkVersion>1.2.0</KontrolSdkVersion>
+    <KontrolSdkAssemblyVersion>1.2.0.0</KontrolSdkAssemblyVersion>
   </PropertyGroup>
 </Project>

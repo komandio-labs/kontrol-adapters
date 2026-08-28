@@ -97,6 +97,7 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        Patches.TranslationPresentationState.Reset();
         _heartbeatTimer.Dispose();
         _connectionReporter.Dispose();
         if (_harmony is not null) _harmony.UnpatchAll(_harmony.Id);
@@ -107,6 +108,18 @@ internal static class SpaceEngineers2AdapterDiagnostics
 {
     private static readonly AdapterLogReporter Reporter = new("space-engineers-2");
 
+    internal static bool IsDebugLoggingEnabled
+    {
+        get
+        {
+#if DEBUG
+            return true;
+#else
+            return string.Equals(Environment.GetEnvironmentVariable("KONTROL_ADAPTER_DEBUG"), "1", StringComparison.Ordinal);
+#endif
+        }
+    }
+
     internal static void Write(string message)
     {
         try { Reporter.Write(message); } catch (Exception) { }
@@ -114,6 +127,7 @@ internal static class SpaceEngineers2AdapterDiagnostics
 
     internal static void WriteDebug(string message)
     {
+        if (!IsDebugLoggingEnabled) return;
         try { Reporter.WriteDebug(message); } catch (Exception) { }
     }
 

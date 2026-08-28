@@ -11,22 +11,25 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     public ProcessInjectionEntryPoint GetProcessInjectionEntryPoint() => new(
         "Kontrol.Adapters.SpaceEngineers2.SpaceEngineers2StartupHook");
 
-    public AdapterInputSchema GetInputSchema() => new(5,
+    public AdapterInputSchema GetInputSchema() => new(8,
     [
-        new("flight.pitch", "Pitch", "Nose up / nose down", "Flight controls", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f),
-        new("flight.roll", "Roll", "Bank left / right", "Flight controls", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f),
-        new("flight.yaw", "Yaw", "Turn left / right", "Flight controls", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1f),
-        new("movement.forward", "Forward thrust", "Forward / reverse translation", "Translation", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f),
-        new("movement.strafe", "Strafe", "Left / right translation", "Translation", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f),
-        new("movement.lift", "Lift", "Up / down translation", "Translation", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .05f, DefaultExponent: 1f),
-        new("systems.dampeners", "Dampeners", "Toggle inertial dampeners", "Vehicle systems", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
-        new("systems.lights", "Lights", "Toggle vehicle lights", "Vehicle systems", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
+        new("flight.pitch", "Pitch", "Nose up / nose down", "Flight controls", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Nose up", "Nose down")),
+        new("flight.roll", "Roll", "Bank left / right", "Flight controls", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Bank left", "Bank right")),
+        new("flight.yaw", "Yaw", "Turn left / right", "Flight controls", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Turn left", "Turn right")),
+        new("movement.forward", "Forward thrust", "Forward / reverse translation", "Translation", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Reverse", "Forward")),
+        new("movement.strafe", "Strafe", "Left / right translation", "Translation", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Left", "Right")),
+        new("movement.lift", "Lift", "Up / down translation", "Translation", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .05f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Down", "Up")),
+        new("systems.dampeners", "Dampeners", "Toggle inertial dampeners", "Vehicle systems", 10, InputSignalKind.Discrete, DiscreteBehavior.Toggle, AllowedSourceKinds: [InputSourceKind.Button, InputSourceKind.Axis], ActionBehavior: DiscreteBehavior.Toggle, DeliveryMode: DiscreteDeliveryMode.Event, AxisThresholdDefaults: new()),
+        new("systems.lights", "Lights", "Cycle vehicle lights", "Vehicle systems", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button, InputSourceKind.Axis], ActionBehavior: DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event, AxisThresholdDefaults: new()),
         new("systems.parking_brakes", "Parking brakes", "Toggle parking brakes", "Vehicle systems", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
         new("systems.power", "Power", "Toggle vehicle power", "Vehicle systems", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
         new("systems.exit_grid", "Exit grid", "Leave the controlled cockpit or seat", "Vehicle systems", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
         new("weapons.fire_primary", "Primary fire", "Fire the currently selected weapon", "Weapons", 10, InputSignalKind.Discrete, DiscreteBehavior.Momentary),
         new("weapons.reload", "Reload", "Reload the currently selected weapon (secondary/right-mouse action)", "Weapons", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary),
-        new("camera.mode_switch", "Camera Mode Switch", "Switch between the available SE2 camera modes", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger)
+        new("camera.mode_switch", "Camera Mode Switch", "Switch between the available SE2 camera modes", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger),
+        new("flight.cruise_control_set", "Cruise Control Set", "Set the current forward speed as the cruise target. Double-click to reset Cruise Control.", "Flight controls", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button]),
+        new("flight.cruise_control_increase", "Cruise Control increase", "Increase Cruise Control by 1 displayed speed unit; hold to repeat and accelerate through 5 and 10 displayed-unit steps.", "Flight controls", 50, InputSignalKind.Discrete, DiscreteBehavior.Momentary, AllowedSourceKinds: [InputSourceKind.Button], ActionBehavior: DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
+        new("flight.cruise_control_decrease", "Cruise Control decrease", "Decrease Cruise Control by 1 displayed speed unit; hold to repeat and accelerate through 5 and 10 displayed-unit steps without going below 0.", "Flight controls", 60, InputSignalKind.Discrete, DiscreteBehavior.Momentary, AllowedSourceKinds: [InputSourceKind.Button], ActionBehavior: DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State)
     ]);
     public DeploymentMethodInformation GetDeploymentInformation(GameLaunchMethod method) => method switch
     {

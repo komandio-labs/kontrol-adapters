@@ -2,6 +2,93 @@
 
 ## Unreleased
 
+- Removes the experimental Cruise Control HUD indicator, setting, template
+  hooks, and standalone POC after unsuccessful in-game validation. Cruise
+  Control input and physics behavior remain unchanged.
+
+- Keeps SE2's native per-frame thrust-audio velocity update active after
+  joystick or keyboard translation release, allowing engine sound to fall with
+  deceleration without changing raw-command thruster visuals or movement data.
+- Makes Cruise Control Set ignore zero or reverse forward speed while retaining
+  double-click Reset. Cruise target adjustment buttons now change by 1 unit in
+  the player-selected speed presentation on press, repeat while held, and
+  accelerate through 5 and 10 displayed-unit steps. Explicit
+  adjustment retargets use full available forward/reverse thrust until the new
+  target is reached; easing ordinary throttle retains its existing behavior.
+- Restores manual strafe and lift while Cruise Control is active, and adds
+  transition-only `[FlightModeTrace]` diagnostics for unexpected Direct Angular
+  Flight/Native Reticle Steering changes.
+
+- Removes the Velocity Hold adapter speed constants. The cap slider now uses
+  only the active SE2 grid's runtime speed limit and remains unavailable until
+  that game-defined limit can be observed.
+- Adds typed adapter-resolved numeric presentation units. `Speed Display Units`
+  now resolves the final unit for each SE2 speed parameter, including telemetry
+  and the Velocity Hold Target-Speed Cap slider: Game Default (SE2 HUD), Metric
+  (`km/h`), or Imperial (`mph`). Canonical physics values remain `m/s`.
+- Makes hands-off Cruise Control show its calculated hold thrust through the
+  thruster animation/audio presentation channel. Manual throttle continues to
+  show the raw shaped joystick axis, and presentation remains separate from
+  Cruise state and SE2 physics data.
+- Lets SE2 dampeners handle ordinary Velocity Hold target reductions. The
+  adapter no longer sends opposing movement thrust below the selected target:
+  Dampeners ON brakes and Dampeners OFF coasts. Cruise Control retains its
+  separate signed correction behavior.
+- Limits the high Velocity Hold response gain to acceleration toward the
+  selected target. Small throttle reductions near the speed limit now retain
+  gentle baseline braking instead of being multiplied into heavy reverse thrust.
+- Prevents transient disabled-input frames from switching Direct Angular Flight
+  back to SE2 target-based/Reticle gyro mode. Native Reticle Steering still
+  preserves the cockpit's prior target-based preference. Reticle presentation
+  now falls back to the cockpit orientation while its observer transform is
+  temporarily unavailable. Adds a compact 4 Hz `[VelocityHoldTrace]`
+  diagnostic line that records mode, dampeners, raw target axes, local
+  velocity, physical command, and presentation vector without host truncation.
+- Fixes Velocity Hold thruster effects/audio using the grid's SE2 `DEntity`
+  identity rather than the managed grid object's unrelated hash code.
+- Adds the realtime `Velocity Hold Response` setting (default `12×`) so full
+  throttle remains strong near the target instead of asymptotically creeping
+  toward the speed limit.
+- Fixes Velocity Hold target reductions: when the current velocity exceeds the
+  newly selected nonzero target, the physical controller now commands bounded
+  opposing thrust rather than coasting at the old speed.
+- Adds a grid-scoped raw joystick presentation channel for six-direction
+  thruster flames and thrust audio. Velocity Hold physical `MovementInputs`,
+  Cruise Control, and SE2's shared `VoluntaryThrustData` remain untouched.
+- Resolves Velocity Hold speed from active-grid `SoftSpeedLimitData.Speed`,
+  then SE2's `LinearVelocityLimit`; the optional target cap no longer treats
+  300 m/s as a permanent game limit. Removes the arbitrary dampener guard.
+- Changes ordinary Velocity Hold to remove same-direction thrust without
+  commanding opposite-direction braking when the live throttle is reduced.
+  Cruise Control's signed positive-throttle handoff remains unchanged.
+- Replaces the pending `Throttle Hold` action with Cruise Control. Set captures
+  the current forward speed; positive throttle temporarily overrides it;
+  negative throttle cancels it. Cruise targets can be adjusted by +/-10 m/s,
+  never go below zero, and double-clicking Set resets Cruise Control.
+- Refines Cruise Control's positive-throttle override under Velocity Hold: it
+  now targets the higher of the captured cruise speed and throttle-derived
+  speed, preventing both underspeed braking and direct-thrust overshoot.
+- Makes Velocity Hold the default translation mode and lists it before Direct
+  Thrust.
+- Adds an independent `Velocity Hold` translation-control option. It maps the
+  current shaped translation axis to a local target velocity and uses
+  directional axis-scaled proportional feedback, while retaining `Direct
+  Thrust` as the selectable direct mapping.
+- Adds a configurable 1–300 m/s target-speed cap (300 m/s / 1080 km/h by
+  default) and uses a lower private SE2 velocity limit when available.
+- Adds focused controller and settings tests. SE2 dampener interaction remains
+  pending interactive game validation; this local package is not a published
+  compatibility claim.
+- Fixes Velocity Hold feedback on rotated grids/cockpits by converting SE2's
+  world-space rigid-body velocity through both the grid and observer frames.
+
+## 0.2.0 — local validation build
+
+- Adds the initial forward/reverse, strafe left/right, and lift up/down
+  translation mapping for both SE2 flight modes.
+- Retains rate-limited input tracing for the pending manual validation. This
+  local build is not a published compatibility claim.
+
 ## 0.1.0 — first stable release
 
 ### Compatible Game Version

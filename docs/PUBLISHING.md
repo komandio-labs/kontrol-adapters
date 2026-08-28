@@ -47,10 +47,11 @@ Pages package, descriptor, and catalog are all signed.
 
 5. Commit the reviewed source change. Confirm the working tree is clean and
    that the scoped tag does not exist locally or remotely.
-6. Build exactly one local package:
+6. Build exactly one local **Release** package. A Debug package is never a
+   publish candidate:
 
    ```powershell
-   python scripts/kontrol_adapters.py pack --adapter spaceengineers2 --version 0.1.0 --output artifacts/kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip
+   python scripts/kontrol_adapters.py pack --adapter spaceengineers2 --version 0.1.0 --configuration Release --output artifacts/kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip
    python scripts/kontrol_adapters.py verify-package --package artifacts/kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip
    Get-FileHash artifacts/kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip -Algorithm SHA256
    ```

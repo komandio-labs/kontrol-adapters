@@ -427,7 +427,7 @@ public static class AdapterRepository
         string adapterId = document["adapterId"]?.GetValue<string>() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing adapterId.");
         string adapterVersion = document["adapterVersion"]?.GetValue<string>() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing adapterVersion.");
         AdapterManifest manifest = manifests.SingleOrDefault(item => string.Equals(item.AdapterId, adapterId, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"Compatibility record '{path}' references an unknown adapter.");
-        if (!string.Equals(manifest.AdapterVersion, adapterVersion, StringComparison.Ordinal)) throw new InvalidOperationException($"Compatibility record '{path}' references a different adapter version.");
+        if (!SemVersion.IsMatch(adapterVersion)) throw new InvalidOperationException($"Compatibility record '{path}' has an invalid adapter version.");
         var game = document["game"]?.AsObject() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing game metadata.");
         var assemblies = game["relevantAssemblies"]?.AsObject() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing relevant assemblies.");
         if (assemblies.Count == 0) throw new InvalidOperationException($"Compatibility record '{path}' contains no relevant assemblies.");

@@ -8,6 +8,9 @@ namespace Kontrol.Sdk.Interfaces;
 /// </summary>
 public interface IAdapterSettingsProvider
 {
+    /// <summary>Revision of the adapter's declarative settings schema.</summary>
+    int SchemaVersion => 1;
+
     /// <summary>Unique adapter identifier (e.g. "space-engineers-2").</summary>
     string AdapterId { get; }
 
