@@ -40,8 +40,6 @@ public sealed class SpaceEngineers2SettingsManager : IDisposable
 
     public string SpeedDisplayUnit => _currentSnapshot.GetString("speedDisplayUnit", "GameDefault");
     public bool ShowCruiseControlHudIndicator => _currentSnapshot.GetBoolean("showCruiseControlHudIndicator", true);
-    public float CruiseControlHudOffsetX => _currentSnapshot.GetNumber("cruiseControlHudOffsetX", 0f);
-    public float CruiseControlHudOffsetY => _currentSnapshot.GetNumber("cruiseControlHudOffsetY", 0f);
     public string FlightModelMode => _currentSnapshot.GetString("flightModelMode", "DirectAngularFlight");
     public bool IsNativeReticleSteering => string.Equals(FlightModelMode, "NativeReticleSteering", StringComparison.OrdinalIgnoreCase);
     public bool IsDirectAngularFlight => string.Equals(FlightModelMode, "DirectAngularFlight", StringComparison.OrdinalIgnoreCase);

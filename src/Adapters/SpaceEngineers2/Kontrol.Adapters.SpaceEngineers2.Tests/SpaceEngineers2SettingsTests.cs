@@ -42,8 +42,6 @@ public class SpaceEngineers2SettingsTests
         snapshot.ShouldNotBeNull();
         snapshot.GetString("speedDisplayUnit").ShouldBe("GameDefault");
         snapshot.GetBoolean("showCruiseControlHudIndicator").ShouldBeTrue();
-        snapshot.GetNumber("cruiseControlHudOffsetX").ShouldBe(0f);
-        snapshot.GetNumber("cruiseControlHudOffsetY").ShouldBe(0f);
         snapshot.GetString("flightModelMode").ShouldBe("DirectAngularFlight");
         snapshot.GetString("translationControlMode").ShouldBe("VelocityHold");
         snapshot.GetNumber("velocityHoldMaxTargetSpeed").ShouldBe(0f);
@@ -89,14 +87,10 @@ public class SpaceEngineers2SettingsTests
     {
         var snapshot = _provider.CreateSnapshot(new Dictionary<string, object?>
         {
-            ["showCruiseControlHudIndicator"] = false,
-            ["cruiseControlHudOffsetX"] = 125f,
-            ["cruiseControlHudOffsetY"] = -240f
+            ["showCruiseControlHudIndicator"] = false
         });
 
         snapshot.GetBoolean("showCruiseControlHudIndicator").ShouldBeFalse();
-        snapshot.GetNumber("cruiseControlHudOffsetX").ShouldBe(125f);
-        snapshot.GetNumber("cruiseControlHudOffsetY").ShouldBe(-240f);
     }
 
     [Test]
@@ -121,8 +115,6 @@ public class SpaceEngineers2SettingsTests
         _provider.Descriptors.Select(descriptor => descriptor.Key).ShouldBe([
             "speedDisplayUnit",
             "showCruiseControlHudIndicator",
-            "cruiseControlHudOffsetX",
-            "cruiseControlHudOffsetY",
             "flightModelMode",
             "directAngularAcceleration",
             "directAngularDeceleration",

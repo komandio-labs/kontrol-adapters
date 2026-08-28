@@ -341,27 +341,33 @@ public class CockpitInputPatchTests
     }
 
     [Test]
-    public void CruiseHudTemplate_AttachesOnlyToTheCompleteFlightSpeedometerTemplate()
+    public void CruiseHudTemplate_ExtendsOnlyTheCompleteFlightSpeedometerTemplate()
     {
-        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: true, rootFound: true, tachometerFound: true)
+        CruiseControlHudTemplatePatch.ShouldAttach(
+                isFlightSpeedometer: true, tachometerFound: true, nativeContentFound: true, nativeSpeedTextFound: true)
             .ShouldBeTrue();
-        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: false, rootFound: true, tachometerFound: true)
+        CruiseControlHudTemplatePatch.ShouldAttach(
+                isFlightSpeedometer: false, tachometerFound: true, nativeContentFound: true, nativeSpeedTextFound: true)
             .ShouldBeFalse();
-        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: true, rootFound: false, tachometerFound: true)
+        CruiseControlHudTemplatePatch.ShouldAttach(
+                isFlightSpeedometer: true, tachometerFound: false, nativeContentFound: true, nativeSpeedTextFound: true)
             .ShouldBeFalse();
-        CruiseControlHudTemplatePatch.ShouldAttach(isFlightSpeedometer: true, rootFound: true, tachometerFound: false)
+        CruiseControlHudTemplatePatch.ShouldAttach(
+                isFlightSpeedometer: true, tachometerFound: true, nativeContentFound: false, nativeSpeedTextFound: true)
+            .ShouldBeFalse();
+        CruiseControlHudTemplatePatch.ShouldAttach(
+                isFlightSpeedometer: true, tachometerFound: true, nativeContentFound: true, nativeSpeedTextFound: false)
             .ShouldBeFalse();
     }
 
-    [Test]
-    public void CruiseHudOverlay_ClampsTheIndicatorInsideTheVisibleParentBounds()
+    [TestCase(true, true, true, true)]
+    [TestCase(false, true, true, false)]
+    [TestCase(true, false, true, false)]
+    [TestCase(true, true, false, false)]
+    public void CruiseHudVisibility_RequiresCockpitSettingAndCruiseState(
+        bool cockpitActive, bool settingEnabled, bool cruiseActive, bool expected)
     {
-        CruiseControlHudOverlay.ClampToVisibleBounds(requested: -40d, contentLength: 32d, availableLength: 100d)
-            .ShouldBe(0d);
-        CruiseControlHudOverlay.ClampToVisibleBounds(requested: 90d, contentLength: 32d, availableLength: 100d)
-            .ShouldBe(68d);
-        CruiseControlHudOverlay.ClampToVisibleBounds(requested: 12d, contentLength: 32d, availableLength: 100d)
-            .ShouldBe(12d);
+        CruiseControlHudManager.ShouldShow(cockpitActive, settingEnabled, cruiseActive).ShouldBe(expected);
     }
 
     [Test]
@@ -474,6 +480,58 @@ public class CockpitInputPatchTests
 
         TranslationPresentationState.Reset();
         TranslationPresentationState.TryGet(42, out _).ShouldBeFalse();
+    }
+
+    [Test]
+    public void Presentation_StaleInputIsReplacedWithZeroForTheActiveGrid()
+    {
+        TranslationPresentationState.SetForTests(42, Quaternion.Identity, .8f, 0f, 0f, updateTick: 1_000);
+
+        TranslationPresentationState.TryGet(42, nowTick: 1_251, out var presentation).ShouldBeTrue();
+        presentation.VoluntaryThrust.ShouldBe(Vector3.Zero);
+    }
+
+    [Test]
+    public void Presentation_AudioKeepAlivePreservesNonzeroValues()
+    {
+        var value = new Vector3(.25f, -.5f, .75f);
+
+        ThrustAudioPresentationPatch.KeepAudioUpdateActive(value).ShouldBe(value);
+    }
+
+    [Test]
+    public void Presentation_AudioKeepAliveMakesReleasedInputNonzero()
+    {
+        Vector3 keepAlive = ThrustAudioPresentationPatch.KeepAudioUpdateActive(Vector3.Zero);
+
+        keepAlive.LengthSquared().ShouldBeGreaterThan(0f);
+    }
+
+    [TestCase(1f, 0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f)]
+    [TestCase(0f, 1f, 0f, 0f, 0f, 0f, -1f, 0f, 0f)]
+    [TestCase(0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f)]
+    [TestCase(0f, 0f, 0f, 1f, 0f, 0f, 0f, -1f, 0f)]
+    [TestCase(0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f)]
+    [TestCase(0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, -1f)]
+    public void Presentation_UsesNativeKeyboardTranslationWhenJoystickIsCentered(
+        float forward, float backward, float right, float left, float up, float down,
+        float expectedSurge, float expectedSway, float expectedHeave)
+    {
+        var nativeMovement = new MovementInputs
+        {
+            Forward = forward,
+            Backward = backward,
+            Right = right,
+            Left = left,
+            Up = up,
+            Down = down
+        };
+
+        var presentation = CockpitInputPatch.ResolvePresentationAxes(
+            cruiseActive: false, rawSurge: 0f, rawSway: 0f, rawHeave: 0f,
+            forward: 0f, backward: 0f, right: 0f, left: 0f, up: 0f, down: 0f, nativeMovement);
+
+        presentation.ShouldBe((expectedSurge, expectedSway, expectedHeave));
     }
 
     [Test]

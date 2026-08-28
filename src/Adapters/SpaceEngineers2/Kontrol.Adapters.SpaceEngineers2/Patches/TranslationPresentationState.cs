@@ -7,9 +7,11 @@ namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 /// <summary>Client-only raw joystick command used by effects and audio, never physics.</summary>
 internal static class TranslationPresentationState
 {
+    private const long MaximumPresentationAgeMilliseconds = 250;
     private static readonly Lock Gate = new();
     private static int _gridHashCode;
     private static bool _hasValue;
+    private static long _lastUpdateTick;
     private static VoluntaryThrustData _value;
 
     internal static void Set(DEntity grid, Quaternion observerOrientation, float surge, float sway, float heave)
@@ -22,17 +24,36 @@ internal static class TranslationPresentationState
         {
             _gridHashCode = grid.GetHashCode();
             _value = new VoluntaryThrustData { VoluntaryThrust = entityLocal };
+            _lastUpdateTick = Environment.TickCount64;
             _hasValue = true;
         }
     }
 
     internal static bool TryGet(DEntity grid, out VoluntaryThrustData value) => TryGet(grid.GetHashCode(), out value);
 
-    internal static bool TryGet(int gridHashCode, out VoluntaryThrustData value)
+    internal static bool TryGet(int gridHashCode, out VoluntaryThrustData value) =>
+        TryGet(gridHashCode, Environment.TickCount64, out value);
+
+    internal static bool TryGet(int gridHashCode, long nowTick, out VoluntaryThrustData value)
     {
         lock (Gate)
         {
-            if (_hasValue && _gridHashCode == gridHashCode) { value = _value; return true; }
+            if (_hasValue && _gridHashCode == gridHashCode)
+            {
+                // SE2 can stop refreshing cockpit input after a stick returns to
+                // center. Do not relinquish the presentation hook in that case:
+                // its native cache can still contain the previous high-thrust
+                // physical command. Replace the stale raw command with zero
+                // until the next input refresh or an explicit lifecycle reset.
+                if (nowTick - _lastUpdateTick > MaximumPresentationAgeMilliseconds)
+                {
+                    _value = default;
+                    _lastUpdateTick = nowTick;
+                }
+
+                value = _value;
+                return true;
+            }
         }
         value = default;
         return false;
@@ -40,16 +61,17 @@ internal static class TranslationPresentationState
 
     internal static void Reset()
     {
-        lock (Gate) { _gridHashCode = 0; _value = default; _hasValue = false; }
+        lock (Gate) { _gridHashCode = 0; _value = default; _lastUpdateTick = 0; _hasValue = false; }
     }
 
-    internal static void SetForTests(int gridHashCode, Quaternion observerOrientation, float surge, float sway, float heave)
+    internal static void SetForTests(int gridHashCode, Quaternion observerOrientation, float surge, float sway, float heave, long updateTick = 0)
     {
         Vector3 observerLocal = new(Clamp(sway), Clamp(heave), -Clamp(surge));
         lock (Gate)
         {
             _gridHashCode = gridHashCode;
             _value = new VoluntaryThrustData { VoluntaryThrust = observerOrientation * observerLocal };
+            _lastUpdateTick = updateTick == 0 ? Environment.TickCount64 : updateTick;
             _hasValue = true;
         }
     }

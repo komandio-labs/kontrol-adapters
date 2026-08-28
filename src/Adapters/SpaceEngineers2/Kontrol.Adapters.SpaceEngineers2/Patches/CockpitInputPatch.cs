@@ -528,14 +528,6 @@ public static class CockpitInputPatch
                 var settings = SpaceEngineers2SettingsManager.Instance;
                 var (fwd, back, right, left, up, down) = ComputeTranslationThrust(
                     settings, surge, sway, heave, instance, observedBlock, out var maximumTargetSpeed);
-                var (presentationSurge, presentationSway, presentationHeave) = ResolvePresentationAxes(
-                    CruiseControl.IsActive, surge, sway, heave, fwd, back, right, left, up, down);
-                TranslationPresentationState.Set(
-                    gridEntity.DEntity, observerOrientation, presentationSurge, presentationSway, presentationHeave);
-                WriteTranslationTrace(
-                    $"DirectAngularFlight/{settings.TranslationControlMode}", in control, surge, sway, heave,
-                    fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
-
                 // Build translation from Kontrol IPC, then merge native keyboard values via Math.Max
                 var movementInputs = new MovementInputs
                 {
@@ -550,6 +542,13 @@ public static class CockpitInputPatch
                     Pitch = pitch,
                     Yaw = yaw
                 };
+                var (presentationSurge, presentationSway, presentationHeave) = ResolvePresentationAxes(
+                    CruiseControl.IsActive, surge, sway, heave, fwd, back, right, left, up, down, nativeMovement);
+                TranslationPresentationState.Set(
+                    gridEntity.DEntity, observerOrientation, presentationSurge, presentationSway, presentationHeave);
+                WriteTranslationTrace(
+                    $"DirectAngularFlight/{settings.TranslationControlMode}", in control, surge, sway, heave,
+                    fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
                 if (settings.IsVelocityHoldTranslation)
                 {
                     MergeVelocityHoldTranslation(ref movementInputs, fwd, back, right, left, up, down);
@@ -679,7 +678,7 @@ public static class CockpitInputPatch
         if (gridEntity is not null && observerOrientation is { } orientation)
         {
             var (presentationSurge, presentationSway, presentationHeave) = ResolvePresentationAxes(
-                CruiseControl.IsActive, surge, sway, heave, fwd, back, right, left, up, down);
+                CruiseControl.IsActive, surge, sway, heave, fwd, back, right, left, up, down, movementInputs);
             TranslationPresentationState.Set(
                 gridEntity.DEntity, orientation, presentationSurge, presentationSway, presentationHeave);
         }
@@ -740,19 +739,35 @@ public static class CockpitInputPatch
 
     internal static (float surge, float sway, float heave) ResolvePresentationAxes(
         bool cruiseActive, float rawSurge, float rawSway, float rawHeave,
-        float forward, float backward, float right, float left, float up, float down)
+        float forward, float backward, float right, float left, float up, float down,
+        MovementInputs nativeMovement = default)
     {
+        float nativeSurge = NormalizeAxis(nativeMovement.Forward - nativeMovement.Backward);
+        float nativeSway = NormalizeAxis(nativeMovement.Right - nativeMovement.Left);
+        float nativeHeave = NormalizeAxis(nativeMovement.Up - nativeMovement.Down);
+        bool hasRawTranslationInput = MathF.Abs(rawSurge) > CruiseThrottleDeadband ||
+            MathF.Abs(rawSway) > CruiseThrottleDeadband ||
+            MathF.Abs(rawHeave) > CruiseThrottleDeadband ||
+            MathF.Abs(nativeSurge) > CruiseThrottleDeadband ||
+            MathF.Abs(nativeSway) > CruiseThrottleDeadband ||
+            MathF.Abs(nativeHeave) > CruiseThrottleDeadband;
+
         // During a hands-off Cruise Control hold, no raw joystick axis exists
-        // to drive presentation. Show the already-calculated control command
+        // or native key input to drive presentation. Show the already-calculated control command
         // instead, without feeding it back into physics or Cruise state.
-        if (cruiseActive && MathF.Abs(rawSurge) <= CruiseThrottleDeadband &&
-            MathF.Abs(rawSway) <= CruiseThrottleDeadband && MathF.Abs(rawHeave) <= CruiseThrottleDeadband)
+        if (cruiseActive && !hasRawTranslationInput)
         {
             return (forward - backward, right - left, up - down);
         }
 
-        return (rawSurge, rawSway, rawHeave);
+        return (
+            MergePresentationAxis(rawSurge, nativeSurge),
+            MergePresentationAxis(rawSway, nativeSway),
+            MergePresentationAxis(rawHeave, nativeHeave));
     }
+
+    private static float MergePresentationAxis(float joystickAxis, float nativeAxis) =>
+        MathF.Abs(nativeAxis) > MathF.Abs(joystickAxis) ? nativeAxis : joystickAxis;
 
     internal static (float fwd, float back, float right, float left, float up, float down) ComputeVelocityHoldThrust(
         float surge, float sway, float heave,

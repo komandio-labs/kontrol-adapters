@@ -1,261 +1,148 @@
-using System.Globalization;
 using System.Reflection;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Media;
+using Avalonia.Threading;
 using HarmonyLib;
+using Keen.Game2.Client.UI.Library.Controls;
 using Keen.VRage.UI.Shared.Controls.BeveledBorder;
 using Kontrol.Adapters.SpaceEngineers2.Settings;
 
 namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 
-/// <summary>Hosts the cruise indicator in the game's Avalonia tree using SE2's native beveled styling.</summary>
-internal sealed class CruiseControlHudOverlay : Canvas
-{
-    private const double IndicatorHeight = 32d;
-    private const double IndicatorGap = 8d;
-
-    private readonly Control _speedometerAnchor;
-    private readonly BeveledBorder _backplate;
-    private readonly CruiseControlIndicatorVisual _indicator;
-
-    internal CruiseControlHudOverlay(Control speedometerAnchor)
-    {
-        _speedometerAnchor = speedometerAnchor;
-        IsHitTestVisible = false;
-        Focusable = false;
-        ClipToBounds = false;
-        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-
-        _indicator = new CruiseControlIndicatorVisual
-        {
-            IsHitTestVisible = false,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
-        };
-        _backplate = new BeveledBorder
-        {
-            Child = _indicator,
-            IsHitTestVisible = false,
-            ClipToBounds = false,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            Padding = new Thickness(0)
-        };
-        CopyNativeBorderAppearance(speedometerAnchor as BeveledBorder);
-        Children.Add(_backplate);
-    }
-
-    internal void Update(bool isActive, string targetSpeedText, float offsetX, float offsetY)
-    {
-        _indicator.Update(isActive, targetSpeedText);
-        IsVisible = isActive;
-        if (isActive)
-        {
-            Reposition(offsetX, offsetY);
-        }
-    }
-
-    internal void Reposition(float offsetX = 0f, float offsetY = 0f)
-    {
-        Point? anchorTopLeft;
-        try
-        {
-            anchorTopLeft = _speedometerAnchor.TranslatePoint(new Point(0, 0), this);
-        }
-        catch
-        {
-            return;
-        }
-
-        if (!anchorTopLeft.HasValue || _speedometerAnchor.Bounds.Width <= 0 || _speedometerAnchor.Bounds.Height <= 0)
-        {
-            return;
-        }
-
-        double scale = Math.Clamp(_speedometerAnchor.Bounds.Height / 60d, 0.65d, 2.0d);
-        // Match the native SPD/tachometer border width exactly. Do not use a
-        // fixed HTML/Poc width here because SE2's actual width is the source
-        // of truth for this in-game control.
-        double width = _speedometerAnchor.Bounds.Width;
-        double height = IndicatorHeight * scale;
-        _backplate.Width = width;
-        _backplate.Height = height;
-
-        // Keep both beveled borders visibly separate. Positive Y moves down;
-        // negative Y moves up, matching the setting labels.
-        double requestedLeft = anchorTopLeft.Value.X + _speedometerAnchor.Bounds.Width - width + offsetX;
-        double requestedTop = anchorTopLeft.Value.Y - height - IndicatorGap * scale + offsetY;
-        double left = ClampToVisibleBounds(requestedLeft, width, Bounds.Width);
-        double top = ClampToVisibleBounds(requestedTop, height, Bounds.Height);
-        Canvas.SetLeft(_backplate, left);
-        Canvas.SetTop(_backplate, top);
-    }
-
-    internal static double ClampToVisibleBounds(double requested, double contentLength, double availableLength)
-    {
-        if (!double.IsFinite(requested) || !double.IsFinite(contentLength) || !double.IsFinite(availableLength) ||
-            contentLength <= 0d || availableLength <= 0d)
-        {
-            return requested;
-        }
-
-        return Math.Clamp(requested, 0d, Math.Max(0d, availableLength - contentLength));
-    }
-
-    private void CopyNativeBorderAppearance(BeveledBorder? nativeBorder)
-    {
-        if (nativeBorder is null)
-        {
-            _backplate.Bevel = new CornerRadius(0, 5, 5, 0);
-            return;
-        }
-
-        _backplate.Bevel = nativeBorder.Bevel;
-        _backplate.BorderThickness = nativeBorder.BorderThickness;
-        _backplate.Padding = nativeBorder.Padding;
-        if (nativeBorder.Background is not null)
-        {
-            _backplate.Background = nativeBorder.Background;
-        }
-        if (nativeBorder.BorderBrush is not null)
-        {
-            _backplate.BorderBrush = nativeBorder.BorderBrush;
-        }
-    }
-}
-
-/// <summary>Renders the compact circular cruise-control glyph and target text.</summary>
-internal sealed class CruiseControlIndicatorVisual : Control
-{
-    private bool _isActive;
-    private string _targetSpeedText = string.Empty;
-
-    internal void Update(bool isActive, string targetSpeedText)
-    {
-        bool changed = _isActive != isActive
-                       || !string.Equals(_targetSpeedText, targetSpeedText, StringComparison.Ordinal);
-        _isActive = isActive;
-        _targetSpeedText = targetSpeedText;
-        IsVisible = isActive;
-        if (changed)
-        {
-            InvalidateVisual();
-        }
-    }
-
-    public override void Render(DrawingContext context)
-    {
-        if (!_isActive || Bounds.Width <= 0 || Bounds.Height <= 0)
-        {
-            return;
-        }
-
-        double scale = Math.Clamp(Bounds.Height / 32d, 0.65d, 2.0d);
-        var center = new Point(Bounds.Width - 23d * scale, Bounds.Height / 2d);
-        double radius = 9d * scale;
-        var color = new SolidColorBrush(Color.FromArgb(230, 255, 255, 255));
-        var typeface = new Typeface(new FontFamily("Share Tech Mono, Consolas, monospace"), FontStyle.Normal, FontWeight.Bold);
-        var text = new FormattedText(_targetSpeedText, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 16d * scale, color);
-        double textRight = center.X - radius - 8d * scale;
-        context.DrawText(text, new Point(textRight - text.Width, center.Y - text.Height / 2d - scale));
-
-        var pen = new Pen(color, 1.8d * scale, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
-        DrawArc(context, pen, center, radius, Math.PI * 0.75d, Math.PI * 2.25d, 18);
-        var tickPen = new Pen(color, 1.2d * scale, lineCap: PenLineCap.Round);
-        foreach (double angle in new[] { 0.85d, 1.15d, 1.5d, 1.85d, 2.15d })
-        {
-            DrawRadialLine(context, tickPen, center, radius - 3d * scale, radius, Math.PI * angle);
-        }
-
-        DrawRadialLine(context, pen, center, radius - 3d * scale, 0d, Math.PI * 1.25d);
-        context.DrawEllipse(color, null, center, 1.8d * scale, 1.8d * scale);
-
-        double lockAngle = Math.PI * 1.15d;
-        Point tip = PointOnCircle(center, radius + 1.5d * scale, lockAngle);
-        Point arrowBase = PointOnCircle(center, radius + 6.5d * scale, lockAngle);
-        Vector perpendicular = new Vector(-Math.Sin(lockAngle), Math.Cos(lockAngle)) * (3d * scale);
-        var arrow = new StreamGeometry();
-        using (var geometry = arrow.Open())
-        {
-            geometry.BeginFigure(tip, true);
-            geometry.LineTo(arrowBase + perpendicular);
-            geometry.LineTo(arrowBase - perpendicular);
-            geometry.EndFigure(true);
-        }
-        context.DrawGeometry(color, null, arrow);
-    }
-
-    private static void DrawArc(DrawingContext context, Pen pen, Point center, double radius, double startAngle, double endAngle, int segments)
-    {
-        Point previous = PointOnCircle(center, radius, startAngle);
-        for (int i = 1; i <= segments; i++)
-        {
-            double angle = startAngle + (endAngle - startAngle) * i / segments;
-            Point next = PointOnCircle(center, radius, angle);
-            context.DrawLine(pen, previous, next);
-            previous = next;
-        }
-    }
-
-    private static void DrawRadialLine(DrawingContext context, Pen pen, Point center, double startRadius, double endRadius, double angle) =>
-        context.DrawLine(pen, PointOnCircle(center, startRadius, angle), PointOnCircle(center, endRadius, angle));
-
-    private static Point PointOnCircle(Point center, double radius, double angle) =>
-        new(center.X + Math.Cos(angle) * radius, center.Y + Math.Sin(angle) * radius);
-}
-
-/// <summary>Owns overlays attached to live SE2 flight speedometer templates.</summary>
+/// <summary>Extends live SE2 flight speedometers with a native-layout Cruise Control row.</summary>
 internal static class CruiseControlHudManager
 {
     private sealed class Host
     {
-        internal required Grid Root { get; init; }
-        internal required Control Anchor { get; init; }
-        internal required CruiseControlHudOverlay Overlay { get; init; }
+        internal required Control Speedometer { get; init; }
+        internal required StackPanel NativeContent { get; init; }
+        internal required ShadowedTextBlock CruiseRow { get; init; }
     }
 
+    private static readonly Lock StateLock = new();
     private static readonly List<Host> Hosts = new();
     private static bool _cockpitActive;
+    private static bool _uiRefreshQueued;
     private static string? _lastVisibilityTrace;
 
-    internal static void Attach(Grid root, Control anchor)
+    internal static void Attach(Control speedometer, StackPanel nativeContent, ShadowedTextBlock nativeSpeedText)
     {
-        // SE2 can recreate the flight HUD tree after a cockpit view change.
-        // Keep only the current native speedometer host so a detached tree
-        // cannot consume later refreshes or accumulate indefinitely.
-        RemoveHostsExcept(root);
-        RemoveForRoot(root);
-        var overlay = new CruiseControlHudOverlay(anchor);
-        Grid.SetColumn(overlay, 0);
-        Grid.SetColumnSpan(overlay, Math.Max(1, root.ColumnDefinitions.Count));
-        Grid.SetRow(overlay, 0);
-        Grid.SetRowSpan(overlay, Math.Max(1, root.RowDefinitions.Count));
-        overlay.ZIndex = 1000;
-        root.Children.Add(overlay);
-        root.LayoutUpdated += RootOnLayoutUpdated;
-        Hosts.Add(new Host { Root = root, Anchor = anchor, Overlay = overlay });
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => Attach(speedometer, nativeContent, nativeSpeedText));
+            return;
+        }
+
+        RemoveHostsExcept(speedometer);
+        RemoveForSpeedometer(speedometer);
+        var cruiseRow = new ShadowedTextBlock
+        {
+            Text = string.Empty,
+            IsVisible = false,
+            IsHitTestVisible = false,
+            Focusable = false,
+            ClipToBounds = false,
+            HorizontalAlignment = nativeSpeedText.HorizontalAlignment,
+            TextAlignment = nativeSpeedText.TextAlignment,
+            FontFamily = nativeSpeedText.FontFamily,
+            FontSize = nativeSpeedText.FontSize,
+            FontStyle = nativeSpeedText.FontStyle,
+            FontWeight = nativeSpeedText.FontWeight,
+            Foreground = nativeSpeedText.Foreground,
+            ShadowColor = nativeSpeedText.ShadowColor,
+            ShadowOffset = nativeSpeedText.ShadowOffset
+        };
+        nativeContent.Children.Add(cruiseRow);
+        Hosts.Add(new Host
+        {
+            Speedometer = speedometer,
+            NativeContent = nativeContent,
+            CruiseRow = cruiseRow
+        });
         SpaceEngineers2AdapterDiagnostics.WriteDebug(
-            $"[CruiseHudTrace] Attached overlay. hosts={Hosts.Count}; root={root.Bounds.Width:F0}x{root.Bounds.Height:F0}; " +
-            $"anchor={anchor.Bounds.Width:F0}x{anchor.Bounds.Height:F0}.");
+            $"[CruiseHudTrace] Extended native speedometer. hosts={Hosts.Count}; " +
+            $"nativeRows={nativeContent.Children.Count}; speedometer={speedometer.Bounds.Width:F0}x{speedometer.Bounds.Height:F0}.");
         Refresh();
     }
 
     internal static void Refresh(bool? cockpitActive = null)
     {
-        if (cockpitActive.HasValue)
+        lock (StateLock)
         {
-            _cockpitActive = cockpitActive.Value;
+            if (cockpitActive.HasValue)
+            {
+                _cockpitActive = cockpitActive.Value;
+            }
+
+            if (_uiRefreshQueued)
+            {
+                return;
+            }
+
+            _uiRefreshQueued = true;
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            ApplyPendingRefresh();
+            return;
+        }
+
+        try
+        {
+            Dispatcher.UIThread.Post(ApplyPendingRefresh);
+        }
+        catch (Exception ex)
+        {
+            lock (StateLock)
+            {
+                _uiRefreshQueued = false;
+            }
+
+            SpaceEngineers2AdapterDiagnostics.WriteDebug($"[CruiseHudTrace] Could not queue HUD refresh on the UI thread: {ex}");
+        }
+    }
+
+    internal static bool ShouldShow(bool cockpitActive, bool settingEnabled, bool cruiseActive) =>
+        cockpitActive && settingEnabled && cruiseActive;
+
+    internal static void Hide() => Refresh(false);
+
+    // A missing IPC frame can be a transient condition during a camera/HUD
+    // transition. Preserve the current state instead of hiding the Cruise row;
+    // the native Flight HUD parent still controls whether it is rendered.
+    internal static void HideTransient() => Refresh();
+
+    internal static void Clear()
+    {
+        lock (StateLock)
+        {
+            _cockpitActive = false;
+        }
+
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ClearVisuals);
+            return;
+        }
+
+        ClearVisuals();
+    }
+
+    private static void ApplyPendingRefresh()
+    {
+        bool cockpitActive;
+        lock (StateLock)
+        {
+            _uiRefreshQueued = false;
+            cockpitActive = _cockpitActive;
         }
 
         var settings = SpaceEngineers2SettingsManager.Instance;
-        bool isActive = _cockpitActive
-                        && settings.ShowCruiseControlHudIndicator
-                        && CockpitInputPatch.IsCruiseControlActiveForHud;
-        string visibilityTrace = $"hosts={Hosts.Count}; cockpitActive={_cockpitActive}; settingEnabled={settings.ShowCruiseControlHudIndicator}; " +
-                                 $"cruiseActive={CockpitInputPatch.IsCruiseControlActiveForHud}; visible={isActive}";
+        bool cruiseActive = CockpitInputPatch.IsCruiseControlActiveForHud;
+        bool isActive = ShouldShow(cockpitActive, settings.ShowCruiseControlHudIndicator, cruiseActive);
+        string visibilityTrace = $"hosts={Hosts.Count}; cockpitActive={cockpitActive}; settingEnabled={settings.ShowCruiseControlHudIndicator}; " +
+                                 $"cruiseActive={cruiseActive}; visible={isActive}; uiThread={Dispatcher.UIThread.CheckAccess()}";
         if (!string.Equals(_lastVisibilityTrace, visibilityTrace, StringComparison.Ordinal))
         {
             _lastVisibilityTrace = visibilityTrace;
@@ -266,43 +153,36 @@ internal static class CruiseControlHudManager
             : string.Empty;
         foreach (var host in Hosts)
         {
-            host.Overlay.Update(isActive, targetSpeed, settings.CruiseControlHudOffsetX, settings.CruiseControlHudOffsetY);
+            host.CruiseRow.Text = isActive ? $"CRUISE {targetSpeed}" : string.Empty;
+            host.CruiseRow.IsVisible = isActive;
         }
     }
 
-    internal static void Hide() => Refresh(false);
-
-    // A missing IPC frame can be a transient condition during a camera/HUD
-    // transition. Preserve the current state instead of hiding the overlay;
-    // the native Flight HUD parent still controls whether it is rendered.
-    internal static void HideTransient() => Refresh();
-
-    internal static void Clear()
+    private static void ClearVisuals()
     {
         for (int i = Hosts.Count - 1; i >= 0; i--)
         {
             RemoveAt(i);
         }
-        _cockpitActive = false;
         _lastVisibilityTrace = null;
     }
 
-    private static void RemoveForRoot(Grid root)
+    private static void RemoveForSpeedometer(Control speedometer)
     {
         for (int i = Hosts.Count - 1; i >= 0; i--)
         {
-            if (ReferenceEquals(Hosts[i].Root, root))
+            if (ReferenceEquals(Hosts[i].Speedometer, speedometer))
             {
                 RemoveAt(i);
             }
         }
     }
 
-    private static void RemoveHostsExcept(Grid root)
+    private static void RemoveHostsExcept(Control speedometer)
     {
         for (int i = Hosts.Count - 1; i >= 0; i--)
         {
-            if (!ReferenceEquals(Hosts[i].Root, root))
+            if (!ReferenceEquals(Hosts[i].Speedometer, speedometer))
             {
                 RemoveAt(i);
             }
@@ -312,21 +192,8 @@ internal static class CruiseControlHudManager
     private static void RemoveAt(int index)
     {
         var host = Hosts[index];
-        host.Root.LayoutUpdated -= RootOnLayoutUpdated;
-        host.Root.Children.Remove(host.Overlay);
+        host.NativeContent.Children.Remove(host.CruiseRow);
         Hosts.RemoveAt(index);
-    }
-
-    private static void RootOnLayoutUpdated(object? sender, EventArgs e)
-    {
-        if (sender is Grid root)
-        {
-            var settings = SpaceEngineers2SettingsManager.Instance;
-            foreach (var host in Hosts.Where(host => ReferenceEquals(host.Root, root)))
-            {
-                host.Overlay.Reposition(settings.CruiseControlHudOffsetX, settings.CruiseControlHudOffsetY);
-            }
-        }
     }
 }
 
@@ -350,24 +217,36 @@ internal static class CruiseControlHudTemplatePatch
         }
 
         bool isFlightSpeedometer = speedometer.Classes.Contains("Flight");
-        Grid? root = e.NameScope.Find<Grid>("PART_Root");
-        Control? anchor = e.NameScope.Find<Control>("PART_Tachometer");
-        if (!ShouldAttach(isFlightSpeedometer, root is not null, anchor is not null))
+        BeveledBorder? tachometer = e.NameScope.Find<BeveledBorder>("PART_Tachometer");
+        StackPanel? nativeContent = tachometer?.Child as StackPanel;
+        ShadowedTextBlock? nativeSpeedText = e.NameScope.Find<ShadowedTextBlock>("PART_SpeedText");
+        if (!ShouldAttach(
+                isFlightSpeedometer,
+                tachometer is not null,
+                nativeContent is not null,
+                nativeSpeedText is not null))
         {
             SpaceEngineers2AdapterDiagnostics.WriteDebug(
-                $"[CruiseHudTrace] HUD template ignored: flightClass={isFlightSpeedometer}; rootFound={root is not null}; tachometerFound={anchor is not null}; " +
+                $"[CruiseHudTrace] HUD template ignored: flightClass={isFlightSpeedometer}; tachometerFound={tachometer is not null}; " +
+                $"nativeContentFound={nativeContent is not null}; nativeSpeedTextFound={nativeSpeedText is not null}; " +
                 $"classes=[{string.Join(',', speedometer.Classes)}].");
             return;
         }
 
-        CruiseControlHudManager.Attach(root!, anchor!);
+        // Extend the existing SPD border's vertical content stack. The native
+        // speedometer now owns Cruise layout, clipping, visibility, and lifetime.
+        CruiseControlHudManager.Attach(speedometer, nativeContent!, nativeSpeedText!);
     }
 
-    internal static bool ShouldAttach(bool isFlightSpeedometer, bool rootFound, bool tachometerFound) =>
-        isFlightSpeedometer && rootFound && tachometerFound;
+    internal static bool ShouldAttach(
+        bool isFlightSpeedometer,
+        bool tachometerFound,
+        bool nativeContentFound,
+        bool nativeSpeedTextFound) =>
+        isFlightSpeedometer && tachometerFound && nativeContentFound && nativeSpeedTextFound;
 }
 
-/// <summary>Refreshes the overlay when SE2 reinitializes the reusable cockpit HUD screen.</summary>
+/// <summary>Refreshes the native speedometer extension when SE2 reinitializes the reusable cockpit HUD screen.</summary>
 [HarmonyPatch]
 internal static class CruiseControlHudCleanPatch
 {
@@ -378,7 +257,7 @@ internal static class CruiseControlHudCleanPatch
     }
 
     // Clean() is also part of the first-person/external-camera transition.
-    // Do not treat it as leaving the cockpit: the overlay is already inside
-    // FlightHUDControl and therefore follows the native HUD visibility.
+    // Do not treat it as leaving the cockpit: the Cruise row is part of the
+    // native HUDSpeedometer and therefore follows the native HUD visibility.
     private static void Postfix() => CruiseControlHudManager.Refresh();
 }

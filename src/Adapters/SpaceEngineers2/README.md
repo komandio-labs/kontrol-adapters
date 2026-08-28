@@ -257,15 +257,15 @@ changed or a new game build is adopted.
 
 ### Cockpit HUD cruise indicator
 
-The optional Cruise Control indicator is rendered by a custom Avalonia
-`Control` added to the native `HUDSpeedometer` template. The adapter patches
+The optional Cruise Control indicator is rendered by an SE2-native
+`ShadowedTextBlock` row added to the existing `HUDSpeedometer` template. The
+adapter patches
 `Keen.Game2.Client.UI.HUD.Movement.HUDSpeedometer.OnApplyTemplate(TemplateAppliedEventArgs)`,
-selects only the template instance with the `Flight` class, and attaches the
-overlay as a sibling of the native `PART_Tachometer` under `PART_Root`.
-Positioning is calculated from the live `PART_Tachometer` bounds, with the
-configured X/Y offsets applied in HUD logical pixels; it is therefore tied to
-SE2's SPD control instead of a fixed screen coordinate. The overlay remains
-attached across `CockpitHUDScreen.Clean()`/camera-view transitions and is
+selects only the template instance with the `Flight` class, and appends the
+Cruise row directly to the existing vertical content stack inside native
+`PART_Tachometer`. SE2's SPD border therefore owns its layout, clipping,
+visibility, and lifetime. The row remains attached across
+`CockpitHUDScreen.Clean()`/camera-view transitions and is
 rendered only while its parent Flight HUD is displayed. Transient missing input
 frames do not hide it. It is hidden unless all of these are true: the player
 has an active cockpit input frame, Cruise Control is active, and
@@ -402,13 +402,12 @@ Default` follows the SE2 HUD's observed speed-unit option, while Metric and
 Imperial force `km/h` and `mph` respectively. It does not alter SE2's physics,
 HUD configuration, or Velocity Hold's canonical `m/s` calculations.
 
-The default-on `Show Cruise Control HUD Indicator` setting adds a small
-Avalonia-drawn cruise target gauge above SE2's native SPD speedometer while the
-player is in a cockpit and Cruise Control is active. Its target text follows
-`Speed Display Units`, including `m/s`, `km/h`, and `mph`. The indicator can be
-disabled with `showCruiseControlHudIndicator`; `cruiseControlHudOffsetX` and
-`cruiseControlHudOffsetY` provide bounded HUD-pixel adjustments relative to the
-native SPD control.
+The default-on `Show Cruise Control HUD Indicator` setting adds a
+`CRUISE <target>` row inside SE2's native SPD border while the player is in a
+cockpit and Cruise Control is active. Its target text follows `Speed Display
+Units`, including `m/s`, `km/h`, and `mph`. The row can be disabled with
+`showCruiseControlHudIndicator`. It is intentionally not independently
+positionable because the native speedometer owns its layout and lifetime.
 
 Normal adapter logs travel over IPC and are persisted by the Kontrol host. The
 adapter's fallback `adapter-debug.log` remains opt-in.

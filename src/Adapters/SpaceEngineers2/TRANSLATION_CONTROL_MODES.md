@@ -59,6 +59,14 @@ Cruise's already-computed physical hold command; manual throttle continues to
 show the raw shaped axis. This presentation-only exception never changes Cruise
 targets, state, or SE2 physics data.
 
+SE2 uses a private audio datum as a presence gate for its per-frame velocity
+parameter update. After translation release, the audio hooks retain that gate
+with a presentation-only epsilon while the cockpit presentation state is
+active. SE2 therefore continues feeding the real grid velocity, including
+zero, to the live audio event throughout deceleration. The epsilon exists only
+in the patched audio method arguments and is never written to movement,
+dampener, or shared thrust data.
+
 ## Scope and terminology
 
 The translation-control mode is independent of the adapter's rotational flight
