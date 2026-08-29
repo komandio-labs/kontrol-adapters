@@ -1,6 +1,6 @@
 {
   "catalogVersion": 1,
-  "generatedAtUtc": "2026-08-28T08:11:02Z",
+  "generatedAtUtc": "2026-08-29T07:13:18Z",
   "adapters": [
     {
       "adapterId": "space-engineers-2",
@@ -29,25 +29,26 @@
           "gameProductVersion": "2.4.0.93",
           "assemblies": {
             "Game2.Client.dll": {
-              "fileVersion": "2.4.0.93",
-              "sha256": "A7112EEFC83564325C67606D3691164B56D36EF343277BB4C21FB65692059FBE",
-              "mvid": "4f7d4986-abee-49db-bb71-1d0d43135138"
+              "fileVersion": "2.4.0.95",
+              "sha256": "FDCD1C1EB01433BE994C87893A88F720325BF93C1E797930D79859ED664BB9BA",
+              "mvid": "f6e100aa-767e-4ff3-a5a5-4a694b657015"
             },
             "VRage.Core.dll": {
-              "fileVersion": "2.4.0.93",
-              "sha256": "0DC53E54435497CF251A13C9B8C2CA871FEA4D28E0FC82AEE7AEC5A004AB5710",
-              "mvid": "2dd2c9fa-dae0-41f1-a823-b5b4e45411b0"
+              "fileVersion": "2.4.0.95",
+              "sha256": "46475534D89BC5E01C5247ADC7DD9C4EA08477B437DCAEDE1AB204B1976F7FA2",
+              "mvid": "12a6700b-bf39-44af-bf8d-5613528583a1"
             },
             "VRage.Library.dll": {
-              "fileVersion": "2.4.0.93",
-              "sha256": "0729CE92BD8F32F5979E0C211C31C376507E44D04B85834C5EF40C0FB2D6A05B",
-              "mvid": "ff2e1fbb-6878-47e0-be5d-52eb82038fc7"
+              "fileVersion": "2.4.0.95",
+              "sha256": "EA782B58E5D63D5F277D9BEB92CAA843D07239473C20F5220D1FABDCA5564E9D",
+              "mvid": "b4ba2bb9-ffe0-48f1-88a8-58a672fd2b4b"
             }
           },
           "verifiedGameVersions": [
+            "2.4.0.95",
             "2.4.0.93"
           ],
-          "signature": "cuCAlJ3KY/OLQZVH1mpVJwD1ZaKzmjVZKoRsOXse2VlLb5w1JMScwD\u002BHb5PSkbKJcBybcxU85tybDYFcdEXekA==",
+          "signature": "dOG\u002BcleNQHj5Jm3UuFZckp5tqS8Ibz\u002Bwa1ATbby3P2GzWOKmOvi3gA/O43u2UA5go6x2\u002BLsrjaVCMsgG8QbXNg==",
           "status": "current"
         },
         {
@@ -92,7 +93,7 @@
             "2.4.0.77",
             "2.3.0.2798"
           ],
-          "signature": "kpnkdEwKa0sLPbfwYigzcyPL8aQ6ZWX6BCXPbc\u002BRQmGSc7SuPSbXdOPDPx5tfb38RYCSJZfu8uboqbgev3eAJw==",
+          "signature": "Zl\u002B1YDU8L5hfSgXlmbQ5f1u3q0CA5scimpFZ3ui0VQC7pBXQTEw4qFn7ym13AVDF\u002Ble5/NjTkFqmKuBTT9N7qw==",
           "status": "superseded"
         },
         {
@@ -132,11 +133,11 @@
             "2.4.0.77",
             "2.3.0.2798"
           ],
-          "signature": "Tig3z6Ie0VehpaI6szB4OsGSFICQSC4K5qJ9RFmPRQtXkCz63buQrMZcMa4i1FFCW8BSNti9sKBUCnbMidEA8A==",
+          "signature": "H8KWP8y2XnQB/zLEQ0UdIr\u002BIjlTZzedLhIbwYHVBkx\u002By\u002Bdow\u002B\u002BVGL0lJNWEzcZJLTPNoa6f2M/J//a7q4CivcQ==",
           "status": "superseded"
         }
       ]
     }
   ],
-  "signature": "Plbez7A5FzBfwxJjtemKG6t8CQ5QqCm3TI1hvzgFec9Lm7\u002BJCEBGWSrEZxllg5gaDmxE\u002BjWUffeRkuTUYJWGtA=="
+  "signature": "V2jaEUnSgsicX5SOr7lKt3\u002BREFbX35Zu\u002BiGVst0whDiEN92CNgOwpxGO4HMzDEcgbJ1EZ10lPSQjaLfFJAhnvg=="
 }
