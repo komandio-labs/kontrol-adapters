@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Cruise Control
+
+- Simplifies held-button target adjustment to 1 and 10 displayed-unit steps.
+- Makes coarse adjustment snap to the next multiple of 10 in its direction.
+
 ## 0.2.0 — 2026-08-28
 
 This release requires Kontrol SDK `1.2.0` and input schema `8`. The exact

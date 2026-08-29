@@ -59,6 +59,27 @@ internal static class SpeedUnitPresentation
         return displayedSpeed / multiplier;
     }
 
+    /// <summary>Converts the controller's canonical target speed to the displayed HUD unit.</summary>
+    internal static float ConvertMetersPerSecondToDisplayedSpeed(float metersPerSecond, string preference)
+    {
+        float multiplier = ResolveSpeedUnit(preference) switch
+        {
+            KilometersPerHour => 3.6f,
+            MilesPerHour => 2.2369363f,
+            _ => 1f
+        };
+        return metersPerSecond * multiplier;
+    }
+
+    /// <summary>
+    /// Moves a displayed target to the next coarse ten-unit value in the requested
+    /// direction. This intentionally moves away from an exact multiple as well.
+    /// </summary>
+    internal static float MoveToNextTenDisplayedSpeed(float displayedSpeed, float direction) =>
+        direction > 0f
+            ? (MathF.Floor(displayedSpeed / 10f) + 1f) * 10f
+            : Math.Max((MathF.Ceiling(displayedSpeed / 10f) - 1f) * 10f, 0f);
+
     internal static NumberSettingPresentation ResolveTargetSpeedPresentation(string preference) =>
         ResolveTargetSpeedPresentation(preference, VelocityHoldSpeedLimitState.Current);
 

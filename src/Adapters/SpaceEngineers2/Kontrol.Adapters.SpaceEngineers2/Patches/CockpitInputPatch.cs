@@ -1272,12 +1272,19 @@ public static class CockpitInputPatch
 
         // The input schema defines these as state-delivered controls. Do not
         // also consume their legacy triggered-action bits: that would apply an
-        // extra increment alongside the held-state increment. The values below
-        // are expressed in the current HUD/presentation unit (1, then 5, then
-        // 10), then converted for the m/s-based controller.
-        float metersPerSecondAdjustment = SpeedUnitPresentation.ConvertDisplayedSpeedToMetersPerSecond(
-            adjustment, SpaceEngineers2SettingsManager.Instance.SpeedDisplayUnit);
-        AdjustCruiseTarget(metersPerSecondAdjustment);
+        // extra increment alongside the held-state increment. Adjustments use
+        // 1 displayed unit until the held-button coarse 10-unit mode begins.
+        // Coarse adjustment always snaps to the next multiple of ten in the
+        // selected direction, including when the current value is already exact.
+        string speedUnit = SpaceEngineers2SettingsManager.Instance.SpeedDisplayUnit;
+        float displayedTarget = SpeedUnitPresentation.ConvertMetersPerSecondToDisplayedSpeed(
+            CruiseControl.TargetSpeedMetersPerSecond, speedUnit);
+        float adjustedDisplayedTarget = MathF.Abs(adjustment) == 10f
+            ? SpeedUnitPresentation.MoveToNextTenDisplayedSpeed(displayedTarget, adjustment)
+            : Math.Max(displayedTarget + adjustment, 0f);
+        float adjustedTarget = SpeedUnitPresentation.ConvertDisplayedSpeedToMetersPerSecond(
+            adjustedDisplayedTarget, speedUnit);
+        AdjustCruiseTarget(adjustedTarget - CruiseControl.TargetSpeedMetersPerSecond);
     }
 
     private static void AdjustCruiseTarget(float delta)

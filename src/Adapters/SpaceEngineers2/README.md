@@ -134,8 +134,8 @@ schema version so saved user mappings continue to refer to the same controls.
 | 12 | `DiscreteStates` bit 12 | `weapons.reload` | Momentary | Held while the physical button is held | Active block-weapon secondary/right-mouse handler, with press and release |
 | 13 | `TriggeredActions` bit 13 | `camera.mode_switch` | Trigger | Rising edge, host-latched for 150 ms | `CameraSystemComponent.ToggleCameraView()` on the camera update path |
 | 14 | `TriggeredActions` bit 14 | `flight.cruise_control_set` | Trigger | Rising edge | Captures current non-negative forward speed as the Cruise Control target; double-click resets Cruise Control |
-| 15 | `DiscreteStates` bit 15 | `flight.cruise_control_increase` | Momentary | Held button; repeats after a short delay | Increases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps |
-| 16 | `DiscreteStates` bit 16 | `flight.cruise_control_decrease` | Momentary | Held button; repeats after a short delay | Decreases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps; never below 0 |
+| 15 | `DiscreteStates` bit 15 | `flight.cruise_control_increase` | Momentary | Held button; repeats after a short delay | Increases the active Cruise Control target by 1 displayed speed unit, then repeats at 1 and 10 displayed-unit steps; coarse adjustment rounds up to the next multiple of 10 |
+| 16 | `DiscreteStates` bit 16 | `flight.cruise_control_decrease` | Momentary | Held button; repeats after a short delay | Decreases the active Cruise Control target by 1 displayed speed unit, then repeats at 1 and 10 displayed-unit steps; coarse adjustment rounds down to the prior multiple of 10 and never below 0 |
 
 ### Host-side analog shaping
 
@@ -163,8 +163,9 @@ Negative throttle past the adapter's small jitter deadband acts as a brake and
 cancels Cruise Control. Double-click Set resets it. Set ignores zero or reverse
 forward speed. The Cruise increase/decrease buttons change an active target by
 1 currently displayed speed unit on press; holding them repeats after a short
-delay and escalates through 1, 5, and 10 displayed-unit steps without allowing
-reverse cruise speeds. Each explicit
+delay and escalates through 1 and 10 displayed-unit steps without allowing
+reverse cruise speeds. The 10-unit adjustment rounds to the next multiple of 10
+in its direction. Each explicit
 button adjustment temporarily commands full available forward/reverse thrust to
 reach its new target, then resumes normal Cruise maintenance.
 

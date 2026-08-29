@@ -68,14 +68,13 @@ internal sealed class CruiseControlState
 }
 
 /// <summary>
-/// Repeats a held Cruise Control adjustment button with a small initial delay
-/// and familiar digital-clock-style step acceleration.
+/// Repeats a held Cruise Control adjustment button with a small initial delay,
+/// starting with fine adjustment before switching to coarse adjustment.
 /// </summary>
 internal sealed class CruiseAdjustmentRepeater
 {
     internal const long InitialRepeatDelayMilliseconds = 350;
     internal const long RepeatIntervalMilliseconds = 125;
-    internal const long FiveMeterStepDelayMilliseconds = 750;
     internal const long TenMeterStepDelayMilliseconds = 1_500;
 
     private int _direction;
@@ -103,11 +102,7 @@ internal sealed class CruiseAdjustmentRepeater
 
         _nextRepeatTick = nowTick + RepeatIntervalMilliseconds;
         long heldMilliseconds = nowTick - _startedAtTick;
-        float step = heldMilliseconds >= TenMeterStepDelayMilliseconds
-            ? 10f
-            : heldMilliseconds >= FiveMeterStepDelayMilliseconds
-                ? 5f
-                : 1f;
+        float step = heldMilliseconds >= TenMeterStepDelayMilliseconds ? 10f : 1f;
         return direction * step;
     }
 
