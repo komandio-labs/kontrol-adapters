@@ -39,7 +39,7 @@ product key, license activation, device binding, or payment information.
 The app uses the SDK and adapters in this repository to communicate with a
 supported game. The host handles device polling, configuration, mappings, and
 the session runtime; an adapter handles the game-specific translation. You can
-[get Kontrol on itch.io](https://komandio-labs.itch.io/kontrol).
+browse signed adapters in the official [Kontrol Adapter Library](https://www.komandio.com/kontrol/adapters.html) or [get Kontrol on itch.io](https://komandio-labs.itch.io/kontrol).
 
 ## How it fits together
 

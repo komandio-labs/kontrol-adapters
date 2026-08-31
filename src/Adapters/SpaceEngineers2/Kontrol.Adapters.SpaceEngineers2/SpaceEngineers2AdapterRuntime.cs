@@ -23,7 +23,6 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
         _connectionReporter.ReportLoaded();
         _heartbeatTimer = new Timer(_ => _connectionReporter.Pulse(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         SpaceEngineers2AdapterDiagnostics.Write("Space Engineers 2 controls adapter started.");
-        SpaceEngineers2AdapterDiagnostics.WriteDebug($"Runtime: {Environment.Version}; location: {AppDomain.CurrentDomain.BaseDirectory}; assemblies loaded: {AppDomain.CurrentDomain.GetAssemblies().Length}");
 
         try
         {
@@ -48,7 +47,7 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
             }
 
             SpaceEngineers2AdapterDiagnostics.Write("Space Engineers 2 control integration is ready.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug("Harmony patches successfully registered and applied to JIT memory, including SE2's final movement commit.");
+            SpaceEngineers2AdapterDiagnostics.Write("Harmony patches successfully registered and applied to SE2's final movement commit.");
             _connectionReporter.ReportActive();
         }
         catch (Exception ex)
@@ -58,7 +57,7 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
                 "Space Engineers 2 updated its internal flight control methods. The installed adapter cannot hook into this game version.",
                 "Check the adapter Library for an updated adapter build compatible with this game patch.");
             SpaceEngineers2AdapterDiagnostics.WriteError("Space Engineers 2 control integration could not be enabled.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Harmony patching failed: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"Harmony patching failed: {ex}");
         }
     }
 

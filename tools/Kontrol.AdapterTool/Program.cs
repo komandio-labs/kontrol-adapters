@@ -1058,7 +1058,8 @@ public static class AdapterSchemaExporter
         {
             adapterId = provider.AdapterId,
             categories = provider.Categories,
-            descriptors = provider.Descriptors
+            descriptors = provider.Descriptors,
+            supportedTraces = provider.SupportedTraces
         };
 
         var options = new JsonSerializerOptions

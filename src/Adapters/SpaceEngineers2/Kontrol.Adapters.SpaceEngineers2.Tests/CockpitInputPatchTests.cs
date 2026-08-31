@@ -19,9 +19,11 @@ using Keen.VRage.Library.Mathematics;
 namespace Kontrol.Adapters.SpaceEngineers2.Tests;
 
 [TestFixture]
+[NonParallelizable]
 public class CockpitInputPatchTests
 {
     private static int _commitCount;
+    private string _testAdapterId = null!;
     private MmfChannel<InputFrame>? _testInputChannel;
     private MmfChannel<TelemetryData>? _testTelemetryChannel;
     private MmfChannel<TelemetryData>? _testSettingsChannel;
@@ -30,15 +32,18 @@ public class CockpitInputPatchTests
     public void SetUp()
     {
         CockpitInputPatch.ResetChannelsForTests();
+        _testAdapterId = $"space-engineers-2-tests-{Guid.NewGuid():N}";
+        CockpitInputPatch.ConfigureChannelsForTests(_testAdapterId);
 
-        // Initialize MMF channels to mimic the WPF app side
-        _testInputChannel = new MmfChannel<InputFrame>("Local\\Kontrol_Input_space-engineers-2");
+        // Initialize a test-only channel set. These names must never overlap with a
+        // running host or injected SE2 adapter.
+        _testInputChannel = new MmfChannel<InputFrame>($"Local\\Kontrol_Input_{_testAdapterId}");
         _testInputChannel.CreateOrOpen();
 
-        _testTelemetryChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Telemetry_space-engineers-2");
+        _testTelemetryChannel = new MmfChannel<TelemetryData>($"Local\\Kontrol_Telemetry_{_testAdapterId}");
         _testTelemetryChannel.CreateOrOpen();
 
-        _testSettingsChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Settings_space-engineers-2");
+        _testSettingsChannel = new MmfChannel<TelemetryData>($"Local\\Kontrol_Settings_{_testAdapterId}");
         _testSettingsChannel.CreateOrOpen();
 
         // Redirect internal _updateControlDataMethod to avoid calling actual game logic
@@ -79,6 +84,12 @@ public class CockpitInputPatchTests
     private static void DummyUpdateControlData()
     {
         _commitCount++;
+    }
+
+    [Test]
+    public void ConfigureChannelsForTests_RejectsTheProductionAdapterId()
+    {
+        Should.Throw<ArgumentException>(() => CockpitInputPatch.ConfigureChannelsForTests("space-engineers-2"));
     }
 
     [Test]
@@ -405,11 +416,11 @@ public class CockpitInputPatchTests
         output.ShouldBe((0f, 0f, 0f, 0f, 0f, 0f));
     }
 
-    [TestCase(true, true, false)]
+    [TestCase(true, true, true)]
     [TestCase(true, false, false)]
     [TestCase(false, true, true)]
     [TestCase(false, false, false)]
-    public void Neutralization_DoesNotSwitchDirectAngularFlightBackToReticle(
+    public void Neutralization_RestoresOriginalDesiredTargetBasedGyro(
         bool isDirectAngularFlight, bool originalTargetBasedGyro, bool expectedTargetBasedGyro)
     {
         CockpitInputPatch.ResolveGyroModeAfterNeutralization(

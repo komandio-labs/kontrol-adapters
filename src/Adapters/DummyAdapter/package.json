@@ -5,7 +5,7 @@
   "slug": "dummy-adapter",
   "displayName": "Kontrol Sandbox",
   "adapterVersion": "1.0.0",
-  "sdkVersion": "1.2.0",
+  "sdkVersion": "1.3.0",
   "entryAssembly": "Kontrol.Adapters.DummyAdapter.dll",
   "inputSchemaVersion": 1,
   "targetFramework": "net9.0",

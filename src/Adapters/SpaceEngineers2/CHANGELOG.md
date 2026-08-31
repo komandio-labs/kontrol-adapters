@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Diagnostics
+
+- Adds adapter-owned, selectable Debug traces for Velocity Hold, Flight Mode,
+  Cruise Control State, and Adapter Performance. Release builds expose no
+  trace descriptors and compile out all trace instrumentation.
+
 ### Cruise Control
 
 - Simplifies held-button target adjustment to 1 and 10 displayed-unit steps.

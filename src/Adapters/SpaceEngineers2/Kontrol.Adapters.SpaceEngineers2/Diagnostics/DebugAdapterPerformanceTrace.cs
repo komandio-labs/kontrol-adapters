@@ -27,10 +27,14 @@ internal static class DebugAdapterPerformanceTrace
     private static readonly long[] SlowCounts = new long[OperationNames.Length];
     private static long _nextSummaryTimestamp = Stopwatch.GetTimestamp() + Stopwatch.Frequency * SummaryIntervalSeconds;
 
-    internal static long Start() => Stopwatch.GetTimestamp();
+    internal static long Start() => SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.Performance)
+        ? Stopwatch.GetTimestamp()
+        : 0;
 
     internal static void Record(int operation, long startedAt)
     {
+        if (startedAt == 0) return;
+
         long elapsed = Stopwatch.GetTimestamp() - startedAt;
         Interlocked.Increment(ref Counts[operation]);
         Interlocked.Add(ref TotalTicks[operation], elapsed);

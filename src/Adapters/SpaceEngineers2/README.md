@@ -93,7 +93,7 @@ maintaining the adapter across game updates.
 | Game binary directory | `<SE2 installation>\Game2` |
 | Adapter version | `0.2.1-beta.1` |
 | Current validated game version | `2.4.0.93` |
-| SDK contract version | `1.2.0` |
+| SDK contract version | `1.3.0` |
 | Adapter input schema | Version `8` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
