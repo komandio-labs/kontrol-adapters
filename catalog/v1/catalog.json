@@ -1,13 +1,53 @@
 {
   "catalogVersion": 1,
-  "generatedAtUtc": "2026-08-29T07:13:18Z",
+  "generatedAtUtc": "2026-09-08T13:28:17Z",
   "adapters": [
     {
       "adapterId": "space-engineers-2",
       "slug": "space-engineers-2",
       "displayName": "Space Engineers 2",
-      "currentVersion": "0.2.0",
+      "currentVersion": "0.3.0",
       "releases": [
+        {
+          "descriptorVersion": 1,
+          "adapterId": "space-engineers-2",
+          "slug": "space-engineers-2",
+          "adapterVersion": "0.3.0",
+          "sdkVersion": "1.3.0",
+          "channel": "stable",
+          "publishedAtUtc": "2026-09-08T13:28:15Z",
+          "source": {
+            "tag": "adapters/space-engineers-2/v0.3.0",
+            "commit": "3dd2c54c1225af962c3dd472b17e267914f8b435"
+          },
+          "package": {
+            "fileName": "kontrol-adapter-space-engineers-2-0.3.0-win-x64.zip",
+            "sha256": "6BEC440B3BF9B1C2A4A0B41F67F51CABBD2D8E975706B5CD36FF2F1584B042A5",
+            "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers-2/0.3.0/kontrol-adapter-space-engineers-2-0.3.0-win-x64.zip",
+            "architecture": "x64"
+          },
+          "gameProductVersion": "2.4.0.93",
+          "assemblies": {
+            "Game2.Client.dll": {
+              "sha256": "A7112EEFC83564325C67606D3691164B56D36EF343277BB4C21FB65692059FBE",
+              "fileVersion": "2.4.0.93"
+            },
+            "VRage.Core.dll": {
+              "sha256": "0DC53E54435497CF251A13C9B8C2CA871FEA4D28E0FC82AEE7AEC5A004AB5710",
+              "fileVersion": "2.4.0.93"
+            },
+            "VRage.Library.dll": {
+              "sha256": "0729CE92BD8F32F5979E0C211C31C376507E44D04B85834C5EF40C0FB2D6A05B",
+              "fileVersion": "2.4.0.93"
+            }
+          },
+          "verifiedGameVersions": [
+            "2.4.0.93",
+            "2.4.0.95"
+          ],
+          "signature": "dACkC5NdexooIW7leT1uw2CGnDjjywHrtn\u002BZ1XPJ/gs/NRZCQ5cYrnitdVVJ6fjrFl5wW2mKcbNMXEQE\u002Bf\u002B/Dw==",
+          "status": "current"
+        },
         {
           "descriptorVersion": 1,
           "adapterId": "space-engineers-2",
@@ -49,7 +89,7 @@
             "2.4.0.93"
           ],
           "signature": "dOG\u002BcleNQHj5Jm3UuFZckp5tqS8Ibz\u002Bwa1ATbby3P2GzWOKmOvi3gA/O43u2UA5go6x2\u002BLsrjaVCMsgG8QbXNg==",
-          "status": "current"
+          "status": "superseded"
         },
         {
           "descriptorVersion": 1,
@@ -139,5 +179,5 @@
       ]
     }
   ],
-  "signature": "V2jaEUnSgsicX5SOr7lKt3\u002BREFbX35Zu\u002BiGVst0whDiEN92CNgOwpxGO4HMzDEcgbJ1EZ10lPSQjaLfFJAhnvg=="
+  "signature": "DoTt3Lp/GPpJZABwxKWLjlqVvLrgTou8EhkTNvg7WvlsmkdmmM6boYP57pJ/lzdFQPve5Ga2MTewKfyTtbiR8w=="
 }
