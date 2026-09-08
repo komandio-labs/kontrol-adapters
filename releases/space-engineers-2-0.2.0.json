@@ -16,7 +16,7 @@
     "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers-2/0.2.0/kontrol-adapter-space-engineers-2-0.2.0-win-x64.zip",
     "architecture": "x64"
   },
-  "gameProductVersion": "2.4.0.93",
+  "gameProductVersion": "2.4.0.95",
   "assemblies": {
     "Game2.Client.dll": {
       "fileVersion": "2.4.0.95",
@@ -38,5 +38,5 @@
     "2.4.0.95",
     "2.4.0.93"
   ],
-  "signature": "dOG\u002BcleNQHj5Jm3UuFZckp5tqS8Ibz\u002Bwa1ATbby3P2GzWOKmOvi3gA/O43u2UA5go6x2\u002BLsrjaVCMsgG8QbXNg=="
+  "signature": "grrtI77lcxhD2M94oFuglFfEvg415CwBXWuM6QENhfxhg0AXFQ4lf31L0Z3k1z4CpF8ewwapNkUSlsI6Nnz1nQ=="
 }
