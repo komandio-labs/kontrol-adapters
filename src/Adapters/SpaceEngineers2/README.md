@@ -91,7 +91,7 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.2.1-beta.1` |
+| Adapter version | `0.3.0` |
 | Current validated game version | `2.4.0.93` |
 | SDK contract version | `1.3.0` |
 | Adapter input schema | Version `9` |

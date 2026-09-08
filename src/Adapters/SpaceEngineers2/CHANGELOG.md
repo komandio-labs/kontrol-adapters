@@ -1,6 +1,6 @@
 # Space Engineers 2 adapter changelog
 
-## Unreleased
+## 0.3.0 — 2026-09-08
 
 ### Toolbar selection
 
