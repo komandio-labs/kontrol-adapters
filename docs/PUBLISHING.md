@@ -90,3 +90,30 @@ path:
 The human-guided `scripts/publish_adapter.py` wizard is for an interactive
 maintainer. AI agents must not invoke it; they follow the same checks directly
 and wait for explicit authorization before external publication.
+
+## Publish the Kontrol SDK
+
+The SDK is a separate contract package published to the organization's GitHub
+Packages NuGet feed. It is not published to NuGet.org. SDK releases use the
+scoped tag sdk/v<version> and are handled by
+.github/workflows/publish-sdk-nuget.yml.
+
+Before tagging an SDK release:
+
+1. Query GitHub Packages and confirm the exact Kontrol.Sdk version does not
+   already exist. Published package versions are immutable.
+2. Update src/Kontrol.Sdk/Versions.props and KontrolSdkContract.Version
+   together, and add the matching section to
+   src/Kontrol.Sdk/CHANGELOG.md.
+3. Build and pack in Release. Confirm the generated .nupkg contains the SDK
+   changelog and record its SHA-256.
+4. Run the SDK/tooling tests, then build and test the consuming host and all
+   affected adapters against the local SDK package.
+5. Confirm the source commit is pushed and that sdk/v<version> and its GitHub
+   Release do not already exist.
+
+After explicit publication approval, push the annotated SDK tag. The workflow
+validates the version and changelog, publishes the package, and creates the
+GitHub Release from the matching changelog section. Verify both the package
+version and release after the workflow completes. A manual workflow dispatch
+must select an sdk/v<version> tag; branch-based SDK publication is rejected.

@@ -389,10 +389,17 @@ When the Kontrol SDK changes:
 1. Classify the change as major, minor, or patch.
 2. Update the single SDK contract version.
 3. Keep additive IPC changes size-aware and capability-driven.
-4. Update first-party adapters and tests.
-5. Publish the SDK before publishing adapters that require it.
-6. Declare the new SDK version in each affected adapter manifest.
-7. Publish a new active adapter release; never patch or replace old artifacts.
+4. Update src/Kontrol.Sdk/CHANGELOG.md and include it in the SDK package.
+5. Update first-party adapters and tests.
+6. Publish the SDK before publishing adapters that require it.
+7. Declare the new SDK version in each affected adapter manifest.
+8. Publish a new active adapter release; never patch or replace old artifacts.
+
+SDK publication uses an annotated sdk/v<version> tag. The publication workflow
+must validate the matching changelog section, publish to GitHub Packages, and
+create a GitHub Release containing that section. The exact package version must
+be absent before publication because package versions, tags, and release assets
+are immutable.
 
 The catalog records each adapter release's SDK version so consumers can exclude
 incompatible SDK major versions.

@@ -63,6 +63,8 @@ and limitations.
 | `src/Adapters/DummyAdapter` | Minimal adapter, documentation, and tests for development and IPC validation. |
 | `src/Kontrol.Sandbox.Game` | Local sandbox game used while developing the SDK. |
 
+The SDK release history is documented in [src/Kontrol.Sdk/CHANGELOG.md](src/Kontrol.Sdk/CHANGELOG.md).
+
 ## Quick start
 
 Install Python 3 and the .NET 9 SDK. The repository's developer and
