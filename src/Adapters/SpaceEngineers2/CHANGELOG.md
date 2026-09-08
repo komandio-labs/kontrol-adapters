@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-### Belt selection
+### Toolbar selection
 
-- Adds cockpit-only belt slot selection actions for keys `1` through `0`.
+- Adds cockpit-only toolbar slot selection actions for keys `1` through `0`.
 
 ### Diagnostics
 

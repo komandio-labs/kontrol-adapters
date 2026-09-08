@@ -613,7 +613,8 @@ public class CockpitInputPatchTests
             var input = schema.Inputs[17 + i];
             string key = i == 9 ? "0" : (i + 1).ToString();
             input.Id.ShouldBe($"belt.select_{key}");
-            input.Category.ShouldBe("Belt");
+            input.Category.ShouldBe("Toolbar");
+            input.DisplayName.ShouldBe($"Toolbar slot {(i == 9 ? 10 : i + 1)}");
             input.SignalKind.ShouldBe(InputSignalKind.Discrete);
             input.EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Trigger);
             input.EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.Event);
