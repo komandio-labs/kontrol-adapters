@@ -5,7 +5,7 @@ using HarmonyLib;
 namespace Kontrol.Adapters.SpaceEngineers2.Patches;
 
 /// <summary>
-/// Bridges Kontrol's cockpit belt actions to SE2's existing toolbar selection path.
+/// Bridges Kontrol's cockpit toolbar actions to SE2's existing toolbar selection path.
 /// </summary>
 [HarmonyPatch]
 internal static class BeltSelectionPatch
@@ -31,7 +31,7 @@ internal static class BeltSelectionPatch
             if (!TrySelectTile(tileIndex))
             {
                 SpaceEngineers2AdapterDiagnostics.WriteDebug(
-                    $"SE2 belt action bit {actionBit} was received, but no active in-game toolbar could select slot {tileIndex + 1}.");
+                    $"SE2 toolbar action bit {actionBit} was received, but no active in-game toolbar could select slot {tileIndex + 1}.");
             }
         }
     }
