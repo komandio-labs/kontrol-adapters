@@ -682,7 +682,7 @@ public static class AdapterRelease
         if (Directory.Exists(compatibilityRoot))
         {
             var verifiedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            JsonObject? latestAssembliesNode = null;
+            var assembliesByVersion = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
 
             foreach (string recordPath in Directory.EnumerateFiles(compatibilityRoot, "*.json"))
             {
@@ -696,33 +696,37 @@ public static class AdapterRelease
                     verifiedVersions.Add(gpv);
                 }
 
-                if (latestAssembliesNode is null && game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0)
+                if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0 &&
+                    game["productVersion"]?.GetValue<string>() is { } assemblyVersion && !string.IsNullOrWhiteSpace(assemblyVersion))
                 {
-                    latestAssembliesNode = new JsonObject();
+                    var assemblySnapshot = new JsonObject();
                     foreach ((string name, JsonNode? val) in assembliesObj)
                     {
                         if (val is JsonObject entryObj)
                         {
-                            latestAssembliesNode[name] = new JsonObject
+                            assemblySnapshot[name] = new JsonObject
                             {
                                 ["sha256"] = entryObj["sha256"]?.GetValue<string>() ?? "",
                                 ["fileVersion"] = entryObj["fileVersion"]?.GetValue<string>() ?? ""
                             };
                         }
                     }
+                    assembliesByVersion[assemblyVersion] = assemblySnapshot;
                 }
-            }
-
-            if (latestAssembliesNode != null)
-            {
-                descriptor["assemblies"] = latestAssembliesNode;
             }
 
             if (verifiedVersions.Count > 0)
             {
-                descriptor["gameProductVersion"] = verifiedVersions.First();
+                string selectedVersion = !string.IsNullOrWhiteSpace(manifest.GameProductVersion) && verifiedVersions.Contains(manifest.GameProductVersion)
+                    ? manifest.GameProductVersion
+                    : verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase).First();
+                descriptor["gameProductVersion"] = selectedVersion;
+                if (assembliesByVersion.TryGetValue(selectedVersion, out JsonObject? selectedAssemblies))
+                {
+                    descriptor["assemblies"] = selectedAssemblies;
+                }
                 var arr = new JsonArray();
-                foreach (string v in verifiedVersions)
+                foreach (string v in verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase))
                 {
                     arr.Add(v);
                 }
@@ -818,12 +822,17 @@ public static class AdapterRelease
                         verifiedVersions.Add(s);
                 }
             }
-            if (descriptor["gameProductVersion"]?.GetValue<string>() is { } baseGpv && !string.IsNullOrWhiteSpace(baseGpv))
+            string? baseGpv = descriptor["gameProductVersion"]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(baseGpv))
             {
                 verifiedVersions.Add(baseGpv);
             }
 
-            JsonObject? latestAssembliesNode = descriptor["assemblies"]?.AsObject()?.DeepClone().AsObject();
+            var assembliesByVersion = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(baseGpv) && descriptor["assemblies"]?.AsObject() is JsonObject existingAssemblies)
+            {
+                assembliesByVersion[baseGpv] = existingAssemblies.DeepClone().AsObject();
+            }
 
             foreach (string recordPath in Directory.EnumerateFiles(compatibilityRoot, "*.json"))
             {
@@ -838,32 +847,37 @@ public static class AdapterRelease
                     verifiedVersions.Add(gpv);
                 }
 
-                if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0)
+                if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0 &&
+                    game["productVersion"]?.GetValue<string>() is { } assemblyVersion && !string.IsNullOrWhiteSpace(assemblyVersion))
                 {
-                    latestAssembliesNode ??= new JsonObject();
+                    var assemblySnapshot = new JsonObject();
                     foreach ((string name, JsonNode? val) in assembliesObj)
                     {
                         if (val is JsonObject entryObj)
                         {
-                            latestAssembliesNode[name] = entryObj.DeepClone();
+                            assemblySnapshot[name] = entryObj.DeepClone();
                         }
                     }
+                    assembliesByVersion[assemblyVersion] = assemblySnapshot;
                 }
             }
 
             if (verifiedVersions.Count > 0)
             {
+                string selectedVersion = !string.IsNullOrWhiteSpace(manifest.GameProductVersion) && verifiedVersions.Contains(manifest.GameProductVersion)
+                    ? manifest.GameProductVersion
+                    : verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase).First();
+                descriptor["gameProductVersion"] = selectedVersion;
+                if (assembliesByVersion.TryGetValue(selectedVersion, out JsonObject? selectedAssemblies))
+                {
+                    descriptor["assemblies"] = selectedAssemblies;
+                }
                 var arr = new JsonArray();
                 foreach (string v in verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase))
                 {
                     arr.Add(v);
                 }
                 descriptor["verifiedGameVersions"] = arr;
-            }
-
-            if (latestAssembliesNode is not null && latestAssembliesNode.Count > 0)
-            {
-                descriptor["assemblies"] = latestAssembliesNode;
             }
 
             File.WriteAllText(descriptorPath, descriptor.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));

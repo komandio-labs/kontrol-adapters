@@ -313,20 +313,19 @@ public class AdapterToolTests
         try
         {
             Directory.CreateDirectory(releasesDir);
-            var descriptor = Descriptor("0.1.0-beta.3");
-            descriptor["channel"] = "beta";
+            var descriptor = Descriptor("0.1.0");
             descriptor["slug"] = "space-engineers-2";
             descriptor["adapterId"] = "space-engineers-2";
             descriptor["gameProductVersion"] = "2.3.0.2798";
-            descriptor["source"] = new JsonObject { ["tag"] = "adapters/space-engineers-2/v0.1.0-beta.3", ["commit"] = "abcdef1234567" };
+            descriptor["source"] = new JsonObject { ["tag"] = "adapters/space-engineers-2/v0.1.0", ["commit"] = "abcdef1234567" };
             descriptor["package"] = new JsonObject
             {
-                ["fileName"] = "kontrol-adapter-space-engineers-2-0.1.0-beta.3-win-x64.zip",
+                ["fileName"] = "kontrol-adapter-space-engineers-2-0.1.0-win-x64.zip",
                 ["sha256"] = new string('A', 64),
                 ["url"] = "https://example.invalid/download.zip",
                 ["architecture"] = "x64"
             };
-            string descPath = Path.Combine(releasesDir, "space-engineers-2-0.1.0-beta.3.json");
+            string descPath = Path.Combine(releasesDir, "space-engineers-2-0.1.0.json");
             File.WriteAllText(descPath, descriptor.ToJsonString());
 
             AdapterRelease.UpdateDescriptors(root, releasesDir);
@@ -334,6 +333,8 @@ public class AdapterToolTests
             var updated = JsonNode.Parse(File.ReadAllText(descPath))!.AsObject();
             var verified = updated["verifiedGameVersions"]!.AsArray().Select(v => v!.GetValue<string>()).ToArray();
             verified.ShouldContain("2.3.0.2798");
+            updated["gameProductVersion"]!.GetValue<string>().ShouldBe("2.4.0.93");
+            updated["assemblies"]!["Game2.Client.dll"]!["fileVersion"]!.GetValue<string>().ShouldBe("2.4.0.93");
             updated["package"]!["sha256"]!.GetValue<string>().ShouldBe(new string('A', 64));
         }
         finally
