@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Belt selection
+
+- Adds cockpit-only belt slot selection actions for keys `1` through `0`.
+
 ### Diagnostics
 
 - Adds adapter-owned, selectable Debug traces for Velocity Hold, Flight Mode,

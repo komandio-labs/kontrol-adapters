@@ -7,7 +7,7 @@
   "adapterVersion": "0.2.1-beta.1",
   "sdkVersion": "1.3.0",
   "entryAssembly": "Kontrol.Adapters.SpaceEngineers2.dll",
-  "inputSchemaVersion": 8,
+  "inputSchemaVersion": 9,
   "targetFramework": "net9.0",
   "architectures": ["x64"],
   "gameProductVersion": "2.4.0.93",

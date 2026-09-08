@@ -1341,6 +1341,7 @@ public static class CockpitInputPatch
             ProcessCruiseControlActions(newActions, instance as CockpitInputHandlerComponent, observedBlock);
 
             CameraActionPatch.ProcessCameraModeSwitch(newActions);
+            BeltSelectionPatch.Process(newActions);
             foreach (var (bit, methodName) in TriggerActions)
             {
                 if ((newActions & (1UL << bit)) == 0) continue;
