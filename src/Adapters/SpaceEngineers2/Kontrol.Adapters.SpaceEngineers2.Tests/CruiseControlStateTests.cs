@@ -123,15 +123,25 @@ public sealed class CruiseControlStateTests
     }
 
     [Test]
-    public void AdjustmentRepeater_StartsAtOneThenAcceleratesToFiveAndTen()
+    public void AdjustmentRepeater_StartsAtOneThenAcceleratesToTen()
     {
         var repeater = new Patches.CruiseAdjustmentRepeater();
 
         repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 0).ShouldBe(1f);
         repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 349).ShouldBe(0f);
         repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 350).ShouldBe(1f);
-        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 750).ShouldBe(5f);
+        repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 750).ShouldBe(1f);
         repeater.Update(increaseHeld: true, decreaseHeld: false, nowTick: 1_500).ShouldBe(10f);
+    }
+
+    [TestCase(231f, 1f, 240f)]
+    [TestCase(240f, 1f, 250f)]
+    [TestCase(233f, -1f, 230f)]
+    [TestCase(230f, -1f, 220f)]
+    [TestCase(3f, -1f, 0f)]
+    public void CoarseAdjustment_MovesToTheNextTenDisplayedUnit(float target, float direction, float expected)
+    {
+        Patches.SpeedUnitPresentation.MoveToNextTenDisplayedSpeed(target, direction).ShouldBe(expected);
     }
 
     [Test]

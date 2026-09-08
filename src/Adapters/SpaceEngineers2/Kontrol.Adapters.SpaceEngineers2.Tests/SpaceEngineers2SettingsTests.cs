@@ -1,5 +1,6 @@
 using Kontrol.Adapters.SpaceEngineers2.Settings;
 using Kontrol.Adapters.SpaceEngineers2.Patches;
+using System.Text.Json;
 using Kontrol.Sdk.Settings;
 using NUnit.Framework;
 using Shouldly;
@@ -189,5 +190,40 @@ public class SpaceEngineers2SettingsTests
             .CanonicalUnit.ShouldBe(MeasurementUnit.MetersPerSecond);
         ((NumberSettingDescriptor)_provider.Descriptors.Single(d => d.Key == "directAngularMaxRate"))
             .PresentationUnit.ShouldBe(MeasurementUnit.DegreesPerSecond);
+    }
+
+    [Test]
+    public void SupportedTraces_AreAdapterOwnedAndHavePresentationMetadata()
+    {
+#if DEBUG
+        _provider.SupportedTraces.Select(trace => trace.Id).ShouldBe([
+            SpaceEngineers2DebugTraceKeys.VelocityHold,
+            SpaceEngineers2DebugTraceKeys.FlightMode,
+            SpaceEngineers2DebugTraceKeys.CruiseState,
+            SpaceEngineers2DebugTraceKeys.Performance
+        ]);
+        _provider.SupportedTraces.ShouldAllBe(trace =>
+            !string.IsNullOrWhiteSpace(trace.DisplayName) && !string.IsNullOrWhiteSpace(trace.Description));
+#else
+        _provider.SupportedTraces.ShouldBeEmpty();
+#endif
+    }
+
+    [Test]
+    public void DebugTraceSelection_AcceptsOnlySupportedIdsFromSettingsPayload()
+    {
+#if DEBUG
+        var values = JsonSerializer.Deserialize<Dictionary<string, object?>>("""
+            { "debugTraceIds": ["velocity-hold", "performance", "unknown"] }
+            """)!;
+
+        SpaceEngineers2DebugTraces.Apply(values);
+
+        SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.VelocityHold).ShouldBeTrue();
+        SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.Performance).ShouldBeTrue();
+        SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.FlightMode).ShouldBeFalse();
+
+        SpaceEngineers2DebugTraces.Apply(new Dictionary<string, object?>());
+#endif
     }
 }

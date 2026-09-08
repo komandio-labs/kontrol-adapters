@@ -25,7 +25,7 @@ internal static class CameraActionPatch
     private static void CaptureCameraSystem(CameraSystemComponent __instance)
     {
         _activeCameraSystem = __instance;
-        SpaceEngineers2AdapterDiagnostics.WriteDebug("Kontrol captured the active SE2 camera system.");
+        SpaceEngineers2AdapterDiagnostics.Write("Kontrol captured the active SE2 camera system.");
     }
 
     internal static void ProcessCameraModeSwitch(ulong newActions)
@@ -52,17 +52,17 @@ internal static class CameraActionPatch
             }
 
             ToggleCameraViewMethod.Invoke(_activeCameraSystem, null);
-            SpaceEngineers2AdapterDiagnostics.WriteDebug("Kontrol invoked SE2 Camera Mode Switch through 'ToggleCameraView'.");
+            SpaceEngineers2AdapterDiagnostics.Write("Kontrol invoked SE2 Camera Mode Switch through 'ToggleCameraView'.");
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError("SE2 rejected the Kontrol Camera Mode Switch action.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 Camera Mode Switch error: {ex.InnerException}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 Camera Mode Switch error: {ex.InnerException}");
         }
         catch (Exception ex)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError("Kontrol could not invoke SE2 Camera Mode Switch.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 Camera Mode Switch error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 Camera Mode Switch error: {ex}");
         }
     }
 

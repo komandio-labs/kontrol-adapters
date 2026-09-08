@@ -2,31 +2,292 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Privacy · Kontrol</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy · Kontrol | Komandio Labs</title>
+  <meta name="description" content="Transparent privacy and telemetry disclosures for Kontrol and official adapter distribution.">
+  <link rel="icon" type="image/png" href="./kontrol-logo.png">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <style>
-    :root{color-scheme:dark;--bg:#08111f;--panel:#101d31;--line:#263854;--text:#edf4ff;--muted:#aebbd0;--accent:#74d9ff}
-    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 15% 0,#172d4a 0,transparent 36%),var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif}
-    .page{width:min(100% - 36px,860px);margin:0 auto;padding:42px 0 72px}.nav{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:58px}.brand{color:var(--text);font-weight:750;text-decoration:none;letter-spacing:.02em}.back{color:var(--accent);text-decoration:none}.eyebrow{color:var(--accent);font-size:.77rem;font-weight:750;letter-spacing:.14em;text-transform:uppercase;margin:0 0 12px}.hero h1{font-size:clamp(2.2rem,6vw,4.4rem);line-height:1.02;letter-spacing:-.045em;margin:0 0 18px}.hero p{max-width:690px;color:var(--muted);font-size:1.08rem}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:38px}.card{background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:18px;padding:22px}.card h2{font-size:1.05rem;margin:0 0 8px}.card p{margin:0;color:var(--muted)}.wide{grid-column:1/-1} a{color:var(--accent)}footer{border-top:1px solid var(--line);margin-top:54px;padding-top:24px;color:var(--muted);font-size:.9rem}@media(max-width:680px){.page{width:min(100% - 28px,860px)}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.nav{align-items:flex-start}}
+    :root {
+      color-scheme: dark;
+      --bg: #030712;
+      --panel-card: linear-gradient(145deg, rgba(16, 22, 38, 0.95), rgba(10, 14, 26, 0.85));
+      --line: rgba(148, 163, 184, 0.12);
+      --line-bright: rgba(148, 163, 184, 0.22);
+      
+      --cyan: #06b6d4;
+      --cyan-light: #22d3ee;
+      --purple: #a855f7;
+      --purple-light: #c084fc;
+      --indigo-light: #818cf8;
+      
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-subtle: #64748b;
+      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    }
+    
+    * { box-sizing: border-box; }
+    html { background-color: var(--bg); color: var(--text); scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      background-color: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Background Glows */
+    .ambient-glow-1 {
+      position: fixed;
+      top: -150px;
+      left: -100px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.14) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .ambient-glow-2 {
+      position: fixed;
+      top: 30%;
+      right: -150px;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .grid-pattern {
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    a { color: var(--cyan-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .page { width: min(960px, calc(100% - 48px)); margin: 0 auto; position: relative; }
+
+    /* Navigation Bar */
+    .nav-wrap {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      z-index: 50;
+      background: rgba(8, 13, 26, 0.8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+    }
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      object-fit: cover;
+      box-shadow: 0 0 14px rgba(6, 182, 212, 0.35);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+    }
+    .brand-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 1.35rem;
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+    .back {
+      color: var(--cyan-light);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    main { padding: clamp(48px, 7vw, 84px) 0 76px; }
+
+    .eyebrow {
+      color: var(--cyan-light);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin: 0 0 14px;
+    }
+    h1 {
+      margin: 0 0 18px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 4.4rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .hero p {
+      max-width: 720px;
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      line-height: 1.7;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 48px;
+    }
+    .card {
+      position: relative;
+      background: var(--panel-card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 26px;
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.4), rgba(168, 85, 247, 0.4), transparent);
+      opacity: 0.7;
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.01em;
+    }
+    .card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+    .wide { grid-column: 1 / -1; }
+
+    /* Footer */
+    .footer-wrap {
+      border-top: 1px solid var(--line);
+      background: rgba(4, 8, 16, 0.85);
+      margin-top: 80px;
+    }
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 34px 0 44px;
+      color: var(--text-subtle);
+      font-size: 0.86rem;
+    }
+    footer a {
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+    footer a:hover { color: #fff; }
+
+    @media (max-width: 680px) {
+      .page { width: min(100% - 32px, 960px); }
+      .grid { grid-template-columns: 1fr; }
+      .wide { grid-column: auto; }
+      footer { flex-direction: column; align-items: flex-start; gap: 14px; }
+    }
   </style>
 </head>
 <body>
+  <!-- Ambient background lighting -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+  <div class="grid-pattern"></div>
+
+  <!-- Navigation -->
+  <header class="nav-wrap">
+    <div class="page">
+      <nav class="nav">
+        <a class="brand" href="./">
+          <img class="brand-logo" src="./kontrol-logo.png" alt="Kontrol Logo">
+          <span class="brand-title">KOMANDIO LABS</span>
+        </a>
+        <a class="back" href="./">← Back to Releases</a>
+      </nav>
+    </div>
+  </header>
+
   <main class="page">
-    <nav class="nav"><a class="brand" href="index.html">KONTROL / ADAPTERS</a><a class="back" href="index.html">← Back to releases</a></nav>
     <section class="hero">
-      <p class="eyebrow">Privacy notice · effective 15 August 2026</p>
+      <p class="eyebrow">Privacy Notice · Effective August 2026</p>
       <h1>Privacy, in plain language.</h1>
-      <p>Kontrol is a Windows application that lets supported games use additional input devices. This notice explains the limited technical data used when Kontrol activates a license and checks its status.</p>
+      <p>Kontrol is a Windows application that connects hardware controls to supported games. This notice explains the limited technical telemetry used when Kontrol checks licenses and verifies adapter updates.</p>
     </section>
+
     <section class="grid">
-      <article class="card"><h2>What is collected</h2><p>The licensing service stores a pseudonymous device-binding value derived on the computer from local hardware information. The raw hardware identifiers are not sent. It also stores the Kontrol version, a bounded client descriptor, a country code supplied by the edge service, and activation, access, and revocation timestamps.</p></article>
-      <article class="card"><h2>Why it is needed</h2><p>This data is used to activate and limit a license to its permitted device, detect abuse, keep the service secure, provide support, and enforce revocations. The application does not send game files, input values, or profile contents to the licensing service.</p></article>
-      <article class="card"><h2>Administrative records</h2><p>License issuance, export, lookup, unbinding, and revocation actions are recorded using a pseudonymous administrator fingerprint. Raw activation keys, certificates, authorization tokens, raw IP addresses, hostnames, and raw browser user-agent strings are not stored.</p></article>
-      <article class="card"><h2>Retention</h2><p>Activation and administrative audit events are retained for 90 days. License and device-binding records are retained while needed to enforce an active or revoked license and its support history. Abuse-control records follow the same operational retention process.</p></article>
-      <article class="card wide"><h2>Your choices and questions</h2><p>You can stop using Kontrol and request support or ask a privacy question through the <a href="https://github.com/komandio-labs/kontrol-adapters/issues">Kontrol adapters issue tracker</a>. Please do not include an activation key, certificate, or device identifier in a public issue. For security reports, use the instructions in <a href="https://github.com/komandio-labs/kontrol-adapters/blob/main/SECURITY.md">SECURITY.md</a>.</p></article>
-      <article class="card wide"><h2>Changes to this notice</h2><p>When the licensing data or retention practices materially change, this page will be updated with a new effective date.</p></article>
+      <article class="card">
+        <h2>What is Collected</h2>
+        <p>The licensing service stores a pseudonymous device-binding value derived locally from hardware information. Raw hardware identifiers are never sent. It also records client version numbers, edge country codes, and access timestamps.</p>
+      </article>
+      <article class="card">
+        <h2>Why it is Needed</h2>
+        <p>This data enforces license binding, protects services against abuse, ensures safe crash diagnostics, and assists customer support. Kontrol never transmits in-game flight telemetry, raw keystrokes, or controller binding files.</p>
+      </article>
+      <article class="card">
+        <h2>Administrative Records</h2>
+        <p>License issuance, lookup, unbinding, and administrative actions are logged with pseudonymous audit identifiers. Raw activation keys, passwords, IP addresses, and browser user-agents are excluded from permanent logs.</p>
+      </article>
+      <article class="card">
+        <h2>Data Retention</h2>
+        <p>Activation and security audit logs are retained for 90 days. Basic license status records are maintained during active service to permit re-activations and support history.</p>
+      </article>
+      <article class="card wide">
+        <h2>Your Choices & Support</h2>
+        <p>You can request data lookup, license unbinding, or report issues through the official <a href="https://github.com/komandio-labs/kontrol-adapters/issues" target="_blank" rel="noopener noreferrer">Kontrol Adapters Issue Tracker</a>. For security disclosures, refer to <a href="https://github.com/komandio-labs/kontrol-adapters/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer">SECURITY.md</a>.</p>
+      </article>
+      <article class="card wide">
+        <h2>Updates to this Notice</h2>
+        <p>Whenever data practices or licensing architecture materially change, this document will be updated with an updated revision date.</p>
+      </article>
     </section>
-    <footer>© 2026 Komandio Labs · Kontrol is provided under the applicable project licenses.</footer>
   </main>
+
+  <!-- Footer -->
+  <div class="footer-wrap">
+    <div class="page">
+      <footer>
+        <span>© 2026 Komandio Labs · Apache-2.0</span>
+        <div>
+          <a href="./">Adapter Library</a> · <a href="https://www.komandio.com/kontrol/">Kontrol Product</a>
+        </div>
+      </footer>
+    </div>
+  </div>
 </body>
 </html>

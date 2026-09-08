@@ -91,10 +91,10 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.2.0` |
+| Adapter version | `0.3.0` |
 | Current validated game version | `2.4.0.93` |
-| SDK contract version | `1.2.0` |
-| Adapter input schema | Version `8` |
+| SDK contract version | `1.3.0` |
+| Adapter input schema | Version `9` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
 | Compatibility records | `compatibility/game-builds/*.json` |
@@ -134,8 +134,18 @@ schema version so saved user mappings continue to refer to the same controls.
 | 12 | `DiscreteStates` bit 12 | `weapons.reload` | Momentary | Held while the physical button is held | Active block-weapon secondary/right-mouse handler, with press and release |
 | 13 | `TriggeredActions` bit 13 | `camera.mode_switch` | Trigger | Rising edge, host-latched for 150 ms | `CameraSystemComponent.ToggleCameraView()` on the camera update path |
 | 14 | `TriggeredActions` bit 14 | `flight.cruise_control_set` | Trigger | Rising edge | Captures current non-negative forward speed as the Cruise Control target; double-click resets Cruise Control |
-| 15 | `DiscreteStates` bit 15 | `flight.cruise_control_increase` | Momentary | Held button; repeats after a short delay | Increases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps |
-| 16 | `DiscreteStates` bit 16 | `flight.cruise_control_decrease` | Momentary | Held button; repeats after a short delay | Decreases the active Cruise Control target by 1 displayed speed unit, then repeats at 1, 5, and 10 displayed-unit steps; never below 0 |
+| 15 | `DiscreteStates` bit 15 | `flight.cruise_control_increase` | Momentary | Held button; repeats after a short delay | Increases the active Cruise Control target by 1 displayed speed unit, then repeats at 1 and 10 displayed-unit steps; coarse adjustment rounds up to the next multiple of 10 |
+| 16 | `DiscreteStates` bit 16 | `flight.cruise_control_decrease` | Momentary | Held button; repeats after a short delay | Decreases the active Cruise Control target by 1 displayed speed unit, then repeats at 1 and 10 displayed-unit steps; coarse adjustment rounds down to the prior multiple of 10 and never below 0 |
+| 17 | `TriggeredActions` bit 17 | `belt.select_1` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 1: `ToolbarScreenViewModel.SelectTile(0, true)` while piloting a cockpit |
+| 18 | `TriggeredActions` bit 18 | `belt.select_2` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 2: `ToolbarScreenViewModel.SelectTile(1, true)` while piloting a cockpit |
+| 19 | `TriggeredActions` bit 19 | `belt.select_3` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 3: `ToolbarScreenViewModel.SelectTile(2, true)` while piloting a cockpit |
+| 20 | `TriggeredActions` bit 20 | `belt.select_4` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 4: `ToolbarScreenViewModel.SelectTile(3, true)` while piloting a cockpit |
+| 21 | `TriggeredActions` bit 21 | `belt.select_5` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 5: `ToolbarScreenViewModel.SelectTile(4, true)` while piloting a cockpit |
+| 22 | `TriggeredActions` bit 22 | `belt.select_6` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 6: `ToolbarScreenViewModel.SelectTile(5, true)` while piloting a cockpit |
+| 23 | `TriggeredActions` bit 23 | `belt.select_7` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 7: `ToolbarScreenViewModel.SelectTile(6, true)` while piloting a cockpit |
+| 24 | `TriggeredActions` bit 24 | `belt.select_8` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 8: `ToolbarScreenViewModel.SelectTile(7, true)` while piloting a cockpit |
+| 25 | `TriggeredActions` bit 25 | `belt.select_9` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 9: `ToolbarScreenViewModel.SelectTile(8, true)` while piloting a cockpit |
+| 26 | `TriggeredActions` bit 26 | `belt.select_0` | Trigger | Rising edge, host-latched for 150 ms | Toolbar slot 10: `ToolbarScreenViewModel.SelectTile(9, true)` while piloting a cockpit |
 
 ### Host-side analog shaping
 
@@ -163,8 +173,9 @@ Negative throttle past the adapter's small jitter deadband acts as a brake and
 cancels Cruise Control. Double-click Set resets it. Set ignores zero or reverse
 forward speed. The Cruise increase/decrease buttons change an active target by
 1 currently displayed speed unit on press; holding them repeats after a short
-delay and escalates through 1, 5, and 10 displayed-unit steps without allowing
-reverse cruise speeds. Each explicit
+delay and escalates through 1 and 10 displayed-unit steps without allowing
+reverse cruise speeds. The 10-unit adjustment rounds to the next multiple of 10
+in its direction. Each explicit
 button adjustment temporarily commands full available forward/reverse thrust to
 reach its new target, then resumes normal Cruise maintenance.
 

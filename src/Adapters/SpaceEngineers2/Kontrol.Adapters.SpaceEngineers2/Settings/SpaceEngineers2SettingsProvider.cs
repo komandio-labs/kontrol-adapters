@@ -1,6 +1,7 @@
 using Kontrol.Sdk.Interfaces;
 using Kontrol.Sdk.Settings;
 using Kontrol.Adapters.SpaceEngineers2.Patches;
+using Kontrol.Sdk.Diagnostics;
 
 namespace Kontrol.Adapters.SpaceEngineers2.Settings;
 
@@ -12,6 +13,13 @@ public sealed class SpaceEngineers2SettingsProvider : IAdapterSettingsProvider
 {
     public string AdapterId => "space-engineers-2";
     public int SchemaVersion => 1;
+
+    public IReadOnlyList<AdapterTraceDescriptor> SupportedTraces =>
+#if DEBUG
+        SpaceEngineers2DebugTraces.Supported;
+#else
+        [];
+#endif
 
     public IReadOnlyList<SettingCategoryGroup> Categories { get; } = new List<SettingCategoryGroup>
     {

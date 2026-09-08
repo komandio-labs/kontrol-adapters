@@ -1,6 +1,21 @@
 # Space Engineers 2 adapter changelog
 
-## Unreleased
+## 0.3.0 — 2026-09-08
+
+### Toolbar selection
+
+- Adds cockpit-only toolbar slot selection actions for keys `1` through `0`.
+
+### Diagnostics
+
+- Adds adapter-owned, selectable Debug traces for Velocity Hold, Flight Mode,
+  Cruise Control State, and Adapter Performance. Release builds expose no
+  trace descriptors and compile out all trace instrumentation.
+
+### Cruise Control
+
+- Simplifies held-button target adjustment to 1 and 10 displayed-unit steps.
+- Makes coarse adjustment snap to the next multiple of 10 in its direction.
 
 ## 0.2.0 — 2026-08-28
 

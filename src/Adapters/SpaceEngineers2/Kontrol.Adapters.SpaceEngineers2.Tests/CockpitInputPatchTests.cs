@@ -19,9 +19,11 @@ using Keen.VRage.Library.Mathematics;
 namespace Kontrol.Adapters.SpaceEngineers2.Tests;
 
 [TestFixture]
+[NonParallelizable]
 public class CockpitInputPatchTests
 {
     private static int _commitCount;
+    private string _testAdapterId = null!;
     private MmfChannel<InputFrame>? _testInputChannel;
     private MmfChannel<TelemetryData>? _testTelemetryChannel;
     private MmfChannel<TelemetryData>? _testSettingsChannel;
@@ -30,15 +32,18 @@ public class CockpitInputPatchTests
     public void SetUp()
     {
         CockpitInputPatch.ResetChannelsForTests();
+        _testAdapterId = $"space-engineers-2-tests-{Guid.NewGuid():N}";
+        CockpitInputPatch.ConfigureChannelsForTests(_testAdapterId);
 
-        // Initialize MMF channels to mimic the WPF app side
-        _testInputChannel = new MmfChannel<InputFrame>("Local\\Kontrol_Input_space-engineers-2");
+        // Initialize a test-only channel set. These names must never overlap with a
+        // running host or injected SE2 adapter.
+        _testInputChannel = new MmfChannel<InputFrame>($"Local\\Kontrol_Input_{_testAdapterId}");
         _testInputChannel.CreateOrOpen();
 
-        _testTelemetryChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Telemetry_space-engineers-2");
+        _testTelemetryChannel = new MmfChannel<TelemetryData>($"Local\\Kontrol_Telemetry_{_testAdapterId}");
         _testTelemetryChannel.CreateOrOpen();
 
-        _testSettingsChannel = new MmfChannel<TelemetryData>("Local\\Kontrol_Settings_space-engineers-2");
+        _testSettingsChannel = new MmfChannel<TelemetryData>($"Local\\Kontrol_Settings_{_testAdapterId}");
         _testSettingsChannel.CreateOrOpen();
 
         // Redirect internal _updateControlDataMethod to avoid calling actual game logic
@@ -79,6 +84,12 @@ public class CockpitInputPatchTests
     private static void DummyUpdateControlData()
     {
         _commitCount++;
+    }
+
+    [Test]
+    public void ConfigureChannelsForTests_RejectsTheProductionAdapterId()
+    {
+        Should.Throw<ArgumentException>(() => CockpitInputPatch.ConfigureChannelsForTests("space-engineers-2"));
     }
 
     [Test]
@@ -405,11 +416,11 @@ public class CockpitInputPatchTests
         output.ShouldBe((0f, 0f, 0f, 0f, 0f, 0f));
     }
 
-    [TestCase(true, true, false)]
+    [TestCase(true, true, true)]
     [TestCase(true, false, false)]
     [TestCase(false, true, true)]
     [TestCase(false, false, false)]
-    public void Neutralization_DoesNotSwitchDirectAngularFlightBackToReticle(
+    public void Neutralization_RestoresOriginalDesiredTargetBasedGyro(
         bool isDirectAngularFlight, bool originalTargetBasedGyro, bool expectedTargetBasedGyro)
     {
         CockpitInputPatch.ResolveGyroModeAfterNeutralization(
@@ -570,7 +581,7 @@ public class CockpitInputPatchTests
     {
         var schema = new SpaceEngineers2Installer().GetInputSchema();
 
-        schema.Version.ShouldBe(8);
+        schema.Version.ShouldBe(9);
         schema.Inputs[10].Id.ShouldBe("systems.exit_grid");
         schema.Inputs[6].Id.ShouldBe("systems.dampeners");
         schema.Inputs[6].DiscreteBehavior.ShouldBe(DiscreteBehavior.Toggle);
@@ -596,6 +607,35 @@ public class CockpitInputPatchTests
         schema.Inputs[15].EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.State);
         schema.Inputs[16].EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Momentary);
         schema.Inputs[16].EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.State);
+
+        for (int i = 0; i < BeltSelectionPatch.ActionCount; i++)
+        {
+            var input = schema.Inputs[17 + i];
+            string key = i == 9 ? "0" : (i + 1).ToString();
+            input.Id.ShouldBe($"belt.select_{key}");
+            input.Category.ShouldBe("Toolbar");
+            input.DisplayName.ShouldBe($"Toolbar slot {(i == 9 ? 10 : i + 1)}");
+            input.SignalKind.ShouldBe(InputSignalKind.Discrete);
+            input.EffectiveActionBehavior.ShouldBe(DiscreteBehavior.Trigger);
+            input.EffectiveDeliveryMode.ShouldBe(DiscreteDeliveryMode.Event);
+        }
+    }
+
+    [TestCase(17, 0)]
+    [TestCase(18, 1)]
+    [TestCase(25, 8)]
+    [TestCase(26, 9)]
+    public void BeltActionBits_MapToTheExpectedToolbarTile(int actionBit, int expectedTileIndex)
+    {
+        BeltSelectionPatch.TryGetTileIndex(actionBit, out int tileIndex).ShouldBeTrue();
+        tileIndex.ShouldBe(expectedTileIndex);
+    }
+
+    [TestCase(16)]
+    [TestCase(27)]
+    public void BeltActionBits_RejectBitsOutsideTheTenSlotRange(int actionBit)
+    {
+        BeltSelectionPatch.TryGetTileIndex(actionBit, out _).ShouldBeFalse();
     }
 
     [Test]

@@ -89,19 +89,23 @@ public static class CockpitInputPatch
     };
     private static readonly Dictionary<(Type Type, string Name), MethodInfo?> TriggerMethods = new();
 
-    private static readonly MmfChannel<InputFrame> ControlChannel = new("Local\\Kontrol_Input_space-engineers-2");
-    private static readonly MmfChannel<TelemetryData> SettingsChannel = new("Local\\Kontrol_Settings_space-engineers-2");
+    private const string ProductionAdapterId = "space-engineers-2";
+
+    private static MmfChannel<InputFrame> ControlChannel = CreateInputChannel(ProductionAdapterId);
+    private static MmfChannel<TelemetryData> SettingsChannel = CreateSettingsChannel(ProductionAdapterId);
     private static string? _lastSettingsJson;
-    private static readonly MmfChannel<TelemetryData> TelemetryChannel = new("Local\\Kontrol_Telemetry_space-engineers-2");
+    private static MmfChannel<TelemetryData> TelemetryChannel = CreateTelemetryChannel(ProductionAdapterId);
     private static readonly Lock ChannelInitializationLock = new();
     private static bool _channelsInitialized;
     private static bool _channelFailureReported;
     private static bool _cockpitHookObserved;
     private static bool _missingObservedBlockReported;
     private static ulong _previousTriggeredActions;
+#if DEBUG
     private static long _nextTranslationTraceTick;
     private static bool? _lastObservedTargetBasedGyro;
     private static string? _lastObservedFlightModel;
+#endif
     private static readonly CruiseControlState CruiseControl = new();
     private static readonly CruiseAdjustmentRepeater CruiseAdjustmentRepeater = new();
 
@@ -127,7 +131,7 @@ public static class CockpitInputPatch
                 if (_channelFailureReported) return;
                 _channelFailureReported = true;
                 SpaceEngineers2AdapterDiagnostics.WriteError("The Space Engineers 2 adapter could not open its input channel.");
-                SpaceEngineers2AdapterDiagnostics.WriteDebug($"IPC channel initialization error: {ex}");
+                SpaceEngineers2AdapterDiagnostics.WriteError($"IPC channel initialization error: {ex}");
             }
         }
     }
@@ -136,9 +140,7 @@ public static class CockpitInputPatch
     {
         lock (ChannelInitializationLock)
         {
-            ControlChannel.Dispose();
-            SettingsChannel.Dispose();
-            TelemetryChannel.Dispose();
+            ReplaceChannels(ProductionAdapterId);
             _lastSettingsJson = null;
             _channelsInitialized = false;
             _channelFailureReported = false;
@@ -147,21 +149,66 @@ public static class CockpitInputPatch
             _wasKontrolActiveInCockpit = false;
             _lastOverrideActiveState = false;
             _lastObservedBlock = null;
+#if DEBUG
             _nextTranslationTraceTick = 0;
             _lastObservedTargetBasedGyro = null;
             _lastObservedFlightModel = null;
+#endif
             CruiseControl.Reset();
             CruiseAdjustmentRepeater.Reset();
             TranslationPresentationState.Reset();
         }
     }
 
+    /// <summary>Routes the patch's IPC channels to a test-only adapter id.</summary>
+    internal static void ConfigureChannelsForTests(string adapterId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(adapterId);
+        if (string.Equals(adapterId, ProductionAdapterId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Tests must not use the production adapter IPC channel names.", nameof(adapterId));
+        }
+
+        lock (ChannelInitializationLock)
+        {
+            ReplaceChannels(adapterId);
+            _lastSettingsJson = null;
+            _channelsInitialized = false;
+            _channelFailureReported = false;
+        }
+    }
+
+    private static MmfChannel<InputFrame> CreateInputChannel(string adapterId) =>
+        new($"Local\\Kontrol_Input_{adapterId}");
+
+    private static MmfChannel<TelemetryData> CreateSettingsChannel(string adapterId) =>
+        new($"Local\\Kontrol_Settings_{adapterId}");
+
+    private static MmfChannel<TelemetryData> CreateTelemetryChannel(string adapterId) =>
+        new($"Local\\Kontrol_Telemetry_{adapterId}");
+
+    private static void ReplaceChannels(string adapterId)
+    {
+        ControlChannel.Dispose();
+        SettingsChannel.Dispose();
+        TelemetryChannel.Dispose();
+        ControlChannel = CreateInputChannel(adapterId);
+        SettingsChannel = CreateSettingsChannel(adapterId);
+        TelemetryChannel = CreateTelemetryChannel(adapterId);
+    }
+
     internal static bool TryReadControlFrame(out InputFrame control)
     {
+#if DEBUG
+        long performanceStartedAt = DebugAdapterPerformanceTrace.Start();
+#endif
         EnsureChannels();
         if (!_channelsInitialized)
         {
             control = default;
+#if DEBUG
+            DebugAdapterPerformanceTrace.Record(1, performanceStartedAt);
+#endif
             return false;
         }
 
@@ -176,8 +223,14 @@ public static class CockpitInputPatch
             if (_channelFailureReported) return false;
             _channelFailureReported = true;
             SpaceEngineers2AdapterDiagnostics.WriteError("The Space Engineers 2 adapter could not read its input channel.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"IPC channel read error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"IPC channel read error: {ex}");
             return false;
+        }
+        finally
+        {
+#if DEBUG
+            DebugAdapterPerformanceTrace.Record(1, performanceStartedAt);
+#endif
         }
     }
 
@@ -196,23 +249,35 @@ public static class CockpitInputPatch
         out NativeInputSnapshot __state
     )
     {
+#if DEBUG
+        long performanceStartedAt = DebugAdapterPerformanceTrace.Start();
+#endif
         __state = default;
-        ApplyLiveSettings();
-        var settings = SpaceEngineers2SettingsManager.Instance;
-
-        // MODE 1: Native Reticle Steering
-        if (settings.IsNativeReticleSteering)
+        try
         {
-            __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
-                ____lookLeft, ____lookRight, ____movementInputs);
-            ProcessNativeReticleOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
-                ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
-            return true; // Let SE2 run native UpdateRotationData with merged Kontrol input
-        }
+            ApplyLiveSettings();
+            var settings = SpaceEngineers2SettingsManager.Instance;
 
-        // MODE 2: Direct Angular Flight (Direct Gyro Velocity)
-        ApplyCurrentKontrolFrameDirect(__instance);
-        return false; // Skip original smoothing/decay job when DirectAngularFlight is active
+            // MODE 1: Native Reticle Steering
+            if (settings.IsNativeReticleSteering)
+            {
+                __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
+                    ____lookLeft, ____lookRight, ____movementInputs);
+                ProcessNativeReticleOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+                    ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
+                return true; // Let SE2 run native UpdateRotationData with merged Kontrol input
+            }
+
+            // MODE 2: Direct Angular Flight (Direct Gyro Velocity)
+            ApplyCurrentKontrolFrameDirect(__instance);
+            return false; // Skip original smoothing/decay job when DirectAngularFlight is active
+        }
+        finally
+        {
+#if DEBUG
+            DebugAdapterPerformanceTrace.Record(3, performanceStartedAt);
+#endif
+        }
     }
 
     [HarmonyPatch(typeof(CockpitInputHandlerComponent), "UpdateRotationData")]
@@ -245,23 +310,46 @@ public static class CockpitInputPatch
         out NativeInputSnapshot __state
     )
     {
+#if DEBUG
+        long performanceStartedAt = DebugAdapterPerformanceTrace.Start();
+#endif
         __state = default;
-        ApplyLiveSettings();
-        var settings = SpaceEngineers2SettingsManager.Instance;
-
-        // MODE 1: Native Reticle Steering
-        if (settings.IsNativeReticleSteering)
+        try
         {
-            __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
-                ____lookLeft, ____lookRight, ____movementInputs);
-            ProcessNativeReticleOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
-                ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
-            return true; // Let SE2 run native ComputeReticlePositioning with merged Kontrol input
-        }
+            ApplyLiveSettings();
+            var settings = SpaceEngineers2SettingsManager.Instance;
 
-        // MODE 2: Direct Angular Flight (Direct Gyro Velocity)
-        ApplyCurrentKontrolFrameDirect(__instance);
-        return false; // Skip original reticle integration job when DirectAngularFlight is active
+            // When Kontrol input is disabled or channels unavailable, bypass completely for 100% native SE2 control
+            if (!TryReadControlFrame(out var control) || control.IsInputEnabled == 0)
+            {
+                TranslationPresentationState.Reset();
+                if (_wasKontrolActiveInCockpit)
+                {
+                    NeutralizeCockpitInput(__instance);
+                }
+                return true; // Let SE2 run 100% native ComputeReticlePositioning untouched
+            }
+
+            // MODE 1: Native Reticle Steering
+            if (settings.IsNativeReticleSteering)
+            {
+                __state = CaptureNativeInput(____pitchAnalog, ____yawAnalog, ____lookUp, ____lookDown,
+                    ____lookLeft, ____lookRight, ____movementInputs);
+                ProcessNativeReticleOverride(__instance, ref ____pitchAnalog, ref ____yawAnalog, ref ____lookUp, ref ____lookDown,
+                    ref ____lookLeft, ref ____lookRight, ref ____movementInputs, ____observedBlock);
+                return true; // Let SE2 run native ComputeReticlePositioning with merged Kontrol input
+            }
+
+            // MODE 2: Direct Angular Flight (Direct Gyro Velocity)
+            ApplyCurrentKontrolFrameDirect(__instance);
+            return false; // Skip original reticle integration job when DirectAngularFlight is active
+        }
+        finally
+        {
+#if DEBUG
+            DebugAdapterPerformanceTrace.Record(4, performanceStartedAt);
+#endif
+        }
     }
 
     [HarmonyPatch(typeof(CockpitInputHandlerComponent), "ComputeReticlePositioning")]
@@ -281,6 +369,9 @@ public static class CockpitInputPatch
 
     public static unsafe bool UpdateControlDataPrefix(CockpitInputHandlerComponent __instance)
     {
+#if DEBUG
+        long performanceStartedAt = DebugAdapterPerformanceTrace.Start();
+#endif
         try
         {
             if (_committingControlData) return true;
@@ -312,8 +403,14 @@ public static class CockpitInputPatch
         }
         catch (Exception ex)
         {
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"UpdateControlDataPrefix error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"UpdateControlDataPrefix error: {ex}");
             return true;
+        }
+        finally
+        {
+#if DEBUG
+            DebugAdapterPerformanceTrace.Record(2, performanceStartedAt);
+#endif
         }
     }
 
@@ -354,12 +451,14 @@ public static class CockpitInputPatch
             if (observedBlock != _lastObservedBlock)
             {
                 _lastObservedBlock = observedBlock;
+#if DEBUG
                 _lastObservedTargetBasedGyro = null;
                 _lastObservedFlightModel = null;
+#endif
                 CruiseControl.Reset();
                 CruiseAdjustmentRepeater.Reset();
                 TranslationPresentationState.Reset();
-                SpaceEngineers2AdapterDiagnostics.WriteDebug(observedBlock is null
+                SpaceEngineers2AdapterDiagnostics.Write(observedBlock is null
                     ? "SE2 cleared the observed cockpit block."
                     : $"Player entered cockpit block ({observedBlock.GetType().Name}).");
             }
@@ -375,7 +474,7 @@ public static class CockpitInputPatch
             if (isInputEnabled != _lastOverrideActiveState)
             {
                 _lastOverrideActiveState = isInputEnabled;
-                SpaceEngineers2AdapterDiagnostics.WriteDebug($"Input override state changed to: {isInputEnabled}.");
+                SpaceEngineers2AdapterDiagnostics.Write($"Input override state changed to: {isInputEnabled}.");
             }
 
             if (!isInputEnabled)
@@ -390,7 +489,9 @@ public static class CockpitInputPatch
             }
 
             _wasKontrolActiveInCockpit = true;
+#if DEBUG
             TraceFlightModeObservation(instance, observedBlock, isInputEnabled, "NativeReticle frame");
+#endif
 
             try
             {
@@ -398,8 +499,10 @@ public static class CockpitInputPatch
                 if (!currentTargetBased)
                 {
                     SwitchGyroModeMethod?.Invoke(instance, [true]);
-                    SpaceEngineers2AdapterDiagnostics.WriteDebug("Ensured cockpit gyro mode is target-based for Native Reticle Steering.");
+                    SpaceEngineers2AdapterDiagnostics.Write("Ensured cockpit gyro mode is target-based for Native Reticle Steering.");
+#if DEBUG
                     TraceFlightModeObservation(instance, observedBlock, isInputEnabled, "NativeReticle enforced target-based gyro");
+#endif
                 }
             }
             catch { }
@@ -426,7 +529,7 @@ public static class CockpitInputPatch
         catch (Exception ex)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError("The Space Engineers 2 adapter encountered an input-processing error.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ProcessNativeReticleOverride error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"ProcessNativeReticleOverride error: {ex}");
         }
     }
 
@@ -462,12 +565,14 @@ public static class CockpitInputPatch
             if (observedBlock != _lastObservedBlock)
             {
                 _lastObservedBlock = observedBlock;
+#if DEBUG
                 _lastObservedTargetBasedGyro = null;
                 _lastObservedFlightModel = null;
+#endif
                 CruiseControl.Reset();
                 CruiseAdjustmentRepeater.Reset();
                 TranslationPresentationState.Reset();
-                SpaceEngineers2AdapterDiagnostics.WriteDebug(observedBlock is null
+                SpaceEngineers2AdapterDiagnostics.Write(observedBlock is null
                     ? "SE2 cleared the observed cockpit block."
                     : $"Player entered cockpit block ({observedBlock.GetType().Name}).");
             }
@@ -480,12 +585,16 @@ public static class CockpitInputPatch
                 _originalDesiredTargetBasedGyro = cockpitComponent?.TargetBasedGyro ?? true;
                 SwitchGyroModeMethod?.Invoke(instance, [false]);
                 _wasKontrolActiveInCockpit = true;
-                SpaceEngineers2AdapterDiagnostics.WriteDebug($"Switched cockpit gyro mode to angular (saved desired target-based={_originalDesiredTargetBasedGyro}).");
+                SpaceEngineers2AdapterDiagnostics.Write($"Switched cockpit gyro mode to angular (saved desired target-based={_originalDesiredTargetBasedGyro}).");
+#if DEBUG
                 TraceFlightModeObservation(instance, observedBlock, inputEnabled: true, "DirectAngular enforced angular gyro");
+#endif
             }
             else
             {
+#if DEBUG
                 TraceFlightModeObservation(instance, observedBlock, inputEnabled: true, "DirectAngular frame");
+#endif
             }
 
             float pitch = NormalizeAxis(control.AnalogValues[0]);
@@ -537,9 +646,12 @@ public static class CockpitInputPatch
                     CruiseControl.IsActive, surge, sway, heave, fwd, back, right, left, up, down, nativeMovement);
                 TranslationPresentationState.Set(
                     gridEntity.DEntity, observerOrientation, presentationSurge, presentationSway, presentationHeave);
+
+#if DEBUG
                 WriteTranslationTrace(
                     $"DirectAngularFlight/{settings.TranslationControlMode}", in control, surge, sway, heave,
                     fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
+#endif
                 if (settings.IsVelocityHoldTranslation)
                 {
                     MergeVelocityHoldTranslation(ref movementInputs, fwd, back, right, left, up, down);
@@ -603,7 +715,7 @@ public static class CockpitInputPatch
         catch (Exception ex)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError("Error in ApplyCurrentKontrolFrameDirect.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"ApplyCurrentKontrolFrameDirect exception: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"ApplyCurrentKontrolFrameDirect exception: {ex}");
             return false;
         }
     }
@@ -631,28 +743,25 @@ public static class CockpitInputPatch
             ActiveToolActionPatch.ApplyPrimaryFire(false);
             ActiveToolActionPatch.ApplyReload(false);
 
-            // A transient disabled-input frame (for example while an action such
-            // as ToggleDampeners is delivered) must not change the user's
-            // selected flight model. Direct Angular Flight owns the angular
-            // gyro path, so keep target-based gyro disabled until that setting
-            // is explicitly changed. Native Reticle Steering restores the
-            // cockpit's pre-Kontrol preference.
+            // Restore SE2's native desired target-based gyro mode (virtual mouse reticle)
             bool targetBasedGyro = ResolveGyroModeAfterNeutralization(
                 SpaceEngineers2SettingsManager.Instance.IsDirectAngularFlight,
                 _originalDesiredTargetBasedGyro);
             SwitchGyroModeMethod?.Invoke(instance, [targetBasedGyro]);
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Restored cockpit gyro mode to: {targetBasedGyro}.");
+            SpaceEngineers2AdapterDiagnostics.Write($"Restored cockpit gyro mode to: {targetBasedGyro}.");
+#if DEBUG
             TraceFlightModeObservation(instance, observedBlock, inputEnabled: false, "Input neutralization");
+#endif
         }
         catch (Exception ex)
         {
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"NeutralizeCockpitInput error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"NeutralizeCockpitInput error: {ex}");
         }
     }
 
     internal static bool ResolveGyroModeAfterNeutralization(
         bool isDirectAngularFlight, bool originalDesiredTargetBasedGyro) =>
-        isDirectAngularFlight ? false : originalDesiredTargetBasedGyro;
+        originalDesiredTargetBasedGyro;
 
     private static unsafe void MergeTranslation(
         ref MovementInputs movementInputs, in InputFrame control, float surge, float sway, float heave, float roll,
@@ -676,9 +785,11 @@ public static class CockpitInputPatch
         {
             TranslationPresentationState.Reset();
         }
+#if DEBUG
         WriteTranslationTrace(
             $"NativeReticleSteering/{settings.TranslationControlMode}", in control, surge, sway, heave,
             fwd, back, right, left, up, down, instance, observedBlock, maximumTargetSpeed);
+#endif
         movementInputs.Forward = Math.Max(movementInputs.Forward, fwd);
         movementInputs.Backward = Math.Max(movementInputs.Backward, back);
         movementInputs.Right = Math.Max(movementInputs.Right, right);
@@ -693,11 +804,14 @@ public static class CockpitInputPatch
         movementInputs.RollLeft = Math.Max(movementInputs.RollLeft, Math.Max(-roll, 0f));
     }
 
+#if DEBUG
     private static unsafe void WriteTranslationTrace(
         string flightMode, in InputFrame control, float surge, float sway, float heave,
         float forward, float backward, float right, float left, float up, float down,
         CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock, float maximumTargetSpeed = 0f)
     {
+        if (!SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.VelocityHold)) return;
+
         long now = Environment.TickCount64;
         if (now < _nextTranslationTraceTick) return;
         _nextTranslationTraceTick = now + 250;
@@ -713,6 +827,7 @@ public static class CockpitInputPatch
         SpaceEngineers2AdapterDiagnostics.WriteDebug(
             $"[VelocityHoldTrace] mode={flightMode}; damp={dampenersEnabled}; axis=({surge:F2},{sway:F2},{heave:F2}); v=({currentSurge:F1},{currentSway:F1},{currentHeave:F1}); target=({surge * maximumTargetSpeed:F1},{sway * maximumTargetSpeed:F1},{heave * maximumTargetSpeed:F1}); cmd=(F{forward:F2}/B{backward:F2},R{right:F2}/L{left:F2},U{up:F2}/D{down:F2}); vmax={maximumTargetSpeed:F1}; cruise={CruiseControl.IsActive}; {presentationTrace}.");
     }
+#endif
 
     internal static (float fwd, float back, float right, float left, float up, float down) ComputeProportionalThrust(
         float surge, float sway, float heave)
@@ -815,7 +930,12 @@ public static class CockpitInputPatch
         if (CruiseControl.IsActive && surge < -CruiseThrottleDeadband)
         {
             CruiseControl.CancelForBrake();
-            SpaceEngineers2AdapterDiagnostics.WriteDebug("Cruise Control cancelled by reverse/brake throttle input.");
+#if DEBUG
+            if (SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.CruiseState))
+            {
+            SpaceEngineers2AdapterDiagnostics.WriteDebug("[CruiseStateTrace] Cancelled by reverse/brake throttle input.");
+            }
+#endif
         }
 
         if (CruiseControl.IsActive && MathF.Abs(surge) <= CruiseThrottleDeadband &&
@@ -956,7 +1076,7 @@ public static class CockpitInputPatch
         }
         catch (Exception ex)
         {
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Could not read SE2 velocity limits; Velocity Hold is unavailable. {ex.Message}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"Could not read SE2 velocity limits; Velocity Hold is unavailable. {ex.Message}");
         }
 
         return 0f;
@@ -1039,12 +1159,12 @@ public static class CockpitInputPatch
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError("Kontrol could not submit the cockpit input state to SE2.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 movement commit error: {ex.InnerException}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 movement commit error: {ex.InnerException}");
         }
         catch (Exception ex)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError("Kontrol could not submit the cockpit input state to SE2.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 movement commit error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 movement commit error: {ex}");
         }
         finally
         {
@@ -1077,12 +1197,15 @@ public static class CockpitInputPatch
     private static float NormalizeAxis(float value) =>
         float.IsFinite(value) ? Math.Clamp(value, -1f, 1f) : 0f;
 
+ #if DEBUG
     private static void TraceFlightModeObservation(
         CockpitInputHandlerComponent instance,
         object? observedBlock,
         bool inputEnabled,
         string path)
     {
+        if (!SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.FlightMode)) return;
+
         bool? targetBasedGyro = TargetBasedGyroField?.GetValue(instance) is bool value ? value : null;
         string selectedFlightModel = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
         if (_lastObservedTargetBasedGyro == targetBasedGyro &&
@@ -1098,30 +1221,49 @@ public static class CockpitInputPatch
             $"inputEnabled={inputEnabled}; kontrolCockpitActive={_wasKontrolActiveInCockpit}; cockpit={observedBlock?.GetType().Name ?? "none"}." );
     }
 
+ #endif
+
     private static void ApplyLiveSettings()
     {
         EnsureChannels();
         SettingsChannel.Read(out var packet);
         var json = packet.GetJson();
         if (string.IsNullOrWhiteSpace(json) || string.Equals(json, _lastSettingsJson, StringComparison.Ordinal)) return;
+#if DEBUG
+        long performanceStartedAt = DebugAdapterPerformanceTrace.Start();
+#endif
         try
         {
             var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(json);
             if (values is null) return;
+#if DEBUG
+            SpaceEngineers2DebugTraces.Apply(values);
+#endif
             var prevMode = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
             SpaceEngineers2SettingsManager.Instance.ApplySettings(values, (ulong)DateTime.UtcNow.Ticks);
             _lastSettingsJson = json;
             var newMode = SpaceEngineers2SettingsManager.Instance.FlightModelMode;
             if (!string.Equals(prevMode, newMode, StringComparison.OrdinalIgnoreCase))
             {
-                SpaceEngineers2AdapterDiagnostics.Write(
-                    $"[FlightModeTrace] Settings IPC changed selected flight model: {prevMode} -> {newMode}; payloadLength={json.Length}.");
+#if DEBUG
+                if (SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.FlightMode))
+                {
+                    SpaceEngineers2AdapterDiagnostics.WriteDebug(
+                        $"[FlightModeTrace] Settings IPC changed selected flight model: {prevMode} -> {newMode}; payloadLength={json.Length}.");
+                }
+#endif
                 _currentCockpitAngularVelocity = Vector3.Zero;
             }
         }
         catch (JsonException ex)
         {
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Ignoring invalid adapter settings snapshot: {ex.Message}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"Ignoring invalid adapter settings snapshot: {ex.Message}");
+        }
+        finally
+        {
+#if DEBUG
+            DebugAdapterPerformanceTrace.Record(0, performanceStartedAt);
+#endif
         }
     }
 
@@ -1132,7 +1274,7 @@ public static class CockpitInputPatch
             if (!_missingObservedBlockReported)
             {
                 _missingObservedBlockReported = true;
-                SpaceEngineers2AdapterDiagnostics.WriteDebug("Cockpit input handler ran before SE2 supplied an observed block; skipped cockpit telemetry.");
+                SpaceEngineers2AdapterDiagnostics.Write("Cockpit input handler ran before SE2 supplied an observed block; skipped cockpit telemetry.");
             }
             return;
         }
@@ -1191,70 +1333,95 @@ public static class CockpitInputPatch
         _previousTriggeredActions = triggeredActions;
         if (newActions == 0) return;
 
-        ProcessCruiseControlActions(newActions, instance as CockpitInputHandlerComponent, observedBlock);
-
-        SpaceEngineers2AdapterDiagnostics.WriteDebug($"Received Kontrol vehicle-system action bits: 0x{newActions:X}.");
-        CameraActionPatch.ProcessCameraModeSwitch(newActions);
-        foreach (var (bit, methodName) in TriggerActions)
+ #if DEBUG
+        long performanceStartedAt = DebugAdapterPerformanceTrace.Start();
+ #endif
+        try
         {
-            if ((newActions & (1UL << bit)) == 0) continue;
-            var methodKey = (instance.GetType(), methodName);
-            if (!TriggerMethods.TryGetValue(methodKey, out var method))
-            {
-                method = instance.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
-                TriggerMethods[methodKey] = method;
-            }
-            if (method is null)
-            {
-                SpaceEngineers2AdapterDiagnostics.WriteError($"Kontrol received action '{methodName}', but SE2 does not expose the expected control method.");
-                continue;
-            }
+            ProcessCruiseControlActions(newActions, instance as CockpitInputHandlerComponent, observedBlock);
 
-            try
+            CameraActionPatch.ProcessCameraModeSwitch(newActions);
+            BeltSelectionPatch.Process(newActions);
+            foreach (var (bit, methodName) in TriggerActions)
             {
-                InvokeButtonAction(instance, method, true);
-                SpaceEngineers2AdapterDiagnostics.WriteDebug($"Kontrol invoked SE2 cockpit action '{methodName}'.");
-            }
-            catch (TargetInvocationException ex) when (ex.InnerException is not null)
-            {
-                SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 rejected Kontrol cockpit action '{methodName}'.");
-                SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 cockpit action '{methodName}' error: {ex.InnerException}");
-            }
-            catch (Exception ex)
-            {
-                SpaceEngineers2AdapterDiagnostics.WriteError($"Kontrol could not invoke SE2 cockpit action '{methodName}'.");
-                SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 cockpit action '{methodName}' error: {ex}");
+                if ((newActions & (1UL << bit)) == 0) continue;
+                var methodKey = (instance.GetType(), methodName);
+                if (!TriggerMethods.TryGetValue(methodKey, out var method))
+                {
+                    method = instance.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+                    TriggerMethods[methodKey] = method;
+                }
+                if (method is null)
+                {
+                    SpaceEngineers2AdapterDiagnostics.WriteError($"Kontrol received action '{methodName}', but SE2 does not expose the expected control method.");
+                    continue;
+                }
+
+                try
+                {
+                    InvokeButtonAction(instance, method, true);
+                }
+                catch (TargetInvocationException ex) when (ex.InnerException is not null)
+                {
+                    SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 rejected Kontrol cockpit action '{methodName}'.");
+                    SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 cockpit action '{methodName}' error: {ex.InnerException}");
+                }
+                catch (Exception ex)
+                {
+                    SpaceEngineers2AdapterDiagnostics.WriteError($"Kontrol could not invoke SE2 cockpit action '{methodName}'.");
+                    SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 cockpit action '{methodName}' error: {ex}");
+                }
             }
         }
+        finally
+        {
+#if DEBUG
+            DebugAdapterPerformanceTrace.Record(5, performanceStartedAt);
+#endif
+        }
     }
-
     private static void ProcessCruiseControlActions(
         ulong newActions, CockpitInputHandlerComponent? instance, CubeBlockComponent? observedBlock)
     {
         if ((newActions & (1UL << CruiseSetActionBit)) != 0)
         {
+#if DEBUG
+            if (SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.CruiseState))
+            {
             SpaceEngineers2AdapterDiagnostics.WriteDebug(
                 $"[CruiseStateTrace] Set action received: actions=0x{newActions:X}; " +
                 $"instance={(instance is null ? "null" : instance.GetType().FullName)}; " +
                 $"observedBlock={(observedBlock is null ? "null" : observedBlock.GetType().FullName)}; " +
                 $"activeBefore={CruiseControl.IsActive}; targetBefore={CruiseControl.TargetSpeedMetersPerSecond:F2}.");
+            }
+#endif
             if (!TryGetLocalVelocity(instance, observedBlock, out var currentSurge, out _, out _))
             {
-                SpaceEngineers2AdapterDiagnostics.WriteDebug("Cruise Control Set ignored because current forward speed is unavailable.");
+#if DEBUG
+                if (SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.CruiseState))
+                {
+                SpaceEngineers2AdapterDiagnostics.WriteDebug("[CruiseStateTrace] Set ignored because current forward speed is unavailable.");
+                }
+#endif
             }
             else
             {
                 CruiseSetResult result = CruiseControl.SetOrReset(currentSurge, Environment.TickCount64);
+#if DEBUG
+                if (SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.CruiseState))
+                {
                 SpaceEngineers2AdapterDiagnostics.WriteDebug(result switch
                 {
-                    CruiseSetResult.Set => $"Cruise Control set to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s.",
-                    CruiseSetResult.Reset => "Cruise Control reset by double-click.",
-                    _ => "Cruise Control Set ignored because forward speed must be greater than zero."
+                    CruiseSetResult.Set => $"[CruiseStateTrace] Set applied; target={CruiseControl.TargetSpeedMetersPerSecond:F2} m/s.",
+                    CruiseSetResult.Reset => "[CruiseStateTrace] Reset applied by double-click.",
+                    _ => "[CruiseStateTrace] Set ignored because forward speed must be greater than zero."
                 });
                 SpaceEngineers2AdapterDiagnostics.WriteDebug(
                     $"[CruiseStateTrace] Set action applied: result={result}; currentSurge={currentSurge:F2}; " +
                     $"activeAfter={CruiseControl.IsActive}; targetAfter={CruiseControl.TargetSpeedMetersPerSecond:F2}; " +
                     $"fastRetarget={CruiseControl.IsFastRetargeting}.");
+                }
+#endif
             }
         }
 
@@ -1272,21 +1439,32 @@ public static class CockpitInputPatch
 
         // The input schema defines these as state-delivered controls. Do not
         // also consume their legacy triggered-action bits: that would apply an
-        // extra increment alongside the held-state increment. The values below
-        // are expressed in the current HUD/presentation unit (1, then 5, then
-        // 10), then converted for the m/s-based controller.
-        float metersPerSecondAdjustment = SpeedUnitPresentation.ConvertDisplayedSpeedToMetersPerSecond(
-            adjustment, SpaceEngineers2SettingsManager.Instance.SpeedDisplayUnit);
-        AdjustCruiseTarget(metersPerSecondAdjustment);
+        // extra increment alongside the held-state increment. Adjustments use
+        // 1 displayed unit until the held-button coarse 10-unit mode begins.
+        // Coarse adjustment always snaps to the next multiple of ten in the
+        // selected direction, including when the current value is already exact.
+        string speedUnit = SpaceEngineers2SettingsManager.Instance.SpeedDisplayUnit;
+        float displayedTarget = SpeedUnitPresentation.ConvertMetersPerSecondToDisplayedSpeed(
+            CruiseControl.TargetSpeedMetersPerSecond, speedUnit);
+        float adjustedDisplayedTarget = MathF.Abs(adjustment) == 10f
+            ? SpeedUnitPresentation.MoveToNextTenDisplayedSpeed(displayedTarget, adjustment)
+            : Math.Max(displayedTarget + adjustment, 0f);
+        float adjustedTarget = SpeedUnitPresentation.ConvertDisplayedSpeedToMetersPerSecond(
+            adjustedDisplayedTarget, speedUnit);
+        AdjustCruiseTarget(adjustedTarget - CruiseControl.TargetSpeedMetersPerSecond);
     }
 
     private static void AdjustCruiseTarget(float delta)
     {
         if (!CruiseControl.AdjustTarget(delta)) return;
 
+#if DEBUG
+        if (!SpaceEngineers2DebugTraces.IsEnabled(SpaceEngineers2DebugTraceKeys.CruiseState)) return;
+
         string direction = delta > 0f ? "increased" : "decreased";
         SpaceEngineers2AdapterDiagnostics.WriteDebug(
-            $"Cruise Control target {direction} by {MathF.Abs(delta):F0} m/s to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s; fast retarget enabled.");
+            $"[CruiseStateTrace] Target {direction} by {MathF.Abs(delta):F0} m/s to {CruiseControl.TargetSpeedMetersPerSecond:F2} m/s; fast retarget enabled.");
+#endif
     }
 
     private static void InvokeButtonAction(object instance, MethodInfo method, bool value)

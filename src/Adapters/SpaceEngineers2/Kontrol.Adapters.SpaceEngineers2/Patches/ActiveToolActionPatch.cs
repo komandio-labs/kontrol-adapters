@@ -46,7 +46,7 @@ internal static class ActiveToolActionPatch
             _lastSecondaryDelivered = false;
         }
 
-        SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 activated primary-action handler '{__instance.GetType().Name}'.");
+        SpaceEngineers2AdapterDiagnostics.Write($"SE2 activated primary-action handler '{__instance.GetType().Name}'.");
     }
 
     [HarmonyPatch(typeof(InputHandlerBaseComponent), "Deactivate")]
@@ -153,17 +153,16 @@ internal static class ActiveToolActionPatch
             ]);
             if (actionName == "reload") _lastSecondaryDelivered = value;
             else _lastPrimaryDelivered = value;
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"Kontrol {actionName} changed to {value} through '{_activeHandler.GetType().Name}'.");
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 rejected the Kontrol {actionName} action.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 {actionName} error: {ex.InnerException}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 {actionName} error: {ex.InnerException}");
         }
         catch (Exception ex)
         {
             SpaceEngineers2AdapterDiagnostics.WriteError($"Kontrol could not invoke SE2 {actionName}.");
-            SpaceEngineers2AdapterDiagnostics.WriteDebug($"SE2 {actionName} error: {ex}");
+            SpaceEngineers2AdapterDiagnostics.WriteError($"SE2 {actionName} error: {ex}");
         }
         finally
         {

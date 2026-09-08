@@ -1,3 +1,4 @@
+using Kontrol.Sdk.Diagnostics;
 using Kontrol.Sdk.Settings;
 
 namespace Kontrol.Sdk.Interfaces;
@@ -19,6 +20,12 @@ public interface IAdapterSettingsProvider
 
     /// <summary>The complete setting schema descriptors supported by this adapter.</summary>
     IReadOnlyList<AdapterSettingDescriptor> Descriptors { get; }
+
+    /// <summary>
+    /// Adapter-owned optional diagnostic traces available in the current build.
+    /// Trace identifiers are opaque to the host; an empty list means none are available.
+    /// </summary>
+    IReadOnlyList<AdapterTraceDescriptor> SupportedTraces => [];
 
     /// <summary>Produces the initial factory-default snapshot.</summary>
     AdapterSettingsSnapshot GetDefaultSnapshot();
