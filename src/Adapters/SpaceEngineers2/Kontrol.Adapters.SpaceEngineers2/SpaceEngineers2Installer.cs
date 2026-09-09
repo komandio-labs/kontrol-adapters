@@ -417,7 +417,7 @@ public class SpaceEngineers2Installer : IAdapterInstaller
             ?? throw new PlatformNotSupportedException("Windows Script Host is required to create a Steam launch shortcut.");
         dynamic shell = Activator.CreateInstance(shellType)
             ?? throw new InvalidOperationException("Windows Script Host could not be started.");
-        dynamic shortcut = shell.CreateShortcut(Path.Combine(desktopPath, "Space Engineers 2 (VRAGE3) Deployed.lnk"));
+        dynamic shortcut = shell.CreateShortcut(Path.Combine(desktopPath, "Space Engineers 2 (Kontrol).lnk"));
         shortcut.TargetPath = steamExecutable;
         string arguments = $"-applaunch {SteamAppId} {BuildNativePluginArgument(pluginPath)}";
         if (!string.IsNullOrWhiteSpace(customLaunchArguments))
