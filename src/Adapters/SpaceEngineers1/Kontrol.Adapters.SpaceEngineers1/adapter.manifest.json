@@ -11,7 +11,7 @@
   "supportedMethods": [ "BinPluginsFolder" ],
   "defaultDeploymentMethod": "BinPluginsFolder",
   "image": "",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "gameProductVersion": "steam-build-24675677",
   "relevantAssemblies": [ "VRage.dll", "VRage.Game.dll", "VRage.Math.dll" ]
 }

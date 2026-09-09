@@ -4,7 +4,7 @@ Initial API-first adapter for the Space Engineers 1 client. It uses Pulsar Legac
 
 | Metadata | Value |
 | --- | --- |
-| Adapter version | `0.1.0` |
+| Adapter version | `1.0.0` |
 | Target game build | `steam-build-24675677` |
 | Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers1.dll` (`net9.0`) |
 | Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers1.Plugin.dll` (`net48`) |
