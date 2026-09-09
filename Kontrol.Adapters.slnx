@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/Sdk/">
     <Project Path="src/Kontrol.Sdk/Kontrol.Sdk.csproj" />
+    <Project Path="src/Kontrol.Sdk.Tests/Kontrol.Sdk.Tests.csproj" />
+    <Project Path="src/Kontrol.Sdk.LegacyAdapterFixture/Kontrol.Sdk.LegacyAdapterFixture.csproj" />
   </Folder>
   <Folder Name="/Tooling/">
     <Project Path="tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj" />

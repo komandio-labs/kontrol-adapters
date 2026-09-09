@@ -1,6 +1,7 @@
 using Kontrol.Adapters.DummyAdapter;
 using Kontrol.Sdk.Attributes;
 using Kontrol.Sdk;
+using Kontrol.Sdk.Interfaces;
 using Kontrol.Sdk.Inputs;
 using NUnit.Framework;
 using Shouldly;
@@ -32,19 +33,26 @@ public class DummyAdapterInstallerTests
     [Test]
     public void ProcessInjection_IsTheOnlySupportedDeploymentMethod()
     {
-        var processInjection = _installer.GetCapabilities(GameLaunchMethod.ProcessInjection);
+        var processInjection = _installer.GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.ProcessInjection,
+            "C:\\KontrolSandbox",
+            "C:\\Kontrol\\Kontrol.Adapters.DummyAdapter.dll"));
 
-        processInjection.CanLaunch.ShouldBeTrue();
-        processInjection.CanInstall.ShouldBeFalse();
-        _installer.GetCapabilities(GameLaunchMethod.AssemblyHooking).CanLaunch.ShouldBeFalse();
+        processInjection.Capabilities.CanLaunch.ShouldBeTrue();
+        processInjection.Capabilities.CanInstall.ShouldBeFalse();
+        processInjection.LaunchChain.Steps.ShouldContain(step => step.Kind == DeploymentLaunchStepKind.AdapterBootstrap);
+        Should.Throw<NotSupportedException>(() => _installer.GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.AssemblyHooking,
+            "C:\\KontrolSandbox",
+            "C:\\Kontrol\\Kontrol.Adapters.DummyAdapter.dll")));
     }
 
     [Test]
     public void SdkAndAdapterAssemblies_AreStampedFromTheInitialVersionSources()
     {
-        KontrolSdkContract.Version.ShouldBe("1.3.0");
+        KontrolSdkContract.Version.ShouldBe("1.4.0");
         KontrolSdkContract.Major.ShouldBe(1);
-        typeof(KontrolSdkContract).Assembly.GetName().Version!.ToString().ShouldBe("1.3.0.0");
+        typeof(KontrolSdkContract).Assembly.GetName().Version!.ToString().ShouldBe("1.4.0.0");
         typeof(DummyAdapterInstaller).Assembly.GetName().Version!.ToString().ShouldBe("1.0.0.0");
     }
 }

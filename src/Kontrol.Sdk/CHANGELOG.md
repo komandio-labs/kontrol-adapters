@@ -3,6 +3,19 @@
 All notable changes to the Kontrol SDK contract and package are documented
 here. The SDK version covers both the adapter API and the IPC contract.
 
+## [1.4.0] - 2026-09-09
+
+### Added
+
+- Added the backward-compatible contextual
+  `IAdapterInstaller.GetDeploymentPlan(AdapterDeploymentContext)` default
+  member and typed adapter-owned deployment descriptors for prerequisites,
+  targets, launch chains, manual steps, verification, and rollback effects.
+- Older adapters automatically receive conservative generic deployment data
+  derived from their existing information and capability members.
+- Marked the legacy deployment-description, capability, and non-contextual
+  plan APIs obsolete with migration guidance to the contextual plan API.
+
 ## [1.3.0] - 2026-09-08
 
 ### Added
@@ -73,6 +86,7 @@ here. The SDK version covers both the adapter API and the IPC contract.
   the exact originating commit for this package is not preserved as a scoped
   SDK release tag.
 
+[1.4.0]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.4.0
 [1.3.0]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.3.0
 [1.2.0]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.2.0
 [1.1.1]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.1.1

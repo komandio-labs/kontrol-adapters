@@ -115,6 +115,16 @@ Adapters declare the SDK version against which they were built. Exact version
 equality is not required: compatible minor and patch versions within the same
 major may communicate when structure sizes and capabilities permit it.
 
+The adapter-owned deployment contract is additive in SDK `1.4.0`. Its
+`IAdapterInstaller.GetDeploymentPlan` member has a default implementation that
+derives generic data from the existing deployment-information and capability
+members, so older adapters remain usable by newer hosts. The superseded
+`GetDeploymentInformation`, `GetCapabilities`, and the non-contextual plan
+member are obsolete; new adapters must provide explicit contextual plans for
+every supported launch method. This is one-way compatibility: older hosts are
+not required to load adapters using the new plan schema. See
+[Adapter-owned deployment contract](ADAPTER_DEPLOYMENT_CONTRACT.md).
+
 A game-version mismatch is advisory. An incompatible SDK major is a hard error
 because the host and adapter cannot safely interpret the same contract.
 

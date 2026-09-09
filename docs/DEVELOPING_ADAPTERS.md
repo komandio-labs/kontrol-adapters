@@ -10,6 +10,12 @@
 8. Declare target game build metadata in `package.json`: specify `gameProductVersion` (the verified game build) and `relevantAssemblies` (the engine/core game DLLs to inspect and fingerprint on disk). Keep the manifest limited to package identity, SDK contract, assembly, schema, platform, target game metadata, and package allowlist. Loading entry points remain in adapter code and tests.
 9. Validate manifests and build a local package with the generic adapter tool before requesting a release.
 
+For adapter-specific deployment and external-loader behavior, implement the
+contextual `IAdapterInstaller.GetDeploymentPlan(AdapterDeploymentContext)`
+member. See
+[Adapter-owned deployment contract](ADAPTER_DEPLOYMENT_CONTRACT.md) for the
+compatibility rules and a complete external-loader example.
+
 When a target requires proprietary reference assemblies, provide a checked-in setup script that creates ignored local references. Do not commit or distribute game binaries.
 
 Adapter and SDK semantic-version sources are validated against the manifest and

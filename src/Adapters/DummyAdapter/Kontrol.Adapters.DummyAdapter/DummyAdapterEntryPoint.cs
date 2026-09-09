@@ -80,16 +80,55 @@ public sealed class DummyAdapterInstaller : IAdapterInstaller
         new("look.pitch", "Pitch", "Look up / down", "Rotation", 10, InputSignalKind.Analog, AllowInvert: true), new("look.yaw", "Yaw", "Turn left / right", "Rotation", 20, InputSignalKind.Analog, AllowInvert: true), new("look.roll", "Roll", "Bank left / right", "Rotation", 30, InputSignalKind.Analog, AllowInvert: true),
         new("action.primary", "Action 1", "Generic momentary action", "Actions", 10, InputSignalKind.Discrete, DiscreteBehavior.Momentary), new("action.secondary", "Action 2", "Generic toggle action", "Actions", 20, InputSignalKind.Discrete, DiscreteBehavior.Toggle), new("action.utility", "Action 3", "Generic one-shot action", "Actions", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger)
     ]);
-    public DeploymentMethodCapabilities GetCapabilities(GameLaunchMethod method) => method switch
+    public AdapterDeploymentPlan GetDeploymentPlan(AdapterDeploymentContext context)
     {
-        GameLaunchMethod.ProcessInjection => DeploymentMethodCapabilities.NoDeploymentRequired,
-        _ => DeploymentMethodCapabilities.Unavailable
-    };
-    public DeploymentMethodInformation GetDeploymentInformation(GameLaunchMethod method) => method switch
-    {
-        GameLaunchMethod.ProcessInjection => new("CoreCLR process injection", "Kontrol starts the target with a CoreCLR startup hook. The hook runs inside the target process and loads this adapter before the game starts.", "Changes: no target files are copied, changed, or backed up. The bootstrap and adapter are loaded from Kontrol's own output directory."),
-        _ => DeploymentMethodInformation.Generic(method)
-    };
+        if (context.Method != GameLaunchMethod.ProcessInjection)
+            throw new NotSupportedException($"Unsupported deployment method: {context.Method}");
+
+        var sandboxDirectory = FindSandboxDirectory() ?? context.GameDirectory;
+        var executable = Path.Combine(sandboxDirectory, "Kontrol.Sandbox.Game.exe");
+        bool sandboxExists = File.Exists(executable);
+        return new AdapterDeploymentPlan(
+            context.Method,
+            DeploymentMethodCapabilities.NoDeploymentRequired,
+            "CoreCLR process injection",
+            "Kontrol starts the target with a CoreCLR startup hook. The hook runs inside the target process and loads this adapter before the game starts.",
+            "No target files are copied, changed, or backed up. The bootstrap and adapter load from Kontrol's own output directory.",
+            "Confirm that Kontrol may start the sandbox with its CoreCLR startup hook.",
+            [new DeploymentPrerequisite(
+                "sandbox-executable",
+                "Kontrol Sandbox executable",
+                "The development sandbox must be built before it can be launched.",
+                sandboxExists ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                executable,
+                "Build Kontrol.Sandbox.Game, then retry.")],
+            [new DeploymentTarget(
+                "kontrol-runtime",
+                "Kontrol-managed runtime",
+                DeploymentTargetKind.KontrolManaged,
+                Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty,
+                Array.Empty<DeploymentOwnedFile>(),
+                Array.Empty<DeploymentConfigurationEffect>())],
+            new DeploymentLaunchChain([
+                new DeploymentLaunchStep(
+                    "Kontrol Sandbox",
+                    DeploymentLaunchStepKind.DirectGame,
+                    "Kontrol starts the sandbox executable."),
+                new DeploymentLaunchStep(
+                    "CoreCLR startup hook",
+                    DeploymentLaunchStepKind.AdapterBootstrap,
+                    "The startup hook loads the adapter before the sandbox starts.")]),
+            Array.Empty<DeploymentManualStep>(),
+            new DeploymentVerification(
+                sandboxExists ? DeploymentState.NoDeploymentRequired : DeploymentState.Failed,
+                sandboxExists ? "No deployment is required." : "The sandbox executable was not found.",
+                DeploymentRuntimeState.NotRunning,
+                "Runtime verification begins when the sandbox starts."),
+            new DeploymentRollbackPlan(
+                "No deployment files or configuration are changed.",
+                Array.Empty<DeploymentRollbackEffect>()));
+    }
+
     public string? GetSuggestedGameDirectory() => FindSandboxDirectory();
 
     public bool CheckIsInstalled(string gameDirectory, GameLaunchMethod method) =>
