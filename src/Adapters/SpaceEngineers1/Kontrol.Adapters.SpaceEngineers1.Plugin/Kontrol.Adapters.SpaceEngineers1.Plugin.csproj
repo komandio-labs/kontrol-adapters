@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(MSBuildProjectDirectory)\..\AdapterVersion.props" />
+  <Import Project="$(MSBuildProjectDirectory)\..\references\ActiveVersion.props" Condition="Exists('$(MSBuildProjectDirectory)\..\references\ActiveVersion.props')" />
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Kontrol.Adapters.SpaceEngineers1.Plugin</AssemblyName>
+    <Version>$(AdapterVersion)</Version>
+    <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(AdapterAssemblyVersion)</FileVersion>
+    <InformationalVersion>$(AdapterVersion)</InformationalVersion>
+    <SpaceEngineers1ReferenceVersion Condition="'$(SpaceEngineers1ReferenceVersion)' == ''">steam-build-24675677</SpaceEngineers1ReferenceVersion>
+    <SpaceEngineers1ReferencesDirectory>$(MSBuildProjectDirectory)\..\references\$(SpaceEngineers1ReferenceVersion)</SpaceEngineers1ReferencesDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\ControlLayout.cs" Link="ControlLayout.cs" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="VRage"><HintPath>$(SpaceEngineers1ReferencesDirectory)\VRage.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VRage.Game"><HintPath>$(SpaceEngineers1ReferencesDirectory)\VRage.Game.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VRage.Math"><HintPath>$(SpaceEngineers1ReferencesDirectory)\VRage.Math.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Sandbox.Common"><HintPath>$(SpaceEngineers1ReferencesDirectory)\Sandbox.Common.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

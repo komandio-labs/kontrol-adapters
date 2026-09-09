@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../../../schemas/compatibility-record-v1.schema.json",
+  "schemaVersion": 1,
+  "adapterId": "space-engineers-1",
+  "adapterVersion": "0.1.0",
+  "game": {
+    "product": "Space Engineers 1",
+    "productVersion": "steam-build-24675677",
+    "steamBuildId": "24675677",
+    "relevantAssemblies": {
+      "VRage.dll": { "fileVersion": "1.0.0.0", "sha256": "EC2410B3D916ADBD7404C3082CCC25A70C8BAEC89BACB57001C67597068E24CA", "mvid": "32e22621-4693-4285-918c-0a0f342b4d58" },
+      "VRage.Game.dll": { "fileVersion": "1.0.0.0", "sha256": "F0970C2B60335F7690E158A485CD528703717C8C5002F2713556E04F09C508E1", "mvid": "6a9e1b61-7c42-4e4e-9d26-347bbf080924" },
+      "VRage.Math.dll": { "fileVersion": "1.0.0.0", "sha256": "953ED575327FFEC5A72BAF13C893843C26F7D248CD1ECE1372EC34D650618F1C" , "mvid": "5d141a5d-adcb-4d88-8ad4-3eb8dd11504c" }
+    }
+  },
+  "validation": {
+    "date": "2026-09-09",
+    "result": "tested",
+    "automatedTests": "passed",
+    "manualChecklist": "pending",
+    "limitations": [
+      "Automated compatibility evidence only; Pulsar Legacy loading and in-game axis direction remain pending manual validation.",
+      "The initial adapter intentionally uses only public IMyControllableEntity controls and does not support weapons, toolbar slots, camera, or mods that replace control ownership."
+    ]
+  }
+}

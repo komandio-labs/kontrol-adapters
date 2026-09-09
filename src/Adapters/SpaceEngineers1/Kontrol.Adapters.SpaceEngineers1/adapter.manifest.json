@@ -1,0 +1,17 @@
+{
+  "id": "space-engineers-1",
+  "displayName": "Space Engineers 1",
+  "slug": "space-engineers-1",
+  "exeName": "SpaceEngineers.exe",
+  "relativeBinPath": "Bin64",
+  "pluginDll": "Kontrol.Adapters.SpaceEngineers1.dll",
+  "steamAppId": "244850",
+  "requiresHarmony": false,
+  "requiresCore": false,
+  "supportedMethods": [ "BinPluginsFolder" ],
+  "defaultDeploymentMethod": "BinPluginsFolder",
+  "image": "",
+  "version": "0.1.0",
+  "gameProductVersion": "steam-build-24675677",
+  "relevantAssemblies": [ "VRage.dll", "VRage.Game.dll", "VRage.Math.dll" ]
+}

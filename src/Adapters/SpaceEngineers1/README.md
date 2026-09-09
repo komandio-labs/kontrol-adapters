@@ -1,0 +1,29 @@
+# Space Engineers 1 adapter
+
+Initial API-first adapter for the Space Engineers 1 client. It uses Pulsar Legacy's public `VRage.Plugins.IPlugin` contract and `IMyControllableEntity`; it does not use Harmony or modify game assemblies.
+
+| Metadata | Value |
+| --- | --- |
+| Adapter version | `0.1.0` |
+| Target game build | `steam-build-24675677` |
+| Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers1.dll` (`net9.0`) |
+| Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers1.Plugin.dll` (`net48`) |
+| Steam application ID | `244850` |
+| Input channel | `Local\Kontrol_Input_space-engineers-1` |
+
+## Supported controls
+
+- Pitch, roll, yaw, forward/reverse, strafe, and lift.
+- Dampeners, lights, landing gear, and handbrake as edge-triggered actions.
+
+The plugin releases injected movement when Kontrol input is disabled, when no locally controlled entity is available, or when Pulsar unloads it. Axis direction must be checked with the generated local manual checklist before this build is considered validated.
+
+## Local Pulsar test
+
+1. Install Pulsar separately and choose its **Legacy** runtime for Space Engineers 1.
+2. Sideload the local adapter ZIP into Kontrol, then select **Plugin folder** deployment for Space Engineers 1.
+3. Deploy from Kontrol. The adapter uses the net9 discovery entry assembly for Kontrol, but copies only the separate net48 `Kontrol.Adapters.SpaceEngineers1.Plugin.dll` payload to `%APPDATA%\Pulsar\Legacy\Local` (or the root configured through `KONTROL_PULSAR_DIRECTORY`).
+4. Enable the plugin in the active Pulsar Legacy profile, then use Kontrol's Launch action.
+5. Complete the ignored `references/<build>/manual-checklist.md` created by the adapter test command.
+
+Pulsar remains responsible for the profile that enables the plugin. Kontrol neither changes Space Engineers files nor modifies Steam launch options.
