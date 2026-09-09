@@ -6,19 +6,19 @@ using Kontrol.Sdk.Attributes;
 using Kontrol.Sdk.Interfaces;
 using Kontrol.Sdk.Inputs;
 
-[assembly: KontrolAdapter("space-engineers-1", "Space Engineers 1", "space-engineers-1", "SpaceEngineers.exe", "Bin64", "244850", false, false,
+[assembly: KontrolAdapter("space-engineers", "Space Engineers", "space-engineers", "SpaceEngineers.exe", "Bin64", "244850", false, false,
     supportedMethods: [GameLaunchMethod.BinPluginsFolder], defaultDeploymentMethod: GameLaunchMethod.BinPluginsFolder)]
 
-namespace Kontrol.Adapters.SpaceEngineers1;
+namespace Kontrol.Adapters.SpaceEngineers;
 
-public sealed class SpaceEngineers1Installer : IAdapterInstaller
+public sealed class SpaceEngineersInstaller : IAdapterInstaller
 {
     private const string PulsarDirectoryEnvironmentVariable = "KONTROL_PULSAR_DIRECTORY";
     private const string PulsarDirectoryName = "Pulsar";
     private const string LegacyExecutableName = "Legacy.exe";
-    private const string PluginPayloadName = "Kontrol.Adapters.SpaceEngineers1.Plugin.dll";
+    private const string PluginPayloadName = "Kontrol.Adapters.SpaceEngineers.Plugin.dll";
     private const string LocalPluginDirectoryName = "Local";
-    private const string StatusMapName = @"Local\Kontrol_AdapterStatus_space-engineers-1";
+    private const string StatusMapName = @"Local\Kontrol_AdapterStatus_space-engineers";
     private const int StatusFrameCapacity = 512;
     private const long ActiveHeartbeatMaximumAgeMilliseconds = 5_000;
 
@@ -64,15 +64,30 @@ public sealed class SpaceEngineers1Installer : IAdapterInstaller
             DeploymentState.Deployed => $"The net48 Pulsar payload is installed at {Path.Combine(localPluginDirectory, PluginPayloadName)}.",
             DeploymentState.NotConfigured => "Pulsar Legacy is not configured or installed.",
             DeploymentState.Failed when !payloadAvailable => $"The packaged Pulsar payload was not found at {sourcePayloadPath}.",
-            DeploymentState.Failed => $"Space Engineers 1 was not found at {gameExecutable}.",
+            DeploymentState.Failed => $"Space Engineers was not found at {gameExecutable}.",
             _ => "The Pulsar payload is ready to deploy."
         };
+
+        bool writeAccessAvailable = false;
+        if (pulsarAvailable)
+        {
+            try
+            {
+                Directory.CreateDirectory(localPluginDirectory);
+                EnsureDirectoryCanBeWritten(localPluginDirectory);
+                writeAccessAvailable = true;
+            }
+            catch
+            {
+                writeAccessAvailable = false;
+            }
+        }
 
         return new AdapterDeploymentPlan(
             context.Method,
             new DeploymentMethodCapabilities(CanInstall: true, CanUninstall: true, CanLaunch: true, CanCreateShortcut: false),
             "Pulsar Legacy plugin",
-            "Kontrol deploys the separate .NET Framework payload to Pulsar Legacy's local-plugin folder, then starts Pulsar Legacy with Space Engineers 1.",
+            "Kontrol deploys the separate .NET Framework payload to Pulsar Legacy's local-plugin folder, then starts Pulsar Legacy with Space Engineers.",
             $"Only {PluginPayloadName} is copied to Pulsar Legacy at {localPluginDirectory}. No Space Engineers file or Steam launch setting is changed.",
             "Confirm the external Pulsar Legacy local-plugin write and the subsequent game launch.",
             [
@@ -84,12 +99,12 @@ public sealed class SpaceEngineers1Installer : IAdapterInstaller
                     legacyExecutable,
                     $"Install Pulsar Legacy under %APPDATA%\\Pulsar or set {PulsarDirectoryEnvironmentVariable} to its root directory."),
                 new DeploymentPrerequisite(
-                    "space-engineers-1-executable",
-                    "Space Engineers 1 executable",
+                    "space-engineers-executable",
+                    "Space Engineers executable",
                     "The selected installation must contain SpaceEngineers.exe under Bin64.",
                     gameAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
                     gameExecutable,
-                    "Select a Space Engineers 1 installation containing Bin64\\SpaceEngineers.exe."),
+                    "Select a Space Engineers installation containing Bin64\\SpaceEngineers.exe."),
                 new DeploymentPrerequisite(
                     "pulsar-payload",
                     "Packaged Pulsar payload",
@@ -101,7 +116,7 @@ public sealed class SpaceEngineers1Installer : IAdapterInstaller
                     "pulsar-local-plugin-write-access",
                     "Pulsar local-plugin write access",
                     "Kontrol verifies write access to Pulsar Legacy's local-plugin directory immediately before deployment.",
-                    DeploymentPrerequisiteState.Unknown,
+                    writeAccessAvailable ? DeploymentPrerequisiteState.Satisfied : (pulsarAvailable ? DeploymentPrerequisiteState.Failed : DeploymentPrerequisiteState.Missing),
                     localPluginDirectory,
                     "Grant write access to the Pulsar Legacy local-plugin directory, then deploy again.")
             ],
@@ -118,10 +133,10 @@ public sealed class SpaceEngineers1Installer : IAdapterInstaller
                 new DeploymentLaunchStep(
                     "Pulsar Legacy",
                     DeploymentLaunchStepKind.ExternalLauncher,
-                    "Kontrol starts Pulsar Legacy with the selected Space Engineers 1 executable. Custom launch arguments are appended by the installer.",
+                    "Kontrol starts Pulsar Legacy with the selected Space Engineers executable. Custom launch arguments are appended by the installer.",
                     legacyExecutable,
                     $"\"{gameExecutable}\"")]),
-            [new DeploymentManualStep("Enable Kontrol.Adapters.SpaceEngineers1.Plugin.dll in the active Pulsar Legacy profile before launching.")],
+            [new DeploymentManualStep("Enable Kontrol.Adapters.SpaceEngineers.Plugin.dll in the active Pulsar Legacy profile before launching.")],
             new DeploymentVerification(
                 deploymentState,
                 deploymentMessage,
@@ -169,7 +184,7 @@ public sealed class SpaceEngineers1Installer : IAdapterInstaller
     {
         EnsurePulsarMethod(method);
         if (!CheckIsInstalled(gameDirectory, method))
-            throw new InvalidOperationException("Deploy the Space Engineers 1 adapter to Pulsar Legacy before launching.");
+            throw new InvalidOperationException("Deploy the Space Engineers adapter to Pulsar Legacy before launching.");
         if (!TryGetPulsarPaths(out var legacyExecutable, out _))
             throw new DirectoryNotFoundException(BuildPulsarNotFoundMessage());
 
@@ -192,7 +207,7 @@ public sealed class SpaceEngineers1Installer : IAdapterInstaller
     private static void EnsurePulsarMethod(GameLaunchMethod method)
     {
         if (method != GameLaunchMethod.BinPluginsFolder)
-            throw new NotSupportedException($"Space Engineers 1 supports only {GameLaunchMethod.BinPluginsFolder} deployment through Pulsar Legacy.");
+            throw new NotSupportedException($"Space Engineers supports only {GameLaunchMethod.BinPluginsFolder} deployment through Pulsar Legacy.");
     }
 
     private static bool TryGetPulsarPaths(out string legacyExecutable, out string localPluginDirectory)
@@ -288,7 +303,7 @@ public sealed class SpaceEngineers1Installer : IAdapterInstaller
                     ? error.GetString() ?? "Pulsar reported an adapter error."
                     : "Pulsar reported an adapter error.");
             if (age > ActiveHeartbeatMaximumAgeMilliseconds)
-                return (DeploymentRuntimeState.NotRunning, "The Pulsar adapter heartbeat is stale; launch Space Engineers 1 through Pulsar Legacy.");
+                return (DeploymentRuntimeState.NotRunning, "The Pulsar adapter heartbeat is stale; launch Space Engineers through Pulsar Legacy.");
             if (string.Equals(state, "Active", StringComparison.OrdinalIgnoreCase))
                 return (DeploymentRuntimeState.Ready, "Pulsar Legacy loaded the Kontrol plugin and its heartbeat is active.");
             if (string.Equals(state, "Loaded", StringComparison.OrdinalIgnoreCase))

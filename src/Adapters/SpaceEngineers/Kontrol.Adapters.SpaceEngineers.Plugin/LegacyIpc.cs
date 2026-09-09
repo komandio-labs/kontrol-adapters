@@ -1,10 +1,11 @@
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Kontrol.Adapters.SpaceEngineers1.Plugin
+namespace Kontrol.Adapters.SpaceEngineers.Plugin
 {
     internal sealed class LegacyMmfChannel<T> : IDisposable where T : struct
     {
@@ -45,7 +46,7 @@ namespace Kontrol.Adapters.SpaceEngineers1.Plugin
 
     internal sealed class PulsarStatusReporter : IDisposable
     {
-        private const string StatusMapName = @"Local\Kontrol_AdapterStatus_space-engineers-1";
+        private const string StatusMapName = @"Local\Kontrol_AdapterStatus_space-engineers";
         private readonly LegacyMmfChannel<TelemetryData> _channel = new LegacyMmfChannel<TelemetryData>(StatusMapName);
         private long _sequence;
         private long _lastPulseUtcTicks;
@@ -91,6 +92,93 @@ namespace Kontrol.Adapters.SpaceEngineers1.Plugin
         private static string JsonProperty(string name, string value) => value is null
             ? string.Empty
             : ",\"" + name + "\":\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    }
+
+    /// <summary>
+    /// Legacy Pulsar payload equivalent of the SDK adapter log reporter. The
+    /// payload cannot reference Kontrol.Sdk, so it writes the same 512-byte
+    /// telemetry frame shape consumed by Kontrol's RuntimeWorker.
+    /// </summary>
+    internal sealed class LegacyAdapterLogReporter : IDisposable
+    {
+        private const string LogMapName = @"Local\Kontrol_Logs_space-engineers";
+        private readonly LegacyMmfChannel<TelemetryData> _channel = new LegacyMmfChannel<TelemetryData>(LogMapName);
+        private readonly object _sync = new object();
+        private readonly bool _debugFallback = string.Equals(
+            Environment.GetEnvironmentVariable("KONTROL_ADAPTER_DEBUG"), "1", StringComparison.OrdinalIgnoreCase);
+        private long _sequence;
+        private bool _initialized;
+
+        public void Write(string message) => WriteCore("Information", message);
+
+        public void WriteWarning(string message) => WriteCore("Information", "[Warning] " + message);
+
+        public void WriteDebug(string message) => WriteCore("Debug", message);
+
+        public void WriteError(string message) => WriteCore("Error", message);
+
+        public void Dispose() => _channel.Dispose();
+
+        private void WriteCore(string level, string message)
+        {
+            string boundedMessage = message ?? string.Empty;
+            if (boundedMessage.Length > 320)
+                boundedMessage = boundedMessage.Substring(0, 320);
+
+            lock (_sync)
+            {
+                string json = string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    "{\"sequence\":{0},\"message\":\"{1}\",\"level\":\"{2}\"}",
+                    ++_sequence,
+                    EscapeJson(boundedMessage),
+                    EscapeJson(level));
+
+                try
+                {
+                    if (!_initialized)
+                    {
+                        _channel.CreateOrOpen();
+                        _initialized = true;
+                    }
+
+                    var frame = new TelemetryData();
+                    frame.SetJson(json);
+                    _channel.Write(ref frame);
+                }
+                catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+                {
+                    if (_debugFallback)
+                        AppendFallback("log IPC failed: " + exception.Message);
+                }
+
+                if (_debugFallback)
+                    AppendFallback(json);
+            }
+        }
+
+        private static string EscapeJson(string value) => value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\r", "\\r")
+            .Replace("\n", "\\n");
+
+        private static void AppendFallback(string line)
+        {
+            try
+            {
+                string directory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Kontrol", "adapters", "space-engineers", "logs");
+                Directory.CreateDirectory(directory);
+                File.AppendAllText(Path.Combine(directory, "adapter-debug.log"),
+                    DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture) + " " + line + Environment.NewLine);
+            }
+            catch
+            {
+                // Diagnostics must never interrupt game input handling.
+            }
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]

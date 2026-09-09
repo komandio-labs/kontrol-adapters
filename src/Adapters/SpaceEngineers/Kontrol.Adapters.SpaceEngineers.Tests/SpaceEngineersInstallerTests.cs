@@ -1,19 +1,19 @@
-using Kontrol.Adapters.SpaceEngineers1;
+using Kontrol.Adapters.SpaceEngineers;
 using Kontrol.Sdk.Attributes;
 using Kontrol.Sdk.Interfaces;
 using NUnit.Framework;
 using Shouldly;
 using System.Text.Json;
 
-namespace Kontrol.Adapters.SpaceEngineers1.Tests;
+namespace Kontrol.Adapters.SpaceEngineers.Tests;
 
 [TestFixture]
-public class SpaceEngineers1InstallerTests
+public class SpaceEngineersInstallerTests
 {
     [Test]
     public void Schema_ExposesApiBackedFlightAndSystemControls()
     {
-        var schema = new SpaceEngineers1Installer().GetInputSchema();
+        var schema = new SpaceEngineersInstaller().GetInputSchema();
         schema.Version.ShouldBe(1);
         schema.Inputs.Select(input => input.Id).ShouldBe(new[]
         {
@@ -25,11 +25,11 @@ public class SpaceEngineers1InstallerTests
     [Test]
     public void PulsarDeployment_UsesTheExistingPluginFolderLifecycle()
     {
-        var installer = new SpaceEngineers1Installer();
+        var installer = new SpaceEngineersInstaller();
         var plan = installer.GetDeploymentPlan(new AdapterDeploymentContext(
             GameLaunchMethod.BinPluginsFolder,
             Path.Combine("test-game", "SpaceEngineers"),
-            Path.Combine("package", "Kontrol.Adapters.SpaceEngineers1.dll")));
+            Path.Combine("package", "Kontrol.Adapters.SpaceEngineers.dll")));
 
         plan.Capabilities.ShouldBe(new DeploymentMethodCapabilities(
             CanInstall: true,
@@ -39,9 +39,9 @@ public class SpaceEngineers1InstallerTests
         plan.Title.ShouldBe("Pulsar Legacy plugin");
         plan.Targets.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentTargetKind.ExternalLoader);
         plan.Targets.Single().Location.ShouldEndWith(Path.Combine("Legacy", "Local"));
-        plan.Targets.Single().OwnedFiles.ShouldHaveSingleItem().Path.ShouldBe("Kontrol.Adapters.SpaceEngineers1.Plugin.dll");
+        plan.Targets.Single().OwnedFiles.ShouldHaveSingleItem().Path.ShouldBe("Kontrol.Adapters.SpaceEngineers.Plugin.dll");
         plan.Prerequisites.Single(prerequisite => prerequisite.Id == "pulsar-local-plugin-write-access")
-            .State.ShouldBe(DeploymentPrerequisiteState.Unknown);
+            .State.ShouldBeOneOf(DeploymentPrerequisiteState.Satisfied, DeploymentPrerequisiteState.Missing, DeploymentPrerequisiteState.Failed);
         plan.LaunchChain.Steps.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentLaunchStepKind.ExternalLauncher);
         plan.LaunchChain.Steps.Single().Executable.ShouldEndWith(Path.Combine("Pulsar", "Legacy.exe"));
         plan.LaunchChain.Steps.Single().Arguments!.ShouldContain("SpaceEngineers.exe");
@@ -53,13 +53,13 @@ public class SpaceEngineers1InstallerTests
     {
         string adapterRoot = FindAdapterRoot();
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(
-            adapterRoot, "Kontrol.Adapters.SpaceEngineers1", "adapter.manifest.json")));
+            adapterRoot, "Kontrol.Adapters.SpaceEngineers", "adapter.manifest.json")));
         using var package = JsonDocument.Parse(File.ReadAllText(Path.Combine(adapterRoot, "package.json")));
 
-        string hostEntry = "Kontrol.Adapters.SpaceEngineers1.dll";
-        string pulsarPayload = "Kontrol.Adapters.SpaceEngineers1.Plugin.dll";
+        string hostEntry = "Kontrol.Adapters.SpaceEngineers.dll";
+        string pulsarPayload = "Kontrol.Adapters.SpaceEngineers.Plugin.dll";
 
-        var deployment = new SpaceEngineers1Installer().GetDeploymentPlan(new AdapterDeploymentContext(
+        var deployment = new SpaceEngineersInstaller().GetDeploymentPlan(new AdapterDeploymentContext(
             GameLaunchMethod.BinPluginsFolder,
             Path.Combine("test-game", "SpaceEngineers"),
             Path.Combine(adapterRoot, hostEntry)));
@@ -68,13 +68,13 @@ public class SpaceEngineers1InstallerTests
         package.RootElement.GetProperty("targetFramework").GetString().ShouldBe("net9.0");
         package.RootElement.GetProperty("package").GetProperty("include").EnumerateArray()
             .Select(item => item.GetString())
-            .ShouldBe(new[] { hostEntry, "Kontrol.Sdk.dll", pulsarPayload, "adapter.manifest.json", "LICENSE", "THIRD_PARTY_NOTICES.md" });
+            .ShouldBe(new[] { hostEntry, "Kontrol.Sdk.dll", pulsarPayload, "Kontrol.Adapters.SpaceEngineers.Plugin.xml", "adapter.manifest.json", "LICENSE", "THIRD_PARTY_NOTICES.md" });
         deployment.Summary.ShouldContain("separate .NET Framework payload");
         deployment.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([pulsarPayload]);
         deployment.Targets.Single().Location.ShouldEndWith(Path.Combine("Legacy", "Local"));
 
         string payloadProject = File.ReadAllText(Path.Combine(
-            adapterRoot, "Kontrol.Adapters.SpaceEngineers1.Plugin", "Kontrol.Adapters.SpaceEngineers1.Plugin.csproj"));
+            adapterRoot, "Kontrol.Adapters.SpaceEngineers.Plugin", "Kontrol.Adapters.SpaceEngineers.Plugin.csproj"));
         payloadProject.ShouldContain("<TargetFramework>net48</TargetFramework>");
         payloadProject.ShouldContain($"<AssemblyName>{Path.GetFileNameWithoutExtension(pulsarPayload)}</AssemblyName>");
         payloadProject.ShouldNotContain($"<AssemblyName>{Path.GetFileNameWithoutExtension(hostEntry)}</AssemblyName>");
@@ -83,11 +83,45 @@ public class SpaceEngineers1InstallerTests
     [Test]
     public void SystemActions_UseTheirStableSchemaPositions()
     {
-        var schema = new SpaceEngineers1Installer().GetInputSchema();
-        schema.Inputs[SpaceEngineers1ControlLayout.DampenersAction].Id.ShouldBe("systems.dampeners");
-        schema.Inputs[SpaceEngineers1ControlLayout.LightsAction].Id.ShouldBe("systems.lights");
-        schema.Inputs[SpaceEngineers1ControlLayout.LandingGearsAction].Id.ShouldBe("systems.landing_gears");
-        schema.Inputs[SpaceEngineers1ControlLayout.HandbrakeAction].Id.ShouldBe("systems.handbrake");
+        var schema = new SpaceEngineersInstaller().GetInputSchema();
+        schema.Inputs[SpaceEngineersControlLayout.DampenersAction].Id.ShouldBe("systems.dampeners");
+        schema.Inputs[SpaceEngineersControlLayout.LightsAction].Id.ShouldBe("systems.lights");
+        schema.Inputs[SpaceEngineersControlLayout.LandingGearsAction].Id.ShouldBe("systems.landing_gears");
+        schema.Inputs[SpaceEngineersControlLayout.HandbrakeAction].Id.ShouldBe("systems.handbrake");
+    }
+
+    [Test]
+    public void PulsarDeploymentPlan_SatisfiesWriteAccessWhenTheLocalPluginDirectoryIsWritable()
+    {
+        string testRoot = Path.Combine(TestContext.CurrentContext.WorkDirectory, Guid.NewGuid().ToString("N"));
+        string pulsarRoot = Path.Combine(testRoot, "Pulsar");
+        string packageDirectory = Path.Combine(testRoot, "package");
+        string gameDirectory = Path.Combine(testRoot, "game");
+        string? previousPulsarDirectory = Environment.GetEnvironmentVariable("KONTROL_PULSAR_DIRECTORY");
+
+        try
+        {
+            Directory.CreateDirectory(pulsarRoot);
+            Directory.CreateDirectory(packageDirectory);
+            Directory.CreateDirectory(Path.Combine(gameDirectory, "Bin64"));
+            File.WriteAllBytes(Path.Combine(pulsarRoot, "Legacy.exe"), []);
+            File.WriteAllBytes(Path.Combine(packageDirectory, "Kontrol.Adapters.SpaceEngineers.Plugin.dll"), []);
+            File.WriteAllBytes(Path.Combine(gameDirectory, "Bin64", "SpaceEngineers.exe"), []);
+            Environment.SetEnvironmentVariable("KONTROL_PULSAR_DIRECTORY", pulsarRoot);
+
+            var plan = new SpaceEngineersInstaller().GetDeploymentPlan(new AdapterDeploymentContext(
+                GameLaunchMethod.BinPluginsFolder,
+                gameDirectory,
+                Path.Combine(packageDirectory, "Kontrol.Adapters.SpaceEngineers.dll")));
+
+            plan.Prerequisites.Single(prerequisite => prerequisite.Id == "pulsar-local-plugin-write-access")
+                .State.ShouldBe(DeploymentPrerequisiteState.Satisfied);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("KONTROL_PULSAR_DIRECTORY", previousPulsarDirectory);
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, recursive: true);
+        }
     }
 
     private static string FindAdapterRoot()
@@ -95,7 +129,7 @@ public class SpaceEngineers1InstallerTests
         DirectoryInfo? directory = new(TestContext.CurrentContext.TestDirectory);
         while (directory is not null)
         {
-            string candidate = Path.Combine(directory.FullName, "src", "Adapters", "SpaceEngineers1");
+            string candidate = Path.Combine(directory.FullName, "src", "Adapters", "SpaceEngineers");
             if (File.Exists(Path.Combine(candidate, "package.json")))
                 return candidate;
             directory = directory.Parent;

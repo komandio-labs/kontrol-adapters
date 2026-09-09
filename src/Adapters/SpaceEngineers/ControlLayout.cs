@@ -1,7 +1,7 @@
-namespace Kontrol.Adapters.SpaceEngineers1;
+namespace Kontrol.Adapters.SpaceEngineers;
 
 /// <summary>Stable schema positions shared by the Kontrol host entry and Pulsar payload.</summary>
-public static class SpaceEngineers1ControlLayout
+public static class SpaceEngineersControlLayout
 {
     public const int DampenersAction = 6;
     public const int LightsAction = 7;

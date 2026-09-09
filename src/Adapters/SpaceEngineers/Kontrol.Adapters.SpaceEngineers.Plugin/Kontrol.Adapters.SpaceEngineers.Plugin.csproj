@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(MSBuildProjectDirectory)\..\AdapterVersion.props" />
+  <Import Project="$(MSBuildProjectDirectory)\..\references\ActiveVersion.props" Condition="Exists('$(MSBuildProjectDirectory)\..\references\ActiveVersion.props')" />
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Kontrol.Adapters.SpaceEngineers.Plugin</AssemblyName>
+    <Version>$(AdapterVersion)</Version>
+    <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(AdapterAssemblyVersion)</FileVersion>
+    <InformationalVersion>$(AdapterVersion)</InformationalVersion>
+    <SpaceEngineersReferenceVersion Condition="'$(SpaceEngineersReferenceVersion)' == ''">steam-build-24675677</SpaceEngineersReferenceVersion>
+    <SpaceEngineersReferencesDirectory>$(MSBuildProjectDirectory)\..\references\$(SpaceEngineersReferenceVersion)</SpaceEngineersReferencesDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\ControlLayout.cs" Link="ControlLayout.cs" />
+    <None Include="Kontrol.Adapters.SpaceEngineers.Plugin.xml" CopyToOutputDirectory="PreserveNewest" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="VRage"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VRage.Game"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.Game.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VRage.Math"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.Math.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Sandbox.Common"><HintPath>$(SpaceEngineersReferencesDirectory)\Sandbox.Common.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

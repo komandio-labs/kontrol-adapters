@@ -1,15 +1,15 @@
-# Space Engineers 1 adapter
+# Space Engineers adapter
 
-Initial API-first adapter for the Space Engineers 1 client. It uses Pulsar Legacy's public `VRage.Plugins.IPlugin` contract and `IMyControllableEntity`; it does not use Harmony or modify game assemblies.
+Initial API-first adapter for the Space Engineers client. It uses Pulsar Legacy's public `VRage.Plugins.IPlugin` contract and `IMyControllableEntity`; it does not use Harmony or modify game assemblies.
 
 | Metadata | Value |
 | --- | --- |
 | Adapter version | `1.0.0` |
 | Target game build | `steam-build-24675677` |
-| Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers1.dll` (`net9.0`) |
-| Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers1.Plugin.dll` (`net48`) |
+| Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers.dll` (`net9.0`) |
+| Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers.Plugin.dll` (`net48`) |
 | Steam application ID | `244850` |
-| Input channel | `Local\Kontrol_Input_space-engineers-1` |
+| Input channel | `Local\Kontrol_Input_space-engineers` |
 
 ## Supported controls
 
@@ -22,9 +22,9 @@ The plugin releases injected movement when Kontrol input is disabled, when no lo
 
 The `BinPluginsFolder` plan is resolved from the selected game directory and the
 Pulsar root. Its Kontrol entry assembly is the packaged `.NET 9`
-`Kontrol.Adapters.SpaceEngineers1.dll`; its only owned deployment file is the
+`Kontrol.Adapters.SpaceEngineers.dll`; its only owned deployment file is the
 separate `.NET Framework 4.8` payload
-`Kontrol.Adapters.SpaceEngineers1.Plugin.dll`.
+`Kontrol.Adapters.SpaceEngineers.Plugin.dll`.
 
 Kontrol writes that payload to the resolved Pulsar Legacy target
 `<Pulsar root>\Legacy\Local`, launches `<Pulsar root>\Legacy.exe` with
@@ -36,9 +36,9 @@ not supported for this adapter.
 
 ## Local Pulsar test
 
-1. Install Pulsar separately and choose its **Legacy** runtime for Space Engineers 1.
-2. Sideload the local adapter ZIP into Kontrol, then select **Plugin folder** deployment for Space Engineers 1.
-3. Deploy from Kontrol. The adapter uses the net9 discovery entry assembly for Kontrol, but copies only the separate net48 `Kontrol.Adapters.SpaceEngineers1.Plugin.dll` payload to `%APPDATA%\Pulsar\Legacy\Local` (or the root configured through `KONTROL_PULSAR_DIRECTORY`).
+1. Install Pulsar separately and choose its **Legacy** runtime for Space Engineers.
+2. Sideload the local adapter ZIP into Kontrol, then select **Plugin folder** deployment for Space Engineers.
+3. Deploy from Kontrol. The adapter uses the net9 discovery entry assembly for Kontrol, but copies only the separate net48 `Kontrol.Adapters.SpaceEngineers.Plugin.dll` payload to `%APPDATA%\Pulsar\Legacy\Local` (or the root configured through `KONTROL_PULSAR_DIRECTORY`).
 4. Enable the plugin in the active Pulsar Legacy profile, then use Kontrol's Launch action.
 5. Complete the ignored `references/<build>/manual-checklist.md` created by the adapter test command.
 

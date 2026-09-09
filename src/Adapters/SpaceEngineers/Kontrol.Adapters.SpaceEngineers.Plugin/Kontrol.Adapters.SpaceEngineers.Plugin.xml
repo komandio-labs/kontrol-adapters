@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PluginData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="GitHubPlugin">
+  <Id>Kontrol.Adapters.SpaceEngineers.Plugin.dll</Id>
+  <RepoId>komandio-labs/kontrol-adapters</RepoId>
+  <FriendlyName>Kontrol Space Engineers Adapter</FriendlyName>
+  <Author>Komandio Labs</Author>
+  <Tooltip>Controller and joystick flight controls for Space Engineers through Kontrol.</Tooltip>
+  <Description>Kontrol adds controller and joystick support to Space Engineers through Pulsar Legacy. Enable this plugin in Pulsar Legacy, then use the Kontrol desktop app to map and send flight and vehicle-system inputs.
+
+More information: https://github.com/komandio-labs/kontrol-adapters</Description>
+  <Runtimes>CLR</Runtimes>
+  <Platforms>Windows</Platforms>
+</PluginData>

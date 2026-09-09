@@ -1,12 +1,12 @@
 {
   "$schema": "../../../schemas/adapter-manifest-v1.schema.json",
   "manifestVersion": 1,
-  "adapterId": "space-engineers-1",
-  "slug": "space-engineers-1",
-  "displayName": "Space Engineers 1",
+  "adapterId": "space-engineers",
+  "slug": "space-engineers",
+  "displayName": "Space Engineers",
   "adapterVersion": "1.0.0",
   "sdkVersion": "1.4.0",
-  "entryAssembly": "Kontrol.Adapters.SpaceEngineers1.dll",
+  "entryAssembly": "Kontrol.Adapters.SpaceEngineers.dll",
   "inputSchemaVersion": 1,
   "targetFramework": "net9.0",
   "architectures": ["x64"],
@@ -14,9 +14,10 @@
   "relevantAssemblies": ["VRage.dll", "VRage.Game.dll", "VRage.Math.dll"],
   "package": {
     "include": [
-      "Kontrol.Adapters.SpaceEngineers1.dll",
+      "Kontrol.Adapters.SpaceEngineers.dll",
       "Kontrol.Sdk.dll",
-      "Kontrol.Adapters.SpaceEngineers1.Plugin.dll",
+      "Kontrol.Adapters.SpaceEngineers.Plugin.dll",
+      "Kontrol.Adapters.SpaceEngineers.Plugin.xml",
       "adapter.manifest.json",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md"

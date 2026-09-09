@@ -1,10 +1,10 @@
 {
   "$schema": "../../../../../schemas/compatibility-record-v1.schema.json",
   "schemaVersion": 1,
-  "adapterId": "space-engineers-1",
-  "adapterVersion": "0.1.0",
+  "adapterId": "space-engineers",
+  "adapterVersion": "1.0.0",
   "game": {
-    "product": "Space Engineers 1",
+    "product": "Space Engineers",
     "productVersion": "steam-build-24675677",
     "steamBuildId": "24675677",
     "relevantAssemblies": {

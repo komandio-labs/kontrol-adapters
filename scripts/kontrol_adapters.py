@@ -22,16 +22,16 @@ ADAPTERS = {
     "dummyadapter": ("DummyAdapter", "Kontrol.Adapters.DummyAdapter"),
     "space-engineers-2": ("SpaceEngineers2", "Kontrol.Adapters.SpaceEngineers2"),
     "spaceengineers2": ("SpaceEngineers2", "Kontrol.Adapters.SpaceEngineers2"),
-    "space-engineers-1": ("SpaceEngineers1", "Kontrol.Adapters.SpaceEngineers1"),
-    "spaceengineers1": ("SpaceEngineers1", "Kontrol.Adapters.SpaceEngineers1"),
+    "space-engineers": ("SpaceEngineers", "Kontrol.Adapters.SpaceEngineers"),
+    "spaceengineers": ("SpaceEngineers", "Kontrol.Adapters.SpaceEngineers"),
 }
 CANONICAL_ADAPTER_SLUGS = {
     "dummyadapter": "dummy-adapter",
     "spaceengineers2": "space-engineers-2",
-    "spaceengineers1": "space-engineers-1",
+    "spaceengineers": "space-engineers",
 }
-SE1_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Common.dll")
-SE1_COMPATIBILITY_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll")
+SPACE_ENGINEERS_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Common.dll")
+SPACE_ENGINEERS_COMPATIBILITY_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll")
 SE2_ASSEMBLIES = (
     "Game2.Client.dll", "Game2.Simulation.dll", "VRage.Core.dll", "VRage.Core.Game.dll",
     "VRage.DCS.dll", "VRage.Library.dll", "VRage.Physics.dll", "VRage.Input.dll",
@@ -93,7 +93,7 @@ def resolve_game2(candidate: str | None) -> Path | None:
     return game2 if game2.is_dir() else None
 
 
-def resolve_se1(candidate: str | None) -> Path | None:
+def resolve_space_engineers(candidate: str | None) -> Path | None:
     if not candidate:
         return None
     path = Path(candidate).expanduser().resolve()
@@ -120,40 +120,40 @@ def steam_candidates() -> list[Path]:
     return candidates
 
 
-def se1_steam_candidates() -> list[Path]:
+def space_engineers_steam_candidates() -> list[Path]:
     return [candidate.parent / "SpaceEngineers" for candidate in steam_candidates()] + [
         Path(r"D:\SteamLibrary\steamapps\common\SpaceEngineers")
     ]
 
 
-def sync_se1(game_directory: str | None) -> Path:
-    game = resolve_se1(game_directory)
+def sync_space_engineers(game_directory: str | None) -> Path:
+    game = resolve_space_engineers(game_directory)
     if game is None:
-        game = next((resolved for candidate in se1_steam_candidates() if (resolved := resolve_se1(str(candidate))) is not None), None)
+        game = next((resolved for candidate in space_engineers_steam_candidates() if (resolved := resolve_space_engineers(str(candidate))) is not None), None)
     if game is None:
-        raise RuntimeError("Space Engineers 1 was not found. Supply --game-directory <SE1 installation directory>.")
+        raise RuntimeError("Space Engineers was not found. Supply --game-directory <Space Engineers installation directory>.")
     bin64 = game / "Bin64"
-    missing = [name for name in SE1_ASSEMBLIES if not (bin64 / name).is_file()]
+    missing = [name for name in SPACE_ENGINEERS_ASSEMBLIES if not (bin64 / name).is_file()]
     if missing:
-        raise RuntimeError(f"Required SE1 assemblies are missing from {bin64}: {', '.join(missing)}")
+        raise RuntimeError(f"Required Space Engineers assemblies are missing from {bin64}: {', '.join(missing)}")
     version = "steam-build-24675677"
-    adapter_root, _, _ = adapter_paths("spaceengineers1")
+    adapter_root, _, _ = adapter_paths("spaceengineers")
     destination = adapter_root / "references" / version
     destination.mkdir(parents=True, exist_ok=True)
     evidence: dict[str, dict] = {}
-    for name in SE1_ASSEMBLIES:
+    for name in SPACE_ENGINEERS_ASSEMBLIES:
         destination_file = destination / name
         shutil.copy2(bin64 / name, destination_file)
         evidence[name] = inspect_assembly(destination_file)
     inspection = {
-        "schemaVersion": 1, "adapterId": manifest("spaceengineers1")["adapterId"],
-        "gameDirectory": r"<SE1 installation>", "productVersion": version,
+        "schemaVersion": 1, "adapterId": manifest("spaceengineers")["adapterId"],
+        "gameDirectory": r"<Space Engineers installation>", "productVersion": version,
         "inspectedAtUtc": datetime.now(timezone.utc).isoformat(), "relevantAssemblies": evidence,
     }
     (destination / "inspection.json").write_text(json.dumps(inspection, indent=2) + "\n", encoding="utf-8")
     (adapter_root / "references" / "ActiveVersion.props").write_text(
-        f"<Project>\n  <PropertyGroup>\n    <SpaceEngineers1ReferenceVersion>{version}</SpaceEngineers1ReferenceVersion>\n  </PropertyGroup>\n</Project>\n", encoding="utf-8")
-    print(f"Prepared SE1 {version} references and inspection evidence at {destination}")
+        f"<Project>\n  <PropertyGroup>\n    <SpaceEngineersReferenceVersion>{version}</SpaceEngineersReferenceVersion>\n  </PropertyGroup>\n</Project>\n", encoding="utf-8")
+    print(f"Prepared Space Engineers {version} references and inspection evidence at {destination}")
     return destination
 
 
@@ -240,26 +240,26 @@ def test_adapter(slug: str, game_directory: str | None, skip_sync: bool) -> None
     if slug == "spaceengineers2":
         test_se2(game_directory, skip_sync)
         return
-    if slug == "spaceengineers1":
+    if slug == "spaceengineers":
         if not skip_sync:
-            reference = sync_se1(game_directory)
+            reference = sync_space_engineers(game_directory)
         elif not (adapter_paths(slug)[0] / "references" / "ActiveVersion.props").is_file():
-            raise RuntimeError("SE1 references are not prepared. Run sync-se1 or omit --skip-sync.")
+            raise RuntimeError("Space Engineers references are not prepared. Run sync-space-engineers or omit --skip-sync.")
         else:
             reference = adapter_paths(slug)[0] / "references" / "steam-build-24675677"
     _, project, tests = adapter_paths(slug)
     tool("validate", "adapter", "--adapter", slug)
-    if slug == "spaceengineers1":
+    if slug == "spaceengineers":
         inspection = reference / "inspection.json"
         if not inspection.is_file():
-            raise RuntimeError(f"SE1 inspection evidence was not found: {inspection}")
-        tool("validate", "compatibility", "--adapter", "space-engineers-1", "--inspection", str(inspection))
+            raise RuntimeError(f"Space Engineers inspection evidence was not found: {inspection}")
+        tool("validate", "compatibility", "--adapter", "space-engineers", "--inspection", str(inspection))
     run("dotnet", "build", str(project), "-c", "Debug")
     run("dotnet", "test", str(tests), "-c", "Debug")
-    if slug == "spaceengineers1":
+    if slug == "spaceengineers":
         checklist = reference / "manual-checklist.md"
         if not checklist.exists():
-            checklist.write_text(f"""# Space Engineers 1 manual validation checklist
+            checklist.write_text(f"""# Space Engineers manual validation checklist
 
 Generated for local game build {reference.name} on {datetime.now(timezone.utc).isoformat()}.
 
@@ -271,7 +271,7 @@ Generated for local game build {reference.name} on {datetime.now(timezone.utc).i
 - [ ] Keyboard and mouse coexist correctly while Kontrol is enabled and disabled
 - [ ] Multiplayer client session has no unexpected control ownership effects
 """, encoding="utf-8")
-            print("SE1 automated compatibility validation completed. Complete the ignored manual checklist before promoting this record.")
+            print("Space Engineers automated compatibility validation completed. Complete the ignored manual checklist before promoting this record.")
 
 
 def se2_compatibility_records() -> list[tuple[Path, dict]]:
@@ -419,8 +419,8 @@ def main() -> int:
     commands.add_parser("validate")
     sync = commands.add_parser("sync-se2")
     sync.add_argument("--game-directory")
-    sync_se1_command = commands.add_parser("sync-se1")
-    sync_se1_command.add_argument("--game-directory")
+    sync_space_engineers_command = commands.add_parser("sync-space-engineers")
+    sync_space_engineers_command.add_argument("--game-directory")
     test = commands.add_parser("test")
     test.add_argument("--adapter", choices=ADAPTERS, required=True)
     test.add_argument("--game-directory")
@@ -456,7 +456,7 @@ def main() -> int:
     try:
         if args.command == "validate": validate_repository()
         elif args.command == "sync-se2": sync_se2(args.game_directory)
-        elif args.command == "sync-se1": sync_se1(args.game_directory)
+        elif args.command == "sync-space-engineers": sync_space_engineers(args.game_directory)
         elif args.command == "test": test_adapter(args.adapter, args.game_directory, args.skip_sync)
         elif args.command == "pack": package(args.adapter, args.version, args.game_directory, args.output, args.overwrite, args.configuration)
         elif args.command == "verify-package": tool("verify-package", "--package", args.package)

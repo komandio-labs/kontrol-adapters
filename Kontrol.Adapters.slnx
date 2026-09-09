@@ -13,9 +13,9 @@
     <Project Path="src/Adapters/DummyAdapter/Kontrol.Adapters.DummyAdapter.Tests/Kontrol.Adapters.DummyAdapter.Tests.csproj" />
     <Project Path="src/Adapters/SpaceEngineers2/Kontrol.Adapters.SpaceEngineers2/Kontrol.Adapters.SpaceEngineers2.csproj" />
     <Project Path="src/Adapters/SpaceEngineers2/Kontrol.Adapters.SpaceEngineers2.Tests/Kontrol.Adapters.SpaceEngineers2.Tests.csproj" />
-    <Project Path="src/Adapters/SpaceEngineers1/Kontrol.Adapters.SpaceEngineers1/Kontrol.Adapters.SpaceEngineers1.csproj" />
-    <Project Path="src/Adapters/SpaceEngineers1/Kontrol.Adapters.SpaceEngineers1.Plugin/Kontrol.Adapters.SpaceEngineers1.Plugin.csproj" />
-    <Project Path="src/Adapters/SpaceEngineers1/Kontrol.Adapters.SpaceEngineers1.Tests/Kontrol.Adapters.SpaceEngineers1.Tests.csproj" />
+    <Project Path="src/Adapters/SpaceEngineers/Kontrol.Adapters.SpaceEngineers/Kontrol.Adapters.SpaceEngineers.csproj" />
+    <Project Path="src/Adapters/SpaceEngineers/Kontrol.Adapters.SpaceEngineers.Plugin/Kontrol.Adapters.SpaceEngineers.Plugin.csproj" />
+    <Project Path="src/Adapters/SpaceEngineers/Kontrol.Adapters.SpaceEngineers.Tests/Kontrol.Adapters.SpaceEngineers.Tests.csproj" />
   </Folder>
   <Folder Name="/Sandbox/">
     <Project Path="src/Kontrol.Sandbox.Game/Kontrol.Sandbox.Game.csproj" />

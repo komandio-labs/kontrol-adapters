@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Kontrol.Adapters.SpaceEngineers1</AssemblyName>
+    <AssemblyName>Kontrol.Adapters.SpaceEngineers</AssemblyName>
     <Version>$(AdapterVersion)</Version>
     <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
     <FileVersion>$(AdapterAssemblyVersion)</FileVersion>
@@ -14,13 +14,14 @@
     <Compile Include="..\ControlLayout.cs" Link="ControlLayout.cs" />
     <ProjectReference Include="..\..\..\Kontrol.Sdk\Kontrol.Sdk.csproj" />
     <None Include="adapter.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\Kontrol.Adapters.SpaceEngineers.Plugin.xml" Link="Kontrol.Adapters.SpaceEngineers.Plugin.xml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="BuildPulsarPayload" BeforeTargets="Build">
-    <MSBuild Projects="$(MSBuildProjectDirectory)\..\Kontrol.Adapters.SpaceEngineers1.Plugin\Kontrol.Adapters.SpaceEngineers1.Plugin.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=net48" />
+    <MSBuild Projects="$(MSBuildProjectDirectory)\..\Kontrol.Adapters.SpaceEngineers.Plugin\Kontrol.Adapters.SpaceEngineers.Plugin.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=net48" />
   </Target>
   <Target Name="CopyPulsarPayload" AfterTargets="Build" DependsOnTargets="BuildPulsarPayload">
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\Kontrol.Adapters.SpaceEngineers1.Plugin\bin\$(Configuration)\net48\Kontrol.Adapters.SpaceEngineers1.Plugin.dll" DestinationFolder="$(TargetDir)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\Kontrol.Adapters.SpaceEngineers.Plugin\bin\$(Configuration)\net48\Kontrol.Adapters.SpaceEngineers.Plugin.dll" DestinationFolder="$(TargetDir)" />
   </Target>
 </Project>
