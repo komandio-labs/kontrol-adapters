@@ -1,5 +1,6 @@
 using Kontrol.Adapters.SpaceEngineers2;
 using Kontrol.Sdk.Attributes;
+using Kontrol.Sdk.Interfaces;
 using NUnit.Framework;
 using Shouldly;
 using System.Reflection;
@@ -62,6 +63,119 @@ public class InstallerTests
     }
 
     [Test]
+    public void NativePluginParameter_Uninstall_RestoresPreExistingSteamAppIdFile()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), $"Kontrol_SE2SteamAppId_{Guid.NewGuid():N}");
+        string gameDirectory = Path.Combine(testRoot, "Game2");
+        string sourceDirectory = Path.Combine(testRoot, "source");
+        Directory.CreateDirectory(gameDirectory);
+        Directory.CreateDirectory(sourceDirectory);
+
+        string sourcePlugin = Path.Combine(sourceDirectory, "Kontrol.Adapters.SpaceEngineers2.dll");
+        File.WriteAllText(sourcePlugin, "test adapter");
+        File.WriteAllText(Path.Combine(sourceDirectory, "0Harmony.dll"), "test harmony");
+        File.WriteAllText(Path.Combine(sourceDirectory, "Kontrol.Sdk.dll"), "test sdk");
+        string steamAppIdPath = Path.Combine(gameDirectory, "steam_appid.txt");
+        File.WriteAllText(steamAppIdPath, "pre-existing app id");
+
+        try
+        {
+            var installer = new SpaceEngineers2Installer();
+            installer.Install(testRoot, GameLaunchMethod.NativePluginParameter, sourcePlugin);
+            File.ReadAllText(steamAppIdPath).ShouldBe("1133870");
+            File.Exists(Path.Combine(gameDirectory, "steam_appid.txt.kontrol-backup")).ShouldBeTrue();
+
+            installer.Uninstall(testRoot, GameLaunchMethod.NativePluginParameter);
+
+            File.ReadAllText(steamAppIdPath).ShouldBe("pre-existing app id");
+            File.Exists(Path.Combine(gameDirectory, "steam_appid.txt.kontrol-backup")).ShouldBeFalse();
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [Test]
+    public void NativePluginParameter_Uninstall_DoesNotDeleteSteamAppIdChangedAfterDeployment()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), $"Kontrol_SE2SteamAppIdChanged_{Guid.NewGuid():N}");
+        string gameDirectory = Path.Combine(testRoot, "Game2");
+        string sourceDirectory = Path.Combine(testRoot, "source");
+        Directory.CreateDirectory(gameDirectory);
+        Directory.CreateDirectory(sourceDirectory);
+
+        string sourcePlugin = Path.Combine(sourceDirectory, "Kontrol.Adapters.SpaceEngineers2.dll");
+        File.WriteAllText(sourcePlugin, "test adapter");
+        File.WriteAllText(Path.Combine(sourceDirectory, "0Harmony.dll"), "test harmony");
+        File.WriteAllText(Path.Combine(sourceDirectory, "Kontrol.Sdk.dll"), "test sdk");
+        string steamAppIdPath = Path.Combine(gameDirectory, "steam_appid.txt");
+
+        try
+        {
+            var installer = new SpaceEngineers2Installer();
+            installer.Install(testRoot, GameLaunchMethod.NativePluginParameter, sourcePlugin);
+            File.WriteAllText(steamAppIdPath, "user-changed app id");
+
+            installer.Uninstall(testRoot, GameLaunchMethod.NativePluginParameter);
+
+            File.ReadAllText(steamAppIdPath).ShouldBe("user-changed app id");
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [Test]
+    public void ProcessInjection_UsesNoDeploymentAndDescribesTheHostOwnedLaunchChain()
+    {
+        var plan = new SpaceEngineers2Installer().GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.ProcessInjection,
+            Path.Combine("test-game", "SpaceEngineers2"),
+            Path.Combine("package", "Kontrol.Adapters.SpaceEngineers2.dll")));
+
+        plan.Capabilities.ShouldBe(new DeploymentMethodCapabilities(
+            CanInstall: false,
+            CanUninstall: false,
+            CanLaunch: false,
+            CanCreateShortcut: false));
+        plan.Capabilities.CanLaunch.ShouldBeFalse();
+        plan.Targets.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentTargetKind.KontrolManaged);
+        plan.Targets.Single().OwnedFiles.ShouldBeEmpty();
+        plan.Targets.Single().ConfigurationEffects.ShouldBeEmpty();
+        plan.LaunchChain.Steps.Select(step => step.Kind).ShouldBe([
+            DeploymentLaunchStepKind.Steam,
+            DeploymentLaunchStepKind.AdapterBootstrap]);
+        plan.ManualSteps.ShouldBeEmpty();
+        plan.Rollback.Effects.ShouldBeEmpty();
+    }
+
+    [Test]
+    public void NativePluginParameter_DescribesGame2FilesAndSteamPluginArgument()
+    {
+        string gameDirectory = Path.Combine("test-game", "SpaceEngineers2");
+        string sourceDllPath = Path.Combine("package", "Kontrol.Adapters.SpaceEngineers2.dll");
+        var plan = new SpaceEngineers2Installer().GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.NativePluginParameter,
+            gameDirectory,
+            sourceDllPath));
+
+        plan.Capabilities.ShouldBe(DeploymentMethodCapabilities.Standard);
+        plan.Targets.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentTargetKind.GameInstallation);
+        plan.Targets.Single().Location.ShouldBe(gameDirectory);
+        plan.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([
+            "Kontrol.Adapters.SpaceEngineers2.dll",
+            "0Harmony.dll",
+            "Kontrol.Sdk.dll"]);
+        plan.Targets.Single().ConfigurationEffects.ShouldHaveSingleItem().Scope.ShouldBe("Game2\\steam_appid.txt");
+        plan.Prerequisites.Single(prerequisite => prerequisite.Id == "steam").IsBlocking.ShouldBeFalse();
+        plan.LaunchChain.Steps.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentLaunchStepKind.Steam);
+        plan.LaunchChain.Steps.Single().Arguments!.ShouldContain("-plugins:");
+        plan.LaunchChain.Steps.Single().Arguments!.ShouldContain("Kontrol.Adapters.SpaceEngineers2.dll");
+    }
+
+    [Test]
     public void ProcessInjection_DeclaresTheManagedStartupEntryPoint()
     {
         var entryPoint = new SpaceEngineers2Installer().GetProcessInjectionEntryPoint();
@@ -74,8 +188,10 @@ public class InstallerTests
     [Test]
     public void AssemblyHooking_IsNotSupported()
     {
-        new SpaceEngineers2Installer().GetCapabilities(Kontrol.Sdk.Attributes.GameLaunchMethod.AssemblyHooking)
-            .CanLaunch.ShouldBeFalse();
+        Should.Throw<NotSupportedException>(() => new SpaceEngineers2Installer().GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.AssemblyHooking,
+            "test-game",
+            "package\\Kontrol.Adapters.SpaceEngineers2.dll")));
     }
 
     [Test]

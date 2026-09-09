@@ -15,7 +15,7 @@ public interface IAdapterInstaller
     /// Implement <see cref="GetDeploymentPlan"/> instead. This member remains so
     /// adapters compiled against SDK 1.3 and earlier can run in a newer host.
     /// </remarks>
-    [Obsolete("Implement GetDeploymentPlan(GameLaunchMethod) instead. This legacy member is used only as a fallback for adapters compiled against SDK 1.3 and earlier.")]
+    [Obsolete("Implement GetDeploymentPlan(AdapterDeploymentContext) instead. This legacy member is used only as a fallback for adapters compiled against SDK 1.3 and earlier.")]
     DeploymentMethodInformation GetDeploymentInformation(GameLaunchMethod method) => DeploymentMethodInformation.Generic(method);
 
     /// <summary>
@@ -26,7 +26,7 @@ public interface IAdapterInstaller
     /// <see cref="GetDeploymentPlan"/> instead. This member remains so adapters
     /// compiled against SDK 1.3 and earlier can run in a newer host.
     /// </remarks>
-    [Obsolete("Set AdapterDeploymentPlan.Capabilities in GetDeploymentPlan(GameLaunchMethod) instead. This legacy member is used only as a fallback for adapters compiled against SDK 1.3 and earlier.")]
+    [Obsolete("Set AdapterDeploymentPlan.Capabilities in GetDeploymentPlan(AdapterDeploymentContext) instead. This legacy member is used only as a fallback for adapters compiled against SDK 1.3 and earlier.")]
     DeploymentMethodCapabilities GetCapabilities(GameLaunchMethod method) => DeploymentMethodCapabilities.Standard;
 
     /// <summary>

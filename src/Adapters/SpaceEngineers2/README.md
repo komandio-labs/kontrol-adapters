@@ -39,6 +39,32 @@ Injection.
 Both methods activate the same process-wide
 `SpaceEngineers2AdapterRuntime`; its start guard prevents duplicate runtimes.
 
+## Adapter-owned deployment plans
+
+The adapter exposes a contextual deployment plan for each supported method.
+Kontrol resolves the selected `Game2` directory, package paths, and Steam path
+before presenting the plan; the host does not infer these effects from the
+launch-method enum.
+
+- **Process Injection** has `NoDeploymentRequired` capabilities. Its target is
+  Kontrol-managed output, it owns no SE2 files or configuration, and its launch
+  chain is Steam (`steam://run/1133870/`) followed by the host-owned native
+  bootstrap attaching to the actual `SpaceEngineers2.exe` process. It has no
+  adapter-created shortcut or uninstall files.
+- **Native Plugin Parameter** owns only
+  `Kontrol.Adapters.SpaceEngineers2.dll`, `0Harmony.dll`, and
+  `Kontrol.Sdk.dll` in the resolved `Game2` directory. It temporarily writes
+  `steam_appid.txt`, preserving and restoring any existing file on uninstall.
+  Its launch chain is
+  Steam with `-applaunch 1133870 -plugins:<absolute-adapter-path>`; custom
+  launch arguments are appended by the installer. Uninstall removes those
+  adapter-owned artifacts and leaves original game files untouched.
+
+Unsupported launch methods are rejected by the adapter. The native method
+supports install, uninstall, launch, and shortcut actions; Process Injection
+supports none of those adapter-owned deployment actions because the Kontrol
+host owns its process launch and attachment flow.
+
 ## Local development setup
 
 The adapter is compiled against locally installed, game-owned reference
@@ -91,15 +117,19 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.3.0` |
+| Adapter version | `0.4.0-beta.1` |
 | Current validated game version | `2.4.0.95` |
-| SDK contract version | `1.3.0` |
+| SDK contract version | `1.4.0` |
 | Adapter input schema | Version `9` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
 | Compatibility records | `compatibility/game-builds/*.json` |
 | Package metadata | `package.json` |
 | Runtime/package manifest | `Kontrol.Adapters.SpaceEngineers2/adapter.manifest.json` |
+
+`0.4.0-beta.1` has automated validation only. It must complete the local
+manual SE2 checklist before it receives a tested compatibility record or is
+released.
 
 When a new Space Engineers 2 build is released:
 1. Synchronize references locally with `python ./scripts/kontrol_adapters.py sync-se2`.

@@ -1,5 +1,12 @@
 # Space Engineers 2 adapter changelog
 
+## 0.4.0-beta.1 — Unreleased
+
+- Added adapter-owned contextual deployment plans for native plugin and
+  process-injection launch paths.
+- Preserved pre-existing `steam_appid.txt` files during native deployment and
+  restores them on uninstall.
+
 ## 0.3.0 — 2026-09-08
 
 ### Toolbar selection

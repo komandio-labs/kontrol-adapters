@@ -41,26 +41,197 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         new("belt.select_9", "Toolbar slot 9", "Select toolbar item in slot 9 while piloting a cockpit.", "Toolbar", 90, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button, InputSourceKind.Axis], ActionBehavior: DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event, AxisThresholdDefaults: new()),
         new("belt.select_0", "Toolbar slot 10", "Select toolbar item in slot 10 using key 0 while piloting a cockpit.", "Toolbar", 100, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button, InputSourceKind.Axis], ActionBehavior: DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event, AxisThresholdDefaults: new())
     ]);
-    public DeploymentMethodInformation GetDeploymentInformation(GameLaunchMethod method) => method switch
-    {
-        GameLaunchMethod.ProcessInjection => new("Process injection", "Kontrol launches Space Engineers 2 through Steam, validates Steam's actual game process, then loads the Kontrol bootstrap and adapter into that process.", "No Space Engineers 2 files are copied, modified, or backed up."),
-        GameLaunchMethod.NativePluginParameter => new("SE2 native plugin loader", "Kontrol copies the adapter and its required dependencies beside the Space Engineers 2 executable, then launches the game through Steam with its -plugins parameter.", "The adapter, its dependencies, and steam_appid.txt are added to Game2. No original Space Engineers 2 assembly is changed."),
-        _ => DeploymentMethodInformation.Generic(method)
-    };
     private const string HarmonyDllName = "0Harmony.dll";
     private const string SdkDllName = "Kontrol.Sdk.dll";
     private const string SteamAppIdFileName = "steam_appid.txt";
+    private const string SteamAppIdBackupFileName = "steam_appid.txt.kontrol-backup";
     private const string SteamAppId = "1133870";
     private const string ExeName = "SpaceEngineers2.exe";
+    private const string RuntimeConfigName = "SpaceEngineers2.runtimeconfig.json";
     private const string RelativeBinPath = "Game2";
     private const string PluginDllName = "Kontrol.Adapters.SpaceEngineers2.dll";
 
-    public DeploymentMethodCapabilities GetCapabilities(GameLaunchMethod method) => method switch
+    public AdapterDeploymentPlan GetDeploymentPlan(AdapterDeploymentContext context)
     {
-        GameLaunchMethod.ProcessInjection => DeploymentMethodCapabilities.NoDeploymentRequired,
-        GameLaunchMethod.NativePluginParameter => DeploymentMethodCapabilities.Standard,
-        _ => DeploymentMethodCapabilities.Unavailable
-    };
+        ArgumentNullException.ThrowIfNull(context);
+        return context.Method switch
+        {
+            GameLaunchMethod.ProcessInjection => BuildProcessInjectionPlan(context),
+            GameLaunchMethod.NativePluginParameter => BuildNativePluginPlan(context),
+            _ => throw new NotSupportedException($"SE2 does not support the {context.Method} deployment method.")
+        };
+    }
+
+    private AdapterDeploymentPlan BuildProcessInjectionPlan(AdapterDeploymentContext context)
+    {
+        string gameExeDir = GetGameExeDir(context.GameDirectory);
+        string gameExecutable = Path.Combine(gameExeDir, ExeName);
+        string runtimeConfig = Path.Combine(gameExeDir, RuntimeConfigName);
+        bool gameAvailable = File.Exists(gameExecutable);
+        bool runtimeAvailable = File.Exists(runtimeConfig);
+        bool steamAvailable = TryFindSteamExecutable(out var steamExecutable);
+        bool ready = gameAvailable && runtimeAvailable && steamAvailable;
+
+        return new AdapterDeploymentPlan(
+            context.Method,
+            new DeploymentMethodCapabilities(CanInstall: false, CanUninstall: false, CanLaunch: false, CanCreateShortcut: false),
+            "Process injection",
+            "Kontrol launches Space Engineers 2 through Steam, validates Steam's actual game process, then attaches the native bootstrap and managed adapter.",
+            "No Space Engineers 2 files are copied, modified, or backed up. The bootstrap and adapter remain in Kontrol-managed output.",
+            "Confirm that Kontrol may launch Space Engineers 2 through Steam and attach the Kontrol bootstrap to its process.",
+            [
+                new DeploymentPrerequisite(
+                    "space-engineers-2-executable",
+                    "Space Engineers 2 executable",
+                    "The selected installation must contain the CoreCLR Space Engineers 2 executable under Game2.",
+                    gameAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    gameExecutable,
+                    "Select a Space Engineers 2 installation containing Game2\\SpaceEngineers2.exe."),
+                new DeploymentPrerequisite(
+                    "space-engineers-2-runtime",
+                    "Space Engineers 2 CoreCLR runtime",
+                    "The selected installation must contain the runtime configuration used to attach the CoreCLR bootstrap.",
+                    runtimeAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    runtimeConfig,
+                    "Select a compatible CoreCLR Space Engineers 2 installation."),
+                new DeploymentPrerequisite(
+                    "steam",
+                    "Steam client",
+                    "Steam must be installed so Kontrol can launch Space Engineers 2 with its Steam application ID.",
+                    steamAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    steamExecutable,
+                    "Install Steam and sign in to the account that owns Space Engineers 2.")
+            ],
+            [new DeploymentTarget(
+                "kontrol-managed-bootstrap",
+                "Kontrol-managed process-injection runtime",
+                DeploymentTargetKind.KontrolManaged,
+                Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty,
+                Array.Empty<DeploymentOwnedFile>(),
+                Array.Empty<DeploymentConfigurationEffect>())],
+            new DeploymentLaunchChain([
+                new DeploymentLaunchStep(
+                    "Steam",
+                    DeploymentLaunchStepKind.Steam,
+                    "Kontrol starts Space Engineers 2 through Steam's recommended application launch URL.",
+                    steamExecutable,
+                    $"steam://run/{SteamAppId}/"),
+                new DeploymentLaunchStep(
+                    "Kontrol native bootstrap",
+                    DeploymentLaunchStepKind.AdapterBootstrap,
+                    "The host waits for Steam's actual SpaceEngineers2.exe process and attaches the source-built x64 bootstrap, which loads the managed adapter.")]),
+            Array.Empty<DeploymentManualStep>(),
+            new DeploymentVerification(
+                ready ? DeploymentState.NoDeploymentRequired : DeploymentState.Failed,
+                ready ? "No deployment is required; the selected game and Steam installation are ready." : "The selected game or Steam installation is not ready for process injection.",
+                DeploymentRuntimeState.NotRunning,
+                "Runtime readiness is reported after the host attaches the bootstrap and the adapter reports its connection."),
+            new DeploymentRollbackPlan(
+                "No deployment files or configuration are changed.",
+                Array.Empty<DeploymentRollbackEffect>()));
+    }
+
+    private AdapterDeploymentPlan BuildNativePluginPlan(AdapterDeploymentContext context)
+    {
+        string gameExeDir = GetGameExeDir(context.GameDirectory);
+        string gameExecutable = Path.Combine(gameExeDir, ExeName);
+        string sourceDirectory = Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty;
+        string sourceHarmonyPath = ResolveHarmonySourcePath(sourceDirectory);
+        string sourceSdkPath = Path.Combine(sourceDirectory, SdkDllName);
+        string destinationPluginPath = Path.Combine(gameExeDir, PluginDllName);
+        bool gameAvailable = Directory.Exists(gameExeDir) && File.Exists(gameExecutable);
+        bool pluginAvailable = File.Exists(context.SourceDllPath);
+        bool harmonyAvailable = File.Exists(sourceHarmonyPath);
+        bool sdkAvailable = File.Exists(sourceSdkPath);
+        bool steamAvailable = TryFindSteamExecutable(out var steamExecutable);
+        bool deployed = gameAvailable && CheckIsInstalled(gameDirectory: gameExeDir, GameLaunchMethod.NativePluginParameter);
+        bool deploymentReady = gameAvailable && pluginAvailable && harmonyAvailable && sdkAvailable;
+        DeploymentState deploymentState = !deploymentReady
+            ? DeploymentState.Failed
+            : deployed
+                ? DeploymentState.Deployed
+                : DeploymentState.NotDeployed;
+
+        return new AdapterDeploymentPlan(
+            context.Method,
+            DeploymentMethodCapabilities.Standard,
+            "SE2 native plugin loader",
+            "Kontrol copies the adapter and its required dependencies beside the Space Engineers 2 executable, then launches the game through Steam with its -plugins parameter.",
+            $"{PluginDllName}, {HarmonyDllName}, and {SdkDllName} are adapter-owned deployment files in {gameExeDir}. {SteamAppIdFileName} is temporarily written and safely restored or removed during uninstall. No original Space Engineers 2 assembly is changed.",
+            "Confirm the adapter-owned Game2 file writes and the Steam launch with the absolute native plugin parameter.",
+            [
+                new DeploymentPrerequisite(
+                    "space-engineers-2-executable",
+                    "Space Engineers 2 executable",
+                    "The selected installation must contain SpaceEngineers2.exe under Game2.",
+                    gameAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    gameExecutable,
+                    "Select a Space Engineers 2 installation containing Game2\\SpaceEngineers2.exe."),
+                new DeploymentPrerequisite(
+                    "adapter-entry-assembly",
+                    "Adapter entry assembly",
+                    "The .NET 9 adapter entry assembly must be available as the installer source.",
+                    pluginAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    context.SourceDllPath,
+                    $"Build or package {PluginDllName} before deploying."),
+                new DeploymentPrerequisite(
+                    "harmony-dependency",
+                    "Harmony dependency",
+                    "The native plugin deployment requires the packaged Harmony dependency or the adapter output fallback.",
+                    harmonyAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    harmonyAvailable ? sourceHarmonyPath : null,
+                    $"Include {HarmonyDllName} beside the adapter entry assembly or in the adapter output."),
+                new DeploymentPrerequisite(
+                    "sdk-assembly",
+                    "Kontrol SDK assembly",
+                    "The native plugin deployment requires the packaged Kontrol SDK assembly.",
+                    sdkAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    sourceSdkPath,
+                    $"Include {SdkDllName} beside the adapter entry assembly."),
+                new DeploymentPrerequisite(
+                    "steam",
+                    "Steam client",
+                    "Steam must be installed so Kontrol can pass the native plugin parameter through Steam.",
+                    steamAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    steamExecutable,
+                    "Install Steam and sign in to the account that owns Space Engineers 2.",
+                    IsBlocking: false)
+            ],
+            [new DeploymentTarget(
+                "space-engineers-2-game2",
+                "Space Engineers 2 Game2 directory",
+                DeploymentTargetKind.GameInstallation,
+                gameExeDir,
+                [
+                    new DeploymentOwnedFile(PluginDllName, "The Kontrol native plugin entry assembly copied beside Space Engineers 2."),
+                    new DeploymentOwnedFile(HarmonyDllName, "The Harmony dependency copied for the native plugin loader."),
+                    new DeploymentOwnedFile(SdkDllName, "The Kontrol SDK assembly copied for the native plugin loader.")
+                ],
+                [new DeploymentConfigurationEffect(
+                    "Game2\\steam_appid.txt",
+                    $"Temporarily writes Steam application ID {SteamAppId}; preserves and restores any pre-existing steam_appid.txt during uninstall.")])],
+            new DeploymentLaunchChain([
+                new DeploymentLaunchStep(
+                    "Steam",
+                    DeploymentLaunchStepKind.Steam,
+                    "Kontrol starts Space Engineers 2 through Steam with the absolute adapter plugin path. Custom launch arguments are appended by the installer.",
+                    steamExecutable,
+                    $"-applaunch {SteamAppId} {BuildNativePluginArgument(Path.GetFullPath(destinationPluginPath))}")]),
+            Array.Empty<DeploymentManualStep>(),
+            new DeploymentVerification(
+                deploymentState,
+                deployed ? $"The native plugin and dependencies are installed in {gameExeDir}." : deploymentReady ? "The native plugin deployment is ready but has not been installed." : "The native plugin deployment prerequisites are not satisfied.",
+                DeploymentRuntimeState.NotRunning,
+                steamAvailable
+                    ? "Runtime readiness is reported after Steam starts Space Engineers 2 and the native plugin bootstrap loads the adapter."
+                    : "Deployment can proceed, but Steam must be installed and signed in before the native plugin can launch."),
+            new DeploymentRollbackPlan(
+                $"Remove only the adapter-owned native deployment artifacts from {gameExeDir}.",
+                [
+                    new DeploymentRollbackEffect(gameExeDir, $"Delete {PluginDllName}, {HarmonyDllName}, and {SdkDllName}; leave original game files unchanged."),
+                    new DeploymentRollbackEffect(Path.Combine(gameExeDir, SteamAppIdFileName), $"Restore a pre-existing {SteamAppIdFileName}; otherwise delete the file written by Kontrol.")
+                ]));
+    }
 
     private string GetGameExeDir(string gameDirectory)
     {
@@ -87,7 +258,9 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         string gameExeDir = GetGameExeDir(gameDirectory);
         if (string.IsNullOrEmpty(gameExeDir) || !Directory.Exists(gameExeDir)) return false;
         if (method == GameLaunchMethod.ProcessInjection)
-            return File.Exists(Path.Combine(gameExeDir, ExeName)) && File.Exists(Path.Combine(gameExeDir, "SpaceEngineers2.runtimeconfig.json"));
+            return File.Exists(Path.Combine(gameExeDir, ExeName)) && File.Exists(Path.Combine(gameExeDir, RuntimeConfigName));
+        if (method != GameLaunchMethod.NativePluginParameter)
+            throw new NotSupportedException($"SE2 does not support the {method} deployment method.");
 
         string destPluginPath = Path.Combine(gameExeDir, PluginDllName);
         bool installed = File.Exists(destPluginPath);
@@ -100,6 +273,9 @@ public class SpaceEngineers2Installer : IAdapterInstaller
 
     public void Install(string gameDirectory, GameLaunchMethod method, string sourceDllPath)
     {
+        if (method != GameLaunchMethod.ProcessInjection && method != GameLaunchMethod.NativePluginParameter)
+            throw new NotSupportedException($"SE2 does not support the {method} deployment method.");
+
         string gameExeDir = GetGameExeDir(gameDirectory);
         if (!Directory.Exists(gameExeDir))
         {
@@ -107,7 +283,7 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         }
         if (method == GameLaunchMethod.ProcessInjection)
         {
-            if (!File.Exists(Path.Combine(gameExeDir, ExeName)) || !File.Exists(Path.Combine(gameExeDir, "SpaceEngineers2.runtimeconfig.json")))
+            if (!File.Exists(Path.Combine(gameExeDir, ExeName)) || !File.Exists(Path.Combine(gameExeDir, RuntimeConfigName)))
                 throw new FileNotFoundException("The selected folder is not a compatible CoreCLR SE2 installation.");
             return;
         }
@@ -150,12 +326,15 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         ClearReadOnlyAttribute(destSdkPath);
         File.Copy(sourceSdkPath, destSdkPath, overwrite: true);
 
-        // Write steam_appid.txt next to the executable.
-        File.WriteAllText(steamAppIdPath, SteamAppId);
+        WriteSteamAppIdPreservingExisting(steamAppIdPath);
     }
 
     public void Uninstall(string gameDirectory, GameLaunchMethod method)
     {
+        if (method == GameLaunchMethod.ProcessInjection) return;
+        if (method != GameLaunchMethod.NativePluginParameter)
+            throw new NotSupportedException($"SE2 does not support the {method} deployment method.");
+
         string gameExeDir = GetGameExeDir(gameDirectory);
         if (!Directory.Exists(gameExeDir)) return;
 
@@ -177,11 +356,7 @@ public class SpaceEngineers2Installer : IAdapterInstaller
             try { ClearReadOnlyAttribute(sdkPath); File.Delete(sdkPath); } catch {}
         }
 
-        string steamAppIdPath = Path.Combine(gameExeDir, SteamAppIdFileName);
-        if (File.Exists(steamAppIdPath))
-        {
-            try { ClearReadOnlyAttribute(steamAppIdPath); File.Delete(steamAppIdPath); } catch {}
-        }
+        RestoreOrRemoveSteamAppId(Path.Combine(gameExeDir, SteamAppIdFileName));
     }
 
     public void Launch(string gameDirectory, GameLaunchMethod method, string sourceDllPath) =>
@@ -232,31 +407,26 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("SE2 launch shortcuts are supported on Windows only.");
+        if (method != GameLaunchMethod.NativePluginParameter)
+            throw new NotSupportedException("Process injection does not provide an adapter-created launch shortcut.");
 
         string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        if (method == GameLaunchMethod.NativePluginParameter)
+        string pluginPath = Path.GetFullPath(Path.Combine(GetGameExeDir(gameDirectory), PluginDllName));
+        string steamExecutable = FindSteamExecutable();
+        Type shellType = Type.GetTypeFromProgID("WScript.Shell")
+            ?? throw new PlatformNotSupportedException("Windows Script Host is required to create a Steam launch shortcut.");
+        dynamic shell = Activator.CreateInstance(shellType)
+            ?? throw new InvalidOperationException("Windows Script Host could not be started.");
+        dynamic shortcut = shell.CreateShortcut(Path.Combine(desktopPath, "Space Engineers 2 (VRAGE3) Deployed.lnk"));
+        shortcut.TargetPath = steamExecutable;
+        string arguments = $"-applaunch {SteamAppId} {BuildNativePluginArgument(pluginPath)}";
+        if (!string.IsNullOrWhiteSpace(customLaunchArguments))
         {
-            string pluginPath = Path.GetFullPath(Path.Combine(GetGameExeDir(gameDirectory), PluginDllName));
-            string steamExecutable = FindSteamExecutable();
-            Type shellType = Type.GetTypeFromProgID("WScript.Shell")
-                ?? throw new PlatformNotSupportedException("Windows Script Host is required to create a Steam launch shortcut.");
-            dynamic shell = Activator.CreateInstance(shellType)
-                ?? throw new InvalidOperationException("Windows Script Host could not be started.");
-            dynamic shortcut = shell.CreateShortcut(Path.Combine(desktopPath, "Space Engineers 2 (VRAGE3) Deployed.lnk"));
-            shortcut.TargetPath = steamExecutable;
-            string arguments = $"-applaunch {SteamAppId} {BuildNativePluginArgument(pluginPath)}";
-            if (!string.IsNullOrWhiteSpace(customLaunchArguments))
-            {
-                arguments += $" {customLaunchArguments.Trim()}";
-            }
-            shortcut.Arguments = arguments;
-            shortcut.WorkingDirectory = Path.GetDirectoryName(steamExecutable);
-            shortcut.Save();
-            return;
+            arguments += $" {customLaunchArguments.Trim()}";
         }
-
-        string shortcutPath = Path.Combine(desktopPath, "Space Engineers 2 (VRAGE3) Deployed.url");
-        File.WriteAllText(shortcutPath, $"[InternetShortcut]\nURL=steam://run/{SteamAppId}/");
+        shortcut.Arguments = arguments;
+        shortcut.WorkingDirectory = Path.GetDirectoryName(steamExecutable);
+        shortcut.Save();
     }
 
     internal static string BuildNativePluginArgument(string absolutePluginPath) => $"-plugins:{absolutePluginPath}";
@@ -278,7 +448,75 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         return steamExecutable;
     }
 
-    private void ClearReadOnlyAttribute(string path)
+    private static bool TryFindSteamExecutable(out string? steamExecutable)
+    {
+        try
+        {
+            steamExecutable = FindSteamExecutable();
+            return true;
+        }
+        catch (Exception) when (OperatingSystem.IsWindows())
+        {
+            steamExecutable = null;
+            return false;
+        }
+        catch (PlatformNotSupportedException)
+        {
+            steamExecutable = null;
+            return false;
+        }
+    }
+
+    private static string ResolveHarmonySourcePath(string sourceDirectory)
+    {
+        string packagedHarmonyPath = Path.Combine(sourceDirectory, HarmonyDllName);
+        if (File.Exists(packagedHarmonyPath)) return packagedHarmonyPath;
+        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, HarmonyDllName);
+    }
+
+    private static void WriteSteamAppIdPreservingExisting(string steamAppIdPath)
+    {
+        string backupPath = Path.Combine(Path.GetDirectoryName(steamAppIdPath) ?? string.Empty, SteamAppIdBackupFileName);
+        if (File.Exists(backupPath))
+        {
+            bool alreadyDeployed = File.Exists(steamAppIdPath) &&
+                string.Equals(File.ReadAllText(steamAppIdPath).Trim(), SteamAppId, StringComparison.Ordinal);
+            if (!alreadyDeployed)
+                throw new IOException($"Cannot safely deploy because the Kontrol backup file already exists: {backupPath}");
+        }
+        else if (File.Exists(steamAppIdPath))
+        {
+            File.Copy(steamAppIdPath, backupPath);
+        }
+
+        ClearReadOnlyAttribute(steamAppIdPath);
+        File.WriteAllText(steamAppIdPath, SteamAppId);
+    }
+
+    private static void RestoreOrRemoveSteamAppId(string steamAppIdPath)
+    {
+        string backupPath = Path.Combine(Path.GetDirectoryName(steamAppIdPath) ?? string.Empty, SteamAppIdBackupFileName);
+        try
+        {
+            ClearReadOnlyAttribute(steamAppIdPath);
+            if (File.Exists(backupPath))
+            {
+                File.Copy(backupPath, steamAppIdPath, overwrite: true);
+                ClearReadOnlyAttribute(backupPath);
+                File.Delete(backupPath);
+                return;
+            }
+
+            if (File.Exists(steamAppIdPath) &&
+                string.Equals(File.ReadAllText(steamAppIdPath).Trim(), SteamAppId, StringComparison.Ordinal))
+            {
+                File.Delete(steamAppIdPath);
+            }
+        }
+        catch { }
+    }
+
+    private static void ClearReadOnlyAttribute(string path)
     {
         try
         {

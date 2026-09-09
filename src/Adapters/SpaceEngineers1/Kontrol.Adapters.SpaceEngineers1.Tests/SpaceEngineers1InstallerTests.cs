@@ -26,9 +26,26 @@ public class SpaceEngineers1InstallerTests
     public void PulsarDeployment_UsesTheExistingPluginFolderLifecycle()
     {
         var installer = new SpaceEngineers1Installer();
-        installer.GetCapabilities(GameLaunchMethod.BinPluginsFolder).ShouldBe(DeploymentMethodCapabilities.Standard);
-        installer.GetCapabilities(GameLaunchMethod.NativePluginParameter).ShouldBe(DeploymentMethodCapabilities.Unavailable);
-        installer.GetDeploymentInformation(GameLaunchMethod.BinPluginsFolder).Title.ShouldBe("Pulsar Legacy plugin");
+        var plan = installer.GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.BinPluginsFolder,
+            Path.Combine("test-game", "SpaceEngineers"),
+            Path.Combine("package", "Kontrol.Adapters.SpaceEngineers1.dll")));
+
+        plan.Capabilities.ShouldBe(new DeploymentMethodCapabilities(
+            CanInstall: true,
+            CanUninstall: true,
+            CanLaunch: true,
+            CanCreateShortcut: false));
+        plan.Title.ShouldBe("Pulsar Legacy plugin");
+        plan.Targets.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentTargetKind.ExternalLoader);
+        plan.Targets.Single().Location.ShouldEndWith(Path.Combine("Legacy", "Local"));
+        plan.Targets.Single().OwnedFiles.ShouldHaveSingleItem().Path.ShouldBe("Kontrol.Adapters.SpaceEngineers1.Plugin.dll");
+        plan.Prerequisites.Single(prerequisite => prerequisite.Id == "pulsar-local-plugin-write-access")
+            .State.ShouldBe(DeploymentPrerequisiteState.Unknown);
+        plan.LaunchChain.Steps.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentLaunchStepKind.ExternalLauncher);
+        plan.LaunchChain.Steps.Single().Executable.ShouldEndWith(Path.Combine("Pulsar", "Legacy.exe"));
+        plan.LaunchChain.Steps.Single().Arguments!.ShouldContain("SpaceEngineers.exe");
+        plan.ManualSteps.ShouldHaveSingleItem().Instruction.ShouldContain("active Pulsar Legacy profile");
     }
 
     [Test]
@@ -42,15 +59,19 @@ public class SpaceEngineers1InstallerTests
         string hostEntry = "Kontrol.Adapters.SpaceEngineers1.dll";
         string pulsarPayload = "Kontrol.Adapters.SpaceEngineers1.Plugin.dll";
 
-        var deployment = new SpaceEngineers1Installer().GetDeploymentInformation(GameLaunchMethod.BinPluginsFolder);
+        var deployment = new SpaceEngineers1Installer().GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.BinPluginsFolder,
+            Path.Combine("test-game", "SpaceEngineers"),
+            Path.Combine(adapterRoot, hostEntry)));
         manifest.RootElement.GetProperty("pluginDll").GetString().ShouldBe(hostEntry);
         package.RootElement.GetProperty("entryAssembly").GetString().ShouldBe(hostEntry);
         package.RootElement.GetProperty("targetFramework").GetString().ShouldBe("net9.0");
         package.RootElement.GetProperty("package").GetProperty("include").EnumerateArray()
             .Select(item => item.GetString())
             .ShouldBe(new[] { hostEntry, "Kontrol.Sdk.dll", pulsarPayload, "adapter.manifest.json", "LICENSE", "THIRD_PARTY_NOTICES.md" });
-        deployment.Summary.ShouldContain(".NET Framework");
-        deployment.Effects.ShouldContain($"Only {pulsarPayload} is copied to Pulsar");
+        deployment.Summary.ShouldContain("separate .NET Framework payload");
+        deployment.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([pulsarPayload]);
+        deployment.Targets.Single().Location.ShouldEndWith(Path.Combine("Legacy", "Local"));
 
         string payloadProject = File.ReadAllText(Path.Combine(
             adapterRoot, "Kontrol.Adapters.SpaceEngineers1.Plugin", "Kontrol.Adapters.SpaceEngineers1.Plugin.csproj"));

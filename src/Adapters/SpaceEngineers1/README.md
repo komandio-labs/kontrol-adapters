@@ -18,6 +18,22 @@ Initial API-first adapter for the Space Engineers 1 client. It uses Pulsar Legac
 
 The plugin releases injected movement when Kontrol input is disabled, when no locally controlled entity is available, or when Pulsar unloads it. Axis direction must be checked with the generated local manual checklist before this build is considered validated.
 
+## Adapter-owned deployment plan
+
+The `BinPluginsFolder` plan is resolved from the selected game directory and the
+Pulsar root. Its Kontrol entry assembly is the packaged `.NET 9`
+`Kontrol.Adapters.SpaceEngineers1.dll`; its only owned deployment file is the
+separate `.NET Framework 4.8` payload
+`Kontrol.Adapters.SpaceEngineers1.Plugin.dll`.
+
+Kontrol writes that payload to the resolved Pulsar Legacy target
+`<Pulsar root>\Legacy\Local`, launches `<Pulsar root>\Legacy.exe` with
+`<Space Engineers root>\Bin64\SpaceEngineers.exe`, and does not write Space
+Engineers files or Steam launch settings. The active Pulsar Legacy profile must
+still be enabled manually. Uninstall removes only the adapter-owned payload;
+Pulsar Legacy itself and the game installation remain unchanged. Shortcuts are
+not supported for this adapter.
+
 ## Local Pulsar test
 
 1. Install Pulsar separately and choose its **Legacy** runtime for Space Engineers 1.
