@@ -4,7 +4,7 @@
   "adapterId": "space-engineers",
   "slug": "space-engineers",
   "displayName": "Space Engineers",
-  "adapterVersion": "1.1.0",
+  "adapterVersion": "1.0.0-beta.1",
   "sdkVersion": "1.4.0",
   "entryAssembly": "Kontrol.Adapters.SpaceEngineers.dll",
   "inputSchemaVersion": 2,

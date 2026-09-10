@@ -4,7 +4,7 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 
 | Metadata | Value |
 | --- | --- |
-| Adapter version | `1.1.0` |
+| Adapter version | `1.0.0-beta.1` |
 | Target game build | `steam-build-24675677` |
 | Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers.dll` (`net9.0`) |
 | Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers.Plugin.dll` + `0Harmony.dll` (`net48`) |
