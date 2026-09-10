@@ -18,6 +18,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\ControlLayout.cs" Link="ControlLayout.cs" />
+    <ProjectReference Include="..\..\..\Kontrol.Sdk\Kontrol.Sdk.csproj" />
     <None Include="Kontrol.Adapters.SpaceEngineers.Plugin.xml" CopyToOutputDirectory="PreserveNewest" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
@@ -29,4 +30,7 @@
     <Reference Include="Sandbox.Common"><HintPath>$(SpaceEngineersReferencesDirectory)\Sandbox.Common.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Sandbox.Game"><HintPath>$(SpaceEngineersReferencesDirectory)\Sandbox.Game.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
+  <Target Name="CopyPortableSdkForPulsarPackage" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetDir)Kontrol.Sdk.dll" DestinationFiles="$(TargetDir)Kontrol.Sdk.Pulsar.dll" />
+  </Target>
 </Project>

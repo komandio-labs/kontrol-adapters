@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="$(MSBuildProjectDirectory)\..\AdapterVersion.props" />
+  <Import Project="$(MSBuildProjectDirectory)\..\references\ActiveVersion.props" Condition="Exists('$(MSBuildProjectDirectory)\..\references\ActiveVersion.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Kontrol.Adapters.SpaceEngineers2.Pulsar</AssemblyName>
+    <Version>$(AdapterVersion)</Version>
+    <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(AdapterAssemblyVersion)</FileVersion>
+    <InformationalVersion>$(AdapterVersion)</InformationalVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <AssemblyTitle>Kontrol Pulsar Modern plugin for Space Engineers 2</AssemblyTitle>
+    <Product>Kontrol</Product>
+    <Description>Pulsar Modern entry point for Kontrol joystick, HOTAS, and HOSAS controls in Space Engineers 2.</Description>
+    <Company>Komandio Labs</Company>
+    <Authors>Komandio Labs</Authors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kontrol.Adapters.SpaceEngineers2\Kontrol.Adapters.SpaceEngineers2.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VRage.Core">
+      <HintPath>$(MSBuildProjectDirectory)\..\references\$(SpaceEngineers2ReferenceVersion)\VRage.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

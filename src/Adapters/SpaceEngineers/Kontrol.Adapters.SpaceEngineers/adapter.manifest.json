@@ -17,5 +17,13 @@
   },
   "version": "1.0.0-beta.1",
   "gameProductVersion": "steam-build-24675677",
+  "gameBuildIdentity": {
+    "platform": "steam",
+    "platformAppId": "244850",
+    "platformBuildId": "24675677",
+    "productVersion": null,
+    "isProductVersionMeaningful": false,
+    "fingerprintBuildId": null
+  },
   "relevantAssemblies": [ "VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Game.dll" ]
 }

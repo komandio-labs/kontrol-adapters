@@ -13,14 +13,14 @@ public sealed class AdapterSettingsSnapshot
     public ulong SequenceNumber { get; init; }
     public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     public IReadOnlyDictionary<string, object?> Values { get; }
-    public IReadOnlySet<string> ActiveKeys { get; }
+    public IReadOnlyCollection<string> ActiveKeys { get; }
     public IReadOnlyDictionary<string, NumberSettingPresentation> NumberPresentations { get; }
 
     public AdapterSettingsSnapshot(
         ulong sequenceNumber,
         DateTime timestampUtc,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string>? activeKeys = null)
+        IReadOnlyCollection<string>? activeKeys = null)
         : this(sequenceNumber, timestampUtc, values, activeKeys, null)
     {
     }
@@ -30,7 +30,7 @@ public sealed class AdapterSettingsSnapshot
         ulong sequenceNumber,
         DateTime timestampUtc,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string>? activeKeys,
+        IReadOnlyCollection<string>? activeKeys,
         IReadOnlyDictionary<string, NumberSettingPresentation>? numberPresentations)
     {
         SequenceNumber = sequenceNumber;

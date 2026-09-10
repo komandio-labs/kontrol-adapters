@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Diagnostics;
 using Kontrol.Sdk.IPC;
 
 namespace Kontrol.Sdk.Diagnostics;
@@ -19,6 +20,10 @@ public enum AdapterRuntimeState
 /// <summary>Reports that an adapter was loaded in a target process, its operational state, and diagnostic health.</summary>
 public sealed class AdapterConnectionReporter(string adapterId) : IDisposable
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
     private readonly MmfChannel<TelemetryData> _channel = new($"Local\\Kontrol_AdapterStatus_{adapterId}");
     private readonly AdapterLogReporter _diagnosticReporter = new(adapterId);
     private long _sequence;
@@ -61,13 +66,13 @@ public sealed class AdapterConnectionReporter(string adapterId) : IDisposable
             var payload = new AdapterRuntimeStatus(
                 ++_sequence,
                 state,
-                Environment.ProcessId,
+                Process.GetCurrentProcess().Id,
                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 _activeError?.Title,
                 _activeError?.Message,
                 _activeError?.Recommendation);
 
-            frame.SetJson(JsonSerializer.Serialize(payload));
+            frame.SetJson(JsonSerializer.Serialize(payload, SerializerOptions));
             _channel.Write(ref frame);
         }
         catch (Exception ex)

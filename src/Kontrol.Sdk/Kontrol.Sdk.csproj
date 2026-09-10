@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net9.0;netstandard2.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -26,6 +27,17 @@
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+    <Compile Remove="Compatibility\**\*.cs" />
+    <Compile Remove="Interfaces\**\*.cs" />
+    <Compile Remove="Inputs\**\*.cs" />
+    <Compile Remove="Settings\**\*.cs" />
+    <Compile Remove="Telemetry\**\*.cs" />
+    <Compile Remove="Diagnostics\AdapterTraceDescriptor.cs" />
+    <Compile Include="Compatibility\NetStandardCompilerServices.cs" />
   </ItemGroup>
 
 </Project>

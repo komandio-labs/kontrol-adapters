@@ -7,7 +7,8 @@
     <PackageReference Include="Shouldly" Version="4.2.1" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\LegacyIpc.cs" Link="Plugin\LegacyIpc.cs" />
+    <Compile Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\PulsarStartupTrace.cs" Link="Plugin\PulsarStartupTrace.cs" />
+    <Compile Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\LegacyFlightSettings.cs" Link="Plugin\LegacyFlightSettings.cs" />
     <ProjectReference Include="..\Kontrol.Adapters.SpaceEngineers\Kontrol.Adapters.SpaceEngineers.csproj" />
   </ItemGroup>
 </Project>

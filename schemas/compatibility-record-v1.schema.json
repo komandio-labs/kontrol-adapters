@@ -16,6 +16,7 @@
         "product": { "type": "string", "minLength": 1 },
         "productVersion": { "type": "string", "minLength": 1 },
         "steamBuildId": { "type": ["string", "null"] },
+        "buildIdentity": { "$ref": "#/$defs/gameBuildIdentity" },
         "relevantAssemblies": { "type": "object", "minProperties": 1 }
       }
     },
@@ -29,6 +30,21 @@
         "automatedTests": { "enum": ["passed", "pending", "failed", "not-run"] },
         "manualChecklist": { "enum": ["passed", "pending", "failed", "not-run"] },
         "limitations": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "gameBuildIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["isProductVersionMeaningful"],
+      "properties": {
+        "platform": { "type": ["string", "null"] },
+        "platformAppId": { "type": ["string", "null"] },
+        "platformBuildId": { "type": ["string", "null"] },
+        "productVersion": { "type": ["string", "null"] },
+        "isProductVersionMeaningful": { "type": "boolean" },
+        "fingerprintBuildId": { "type": ["string", "null"] }
       }
     }
   }

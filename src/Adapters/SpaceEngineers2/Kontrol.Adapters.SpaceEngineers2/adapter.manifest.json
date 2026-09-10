@@ -8,11 +8,19 @@
   "steamAppId": "1133870",
   "requiresHarmony": true,
   "requiresCore": true,
-  "supportedMethods": [ "NativePluginParameter", "ProcessInjection" ],
+  "supportedMethods": [ "NativePluginParameter", "BinPluginsFolder", "ProcessInjection" ],
   "defaultDeploymentMethod": "NativePluginParameter",
   "image": "icon.png",
   "version": "0.4.0-beta.1",
   "gameProductVersion": "2.4.0.95",
+  "gameBuildIdentity": {
+    "platform": "steam",
+    "platformAppId": "1133870",
+    "platformBuildId": "24993846",
+    "productVersion": "2.4.0.95",
+    "isProductVersionMeaningful": true,
+    "fingerprintBuildId": null
+  },
   "relevantAssemblies": [
     "Game2.Client.dll",
     "Game2.Simulation.dll",

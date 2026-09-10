@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Kontrol.Sdk.Compatibility;
 using Kontrol.Sdk.Interfaces;
 using Kontrol.Sdk.Settings;
 
@@ -236,7 +237,8 @@ public sealed record AdapterManifest(
     IReadOnlyList<string> Architectures,
     IReadOnlyList<string> PackageFiles,
     string? GameProductVersion = null,
-    IReadOnlyList<string>? RelevantAssemblies = null);
+    IReadOnlyList<string>? RelevantAssemblies = null,
+    GameBuildIdentity? GameBuildIdentity = null);
 
 public enum CompatibilityClassification
 {
@@ -296,8 +298,9 @@ public static class AdapterRepository
         var inspection = JsonNode.Parse(File.ReadAllText(inspectionPath))?.AsObject() ?? throw new InvalidOperationException("Inspection JSON is invalid.");
         if (!string.Equals(inspection["adapterId"]?.GetValue<string>(), manifest.AdapterId, StringComparison.Ordinal))
             throw new InvalidOperationException("Inspection adapter ID does not match the selected manifest.");
-        if (string.IsNullOrWhiteSpace(inspection["productVersion"]?.GetValue<string>()))
-            throw new InvalidOperationException("Inspection does not contain a product version.");
+        GameBuildIdentity identity = ReadBuildIdentity(inspection, "buildIdentity");
+        if (identity.CanonicalIdentifier is null)
+            throw new InvalidOperationException("Inspection does not contain a canonical build identity or meaningful product version.");
         if (inspection["relevantAssemblies"] is not JsonObject assemblies || assemblies.Count == 0)
             throw new InvalidOperationException("Inspection does not contain relevant assembly evidence.");
         foreach ((string name, JsonNode? value) in assemblies)
@@ -313,8 +316,7 @@ public static class AdapterRepository
         ValidateCompatibility(root, slug, inspectionPath);
         AdapterManifest manifest = GetManifest(root, slug);
         var inspection = JsonNode.Parse(File.ReadAllText(inspectionPath))!.AsObject();
-        string productVersion = inspection["productVersion"]!.GetValue<string>();
-        var inspectedAssemblies = inspection["relevantAssemblies"]!.AsObject();
+        GameBuildEvidence inspectedEvidence = ReadBuildEvidence(inspection, "buildIdentity");
         var classifications = new List<CompatibilityClassification>();
 
         string compatibilityRoot = Path.Combine(AdapterRoot(manifest), "compatibility", "game-builds");
@@ -324,9 +326,12 @@ public static class AdapterRepository
             var record = JsonNode.Parse(File.ReadAllText(recordPath))?.AsObject();
             if (record is null || !string.Equals(record["adapterVersion"]?.GetValue<string>(), manifest.AdapterVersion, StringComparison.Ordinal)) continue;
             var game = record["game"]?.AsObject();
-            if (!string.Equals(game?["productVersion"]?.GetValue<string>(), productVersion, StringComparison.Ordinal)) continue;
-            var requiredAssemblies = game?["relevantAssemblies"]?.AsObject();
-            if (requiredAssemblies is null || !FingerprintsMatch(requiredAssemblies, inspectedAssemblies)) continue;
+            if (game is null) continue;
+            GameBuildEvidence expectedEvidence = ReadBuildEvidence(game, "buildIdentity");
+            GameBuildEvidence observedEvidence = game["buildIdentity"] is null
+                ? ReadBuildEvidence(inspection, "legacyBuildIdentity")
+                : inspectedEvidence;
+            if (GameBuildCompatibility.Evaluate(expectedEvidence, observedEvidence) != GameBuildCompatibilityMatch.Verified) continue;
             classifications.Add(record["validation"]?["result"]?.GetValue<string>() switch
             {
                 "tested" => CompatibilityClassification.Tested,
@@ -378,8 +383,11 @@ public static class AdapterRepository
         var architectures = document["architectures"]?.AsArray().Select(node => node?.GetValue<string>() ?? throw new InvalidOperationException($"Manifest '{path}' has an invalid architecture.")).ToArray()
             ?? throw new InvalidOperationException($"Manifest '{path}' is missing architectures.");
         string? gameProductVersion = document["gameProductVersion"]?.GetValue<string>();
+        GameBuildIdentity? gameBuildIdentity = document["gameBuildIdentity"] is JsonObject buildIdentity
+            ? buildIdentity.Deserialize<GameBuildIdentity>()
+            : null;
         var relevantAssemblies = document["relevantAssemblies"]?.AsArray().Select(node => node?.GetValue<string>() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToArray();
-        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include, gameProductVersion, relevantAssemblies);
+        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include, gameProductVersion, relevantAssemblies, gameBuildIdentity);
     }
 
     private static void ValidateManifest(string root, AdapterManifest manifest)
@@ -439,18 +447,33 @@ public static class AdapterRepository
         }
     }
 
-    private static bool FingerprintsMatch(JsonObject requiredAssemblies, JsonObject inspectedAssemblies)
+    private static GameBuildEvidence ReadBuildEvidence(JsonObject document, string identityProperty)
     {
-        foreach ((string name, JsonNode? requiredNode) in requiredAssemblies)
+        var assemblies = document["relevantAssemblies"]?.AsObject()
+            ?? throw new InvalidOperationException("Game-build evidence does not contain relevant assemblies.");
+        return new GameBuildEvidence(
+            ReadBuildIdentity(document, identityProperty),
+            assemblies.Select(pair =>
+            {
+                var evidence = pair.Value?.AsObject() ?? throw new InvalidOperationException($"Game-build evidence for '{pair.Key}' is invalid.");
+                string sha256 = evidence["sha256"]?.GetValue<string>() ?? throw new InvalidOperationException($"Game-build evidence for '{pair.Key}' has no SHA-256.");
+                return new GameAssemblyFingerprint(pair.Key, sha256, evidence["mvid"]?.GetValue<string>());
+            }).ToArray());
+    }
+
+    private static GameBuildIdentity ReadBuildIdentity(JsonObject document, string identityProperty)
+    {
+        if (document[identityProperty] is JsonObject identityNode)
         {
-            var required = requiredNode?.AsObject();
-            var inspected = inspectedAssemblies[name]?.AsObject();
-            if (required is null || inspected is null) return false;
-            if (!string.Equals(required["sha256"]?.GetValue<string>(), inspected["sha256"]?.GetValue<string>(), StringComparison.OrdinalIgnoreCase)) return false;
-            string? requiredMvid = required["mvid"]?.GetValue<string>();
-            if (!string.IsNullOrWhiteSpace(requiredMvid) && !string.Equals(requiredMvid, inspected["mvid"]?.GetValue<string>(), StringComparison.OrdinalIgnoreCase)) return false;
+            return identityNode.Deserialize<GameBuildIdentity>()
+                ?? throw new InvalidOperationException("Game-build identity is invalid.");
         }
-        return true;
+
+        string? productVersion = document["productVersion"]?.GetValue<string>();
+        string? steamBuildId = document["steamBuildId"]?.GetValue<string>();
+        return !string.IsNullOrWhiteSpace(steamBuildId)
+            ? new GameBuildIdentity("steam", null, steamBuildId, productVersion, false)
+            : new GameBuildIdentity(null, null, null, productVersion, !string.IsNullOrWhiteSpace(productVersion));
     }
 
     public static string NormalizeSlug(string slug) => slug switch
@@ -463,6 +486,7 @@ public static class AdapterRepository
     private static string AdapterFolder(string slug) => slug switch
     {
         "space-engineers-2" or "spaceengineers2" => "SpaceEngineers2",
+        "space-engineers" or "spaceengineers" => "SpaceEngineers",
         "dummy-adapter" or "dummyadapter" => "DummyAdapter",
         _ => slug
     };
@@ -510,6 +534,22 @@ public static class AdapterPackage
                 "THIRD_PARTY_NOTICES.md" => Path.Combine(adapterRoot, "THIRD_PARTY_NOTICES.md"),
                 _ => Path.Combine(outputDirectory, include)
             };
+            if (!File.Exists(source) && include.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                string[] candidates = Directory.EnumerateFiles(adapterRoot, include, SearchOption.AllDirectories)
+                    .Where(path => path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}{configuration}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                if (candidates.Length == 1) source = candidates[0];
+            }
+            if (!File.Exists(source) && include.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            {
+                string[] candidates = Directory.EnumerateFiles(adapterRoot, include, SearchOption.AllDirectories)
+                    .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                if (candidates.Length == 1) source = candidates[0];
+            }
             if (!File.Exists(source)) throw new FileNotFoundException($"Required package file is missing: {source}");
             files[include] = source;
         }

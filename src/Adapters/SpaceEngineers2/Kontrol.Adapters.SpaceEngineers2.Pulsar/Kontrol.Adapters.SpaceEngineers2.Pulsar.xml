@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PluginData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="GitHubPlugin">
+  <Id>kontrol-space-engineers-2</Id>
+  <FriendlyName>Kontrol Joystick / HOTAS / HOSAS for Space Engineers 2</FriendlyName>
+  <Author>Komandio Labs</Author>
+  <Tooltip>Hardware flight controls for Space Engineers 2, provided by Kontrol.</Tooltip>
+  <Description>Use Kontrol to map joystick, HOTAS, HOSAS, controller, and button-box inputs for Space Engineers 2.
+
+Controls: pitch, roll, yaw; forward/reverse thrust, strafe, and lift; dampeners, lights, parking brakes, power, and leave cockpit; primary fire and reload; camera-mode switch; cruise-control set/increase/decrease; and toolbar slots 1–10.
+
+For setup, controls, and troubleshooting, visit https://www.komandio.com/kontrol.</Description>
+  <Runtimes>CoreCLR</Runtimes>
+  <Platforms>Windows</Platforms>
+</PluginData>

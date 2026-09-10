@@ -59,7 +59,76 @@ public class InstallerTests
 
         metadata.ShouldNotBeNull();
         metadata.DefaultDeploymentMethod.ShouldBe(GameLaunchMethod.NativePluginParameter);
-        metadata.SupportedMethods.ShouldBe([GameLaunchMethod.NativePluginParameter, GameLaunchMethod.ProcessInjection]);
+        metadata.SupportedMethods.ShouldBe([GameLaunchMethod.NativePluginParameter, GameLaunchMethod.BinPluginsFolder, GameLaunchMethod.ProcessInjection]);
+    }
+
+    [Test]
+    public void PulsarModern_InstallsAndRemovesOnlyItsOwnedLocalPayload()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), $"Kontrol_SE2Pulsar_{Guid.NewGuid():N}");
+        string pulsarRoot = Path.Combine(testRoot, "Pulsar");
+        string sourceDirectory = Path.Combine(testRoot, "source");
+        string gameDirectory = Path.Combine(testRoot, "SpaceEngineers2", "Game2");
+        Directory.CreateDirectory(pulsarRoot);
+        Directory.CreateDirectory(sourceDirectory);
+        Directory.CreateDirectory(gameDirectory);
+        File.WriteAllText(Path.Combine(pulsarRoot, "Modern.exe"), "test pulsar");
+        File.WriteAllText(Path.Combine(gameDirectory, "SpaceEngineers2.exe"), "test game");
+        foreach (string file in new[]
+                 {
+                     "Kontrol.Adapters.SpaceEngineers2.dll",
+                     "Kontrol.Adapters.SpaceEngineers2.Pulsar.dll",
+                     "Kontrol.Adapters.SpaceEngineers2.Pulsar.xml",
+                     "Kontrol.Sdk.dll",
+                     "0Harmony.dll"
+                 })
+            File.WriteAllText(Path.Combine(sourceDirectory, file), "test payload");
+
+        string localDirectory = Path.Combine(pulsarRoot, "Modern", "Local", "Kontrol.Adapters.SpaceEngineers2.Pulsar");
+        string unrelatedFile = Path.Combine(localDirectory, "user-file.txt");
+        string? previousRoot = Environment.GetEnvironmentVariable("KONTROL_PULSAR_DIRECTORY");
+        Environment.SetEnvironmentVariable("KONTROL_PULSAR_DIRECTORY", pulsarRoot);
+        try
+        {
+            var installer = new SpaceEngineers2Installer();
+            string sourceDllPath = Path.Combine(sourceDirectory, "Kontrol.Adapters.SpaceEngineers2.dll");
+
+            installer.Install(gameDirectory, GameLaunchMethod.BinPluginsFolder, sourceDllPath);
+            installer.CheckIsInstalled(gameDirectory, GameLaunchMethod.BinPluginsFolder).ShouldBeTrue();
+            File.WriteAllText(unrelatedFile, "keep me");
+
+            installer.Uninstall(gameDirectory, GameLaunchMethod.BinPluginsFolder);
+
+            installer.CheckIsInstalled(gameDirectory, GameLaunchMethod.BinPluginsFolder).ShouldBeFalse();
+            File.Exists(unrelatedFile).ShouldBeTrue();
+            File.Exists(Path.Combine(gameDirectory, "SpaceEngineers2.exe")).ShouldBeTrue();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("KONTROL_PULSAR_DIRECTORY", previousRoot);
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [Test]
+    public void PulsarModern_PlanDeclaresNet10PayloadAndNoGameFileWrites()
+    {
+        var plan = new SpaceEngineers2Installer().GetDeploymentPlan(new AdapterDeploymentContext(
+            GameLaunchMethod.BinPluginsFolder,
+            Path.Combine("test-game", "SpaceEngineers2"),
+            Path.Combine("package", "Kontrol.Adapters.SpaceEngineers2.dll")));
+
+        plan.Capabilities.ShouldBe(new DeploymentMethodCapabilities(CanInstall: true, CanUninstall: true, CanLaunch: true, CanCreateShortcut: false));
+        plan.Targets.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentTargetKind.ExternalLoader);
+        plan.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([
+            "Kontrol.Adapters.SpaceEngineers2.Pulsar.dll",
+            "Kontrol.Adapters.SpaceEngineers2.Pulsar.xml",
+            "Kontrol.Adapters.SpaceEngineers2.dll",
+            "0Harmony.dll",
+            "Kontrol.Sdk.dll"]);
+        plan.Targets.Single().ConfigurationEffects.ShouldBeEmpty();
+        plan.LaunchChain.Steps.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentLaunchStepKind.ExternalLauncher);
+        plan.ManualSteps.Single().Instruction.ShouldContain("Kontrol.Adapters.SpaceEngineers2.Pulsar.dll");
     }
 
     [Test]

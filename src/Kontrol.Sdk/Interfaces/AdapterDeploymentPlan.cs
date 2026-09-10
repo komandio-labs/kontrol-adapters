@@ -38,14 +38,14 @@ public sealed record AdapterDeploymentPlan(
 {
 #pragma warning disable CS0618 // Deliberately constructs fallback data for pre-1.4 adapters.
     /// <summary>Creates conservative presentation data for an older adapter.</summary>
-    internal static AdapterDeploymentPlan Generic(GameLaunchMethod method) =>
+    public static AdapterDeploymentPlan Generic(GameLaunchMethod method) =>
         Generic(method, DeploymentMethodInformation.Generic(method), DeploymentMethodCapabilities.Standard);
 
     /// <summary>
     /// Creates conservative presentation data while preserving legacy adapter
     /// overrides for method information and action capabilities.
     /// </summary>
-    internal static AdapterDeploymentPlan Generic(
+    public static AdapterDeploymentPlan Generic(
         GameLaunchMethod method,
         DeploymentMethodInformation information,
         DeploymentMethodCapabilities capabilities)
@@ -98,7 +98,7 @@ public sealed record DeploymentTarget(
     IReadOnlyList<DeploymentOwnedFile> OwnedFiles,
     IReadOnlyList<DeploymentConfigurationEffect> ConfigurationEffects)
 {
-    internal static DeploymentTarget Generic() => new(
+    public static DeploymentTarget Generic() => new(
         "legacy-adapter-target",
         "Adapter-managed deployment target",
         DeploymentTargetKind.Other,
@@ -122,7 +122,7 @@ public enum DeploymentTargetKind
 /// <summary>Describes the ordered launcher/bootstrap chain used by a method.</summary>
 public sealed record DeploymentLaunchChain(IReadOnlyList<DeploymentLaunchStep> Steps)
 {
-    internal static DeploymentLaunchChain Generic() => new(
+    public static DeploymentLaunchChain Generic() => new(
         [new DeploymentLaunchStep(
             "Adapter-managed launch chain",
             DeploymentLaunchStepKind.Other,
@@ -154,7 +154,7 @@ public sealed record DeploymentVerification(
     DeploymentRuntimeState RuntimeState,
     string RuntimeMessage)
 {
-    internal static DeploymentVerification Generic() => new(
+    public static DeploymentVerification Generic() => new(
         DeploymentState.NotConfigured,
         "Deployment readiness is provided by the adapter's existing installer behavior.",
         DeploymentRuntimeState.Unknown,
@@ -173,7 +173,7 @@ public enum DeploymentRuntimeState
 /// <summary>Describes the adapter-owned effects of uninstall and rollback.</summary>
 public sealed record DeploymentRollbackPlan(string Summary, IReadOnlyList<DeploymentRollbackEffect> Effects)
 {
-    internal static DeploymentRollbackPlan Generic() => new(
+    public static DeploymentRollbackPlan Generic() => new(
         "The adapter's existing uninstall operation reverses its deployment.",
         Array.Empty<DeploymentRollbackEffect>());
 }

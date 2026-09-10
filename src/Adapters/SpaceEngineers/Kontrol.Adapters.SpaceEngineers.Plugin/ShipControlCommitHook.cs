@@ -7,7 +7,7 @@ using MyShipController = Sandbox.Game.Entities.MyShipController;
 namespace Kontrol.Adapters.SpaceEngineers.Plugin
 {
     /// <summary>
-    /// Applies Kontrol's latest frame at SE1's final ship-control commit, after native input has populated the controller.
+    /// Applies Kontrol's latest frame before SE1 consumes the controller indicators for thrust and gyro control.
     /// </summary>
     internal static class ShipControlCommitHook
     {
@@ -15,11 +15,14 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
         private static readonly Harmony Harmony = new Harmony(HarmonyId);
         private static readonly MethodInfo TargetMethod = AccessTools.DeclaredMethod(
             typeof(MyShipController),
-            nameof(MyShipController.MoveAndRotate),
+            nameof(MyShipController.UpdateControls),
             Type.EmptyTypes);
         private static readonly MethodInfo PrefixMethod = AccessTools.DeclaredMethod(
             typeof(ShipControlCommitHook),
             nameof(Prefix));
+        private static readonly MethodInfo PostfixMethod = AccessTools.DeclaredMethod(
+            typeof(ShipControlCommitHook),
+            nameof(Postfix));
         private static SpaceEngineersPlugin _plugin;
         private static bool _installed;
 
@@ -31,13 +34,14 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
                 return;
             }
 
-            if (TargetMethod == null || PrefixMethod == null)
-                throw new MissingMethodException("Could not locate Space Engineers' final MyShipController.MoveAndRotate() control commit.");
+            if (TargetMethod == null || PrefixMethod == null || PostfixMethod == null)
+                throw new MissingMethodException("Could not locate Space Engineers' MyShipController.UpdateControls() control commit.");
 
-            Harmony.Patch(TargetMethod, prefix: new HarmonyMethod(PrefixMethod));
+            Harmony.Patch(TargetMethod, prefix: new HarmonyMethod(PrefixMethod), postfix: new HarmonyMethod(PostfixMethod));
             var patchInfo = Harmony.GetPatchInfo(TargetMethod);
-            if (patchInfo == null || !patchInfo.Prefixes.Any(prefix => prefix.owner == HarmonyId))
-                throw new InvalidOperationException("Harmony did not register Kontrol's Space Engineers ship-control prefix.");
+            if (patchInfo == null || !patchInfo.Prefixes.Any(prefix => prefix.owner == HarmonyId) ||
+                !patchInfo.Postfixes.Any(postfix => postfix.owner == HarmonyId))
+                throw new InvalidOperationException("Harmony did not register Kontrol's Space Engineers ship-control prefix/postfix.");
 
             _plugin = plugin;
             _installed = true;
@@ -58,6 +62,13 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
             var plugin = _plugin;
             if (plugin != null)
                 plugin.ApplyAtFinalControlCommit(__instance);
+        }
+
+        private static void Postfix(MyShipController __instance)
+        {
+            var plugin = _plugin;
+            if (plugin != null)
+                plugin.TraceAfterFinalControlCommit(__instance);
         }
     }
 }

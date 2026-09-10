@@ -50,6 +50,14 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     private const string RuntimeConfigName = "SpaceEngineers2.runtimeconfig.json";
     private const string RelativeBinPath = "Game2";
     private const string PluginDllName = "Kontrol.Adapters.SpaceEngineers2.dll";
+    private const string PulsarDirectoryEnvironmentVariable = "KONTROL_PULSAR_DIRECTORY";
+    private const string PulsarDirectoryName = "Pulsar";
+    private const string PulsarModernExecutableName = "Modern.exe";
+    private const string PulsarModernDirectoryName = "Modern";
+    private const string PulsarPluginFolderName = "Kontrol.Adapters.SpaceEngineers2.Pulsar";
+    private const string PulsarPluginDllName = "Kontrol.Adapters.SpaceEngineers2.Pulsar.dll";
+    private const string PulsarPluginMetadataName = "Kontrol.Adapters.SpaceEngineers2.Pulsar.xml";
+    private static readonly string[] PulsarPayloadFiles = [PulsarPluginDllName, PulsarPluginMetadataName, PluginDllName, HarmonyDllName, SdkDllName];
 
     public AdapterDeploymentPlan GetDeploymentPlan(AdapterDeploymentContext context)
     {
@@ -58,8 +66,75 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         {
             GameLaunchMethod.ProcessInjection => BuildProcessInjectionPlan(context),
             GameLaunchMethod.NativePluginParameter => BuildNativePluginPlan(context),
+            GameLaunchMethod.BinPluginsFolder => BuildPulsarModernPlan(context),
             _ => throw new NotSupportedException($"SE2 does not support the {context.Method} deployment method.")
         };
+    }
+
+    private AdapterDeploymentPlan BuildPulsarModernPlan(AdapterDeploymentContext context)
+    {
+        GetPulsarModernPaths(out string modernExecutable, out string localPluginDirectory);
+        string sourceDirectory = Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty;
+        string sourcePayloadPath = Path.Combine(sourceDirectory, PulsarPluginDllName);
+        string sourceMetadataPath = Path.Combine(sourceDirectory, PulsarPluginMetadataName);
+        string sourceAdapterPath = Path.Combine(sourceDirectory, PluginDllName);
+        string sourceHarmonyPath = ResolveHarmonySourcePath(sourceDirectory);
+        string sourceSdkPath = Path.Combine(sourceDirectory, SdkDllName);
+        string gameExecutable = Path.Combine(GetGameExeDir(context.GameDirectory), ExeName);
+        string destinationDirectory = Path.Combine(localPluginDirectory, PulsarPluginFolderName);
+        bool pulsarAvailable = File.Exists(modernExecutable);
+        bool gameAvailable = File.Exists(gameExecutable);
+        bool payloadAvailable = File.Exists(sourcePayloadPath);
+        bool metadataAvailable = File.Exists(sourceMetadataPath);
+        bool adapterAvailable = File.Exists(sourceAdapterPath);
+        bool harmonyAvailable = File.Exists(sourceHarmonyPath);
+        bool sdkAvailable = File.Exists(sourceSdkPath);
+        bool writeAvailable = false;
+        if (pulsarAvailable)
+        {
+            try
+            {
+                Directory.CreateDirectory(localPluginDirectory);
+                EnsureDirectoryCanBeWritten(localPluginDirectory);
+                writeAvailable = true;
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        bool deployed = PulsarPayloadFiles.All(file => File.Exists(Path.Combine(destinationDirectory, file)));
+        bool ready = pulsarAvailable && gameAvailable && payloadAvailable && metadataAvailable && adapterAvailable && harmonyAvailable && sdkAvailable && writeAvailable;
+        DeploymentState state = !payloadAvailable || !metadataAvailable || !adapterAvailable || !harmonyAvailable || !sdkAvailable || !gameAvailable
+            ? DeploymentState.Failed
+            : !pulsarAvailable
+                ? DeploymentState.NotConfigured
+                : deployed
+                    ? DeploymentState.Deployed
+                    : DeploymentState.NotDeployed;
+
+        return new AdapterDeploymentPlan(
+            context.Method,
+            new DeploymentMethodCapabilities(CanInstall: true, CanUninstall: true, CanLaunch: true, CanCreateShortcut: false),
+            "Pulsar Modern joystick / HOTAS / HOSAS plugin",
+            "Kontrol deploys a separate .NET 10 Pulsar Modern entry plugin and its Kontrol runtime sidecars to Pulsar Modern's owned local-plugin folder, then starts Pulsar Modern with Space Engineers 2.",
+            $"Only Kontrol-owned files are copied to {destinationDirectory}. No Space Engineers 2 or Steam file is changed.",
+            "Confirm the external Pulsar Modern local-plugin write and the subsequent game launch.",
+            [
+                new DeploymentPrerequisite("pulsar-modern", "Pulsar Modern", "Pulsar Modern must be installed to load the .NET 10 Kontrol plugin.", pulsarAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing, modernExecutable, $"Install Pulsar Modern under %APPDATA%\\Pulsar or set {PulsarDirectoryEnvironmentVariable} to its root directory."),
+                new DeploymentPrerequisite("space-engineers-2-executable", "Space Engineers 2 executable", "The selected installation must contain SpaceEngineers2.exe under Game2.", gameAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing, gameExecutable, "Select a Space Engineers 2 installation containing Game2\\SpaceEngineers2.exe."),
+                new DeploymentPrerequisite("pulsar-modern-payload", "Packaged Pulsar Modern payload", "The package must contain the separate .NET 10 Pulsar Modern entry assembly.", payloadAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing, sourcePayloadPath, $"Rebuild the adapter package with {PulsarPluginDllName} included."),
+                new DeploymentPrerequisite("pulsar-modern-metadata", "Pulsar plugin metadata", "The package must contain the metadata that supplies the friendly name and description in Pulsar Modern.", metadataAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing, sourceMetadataPath, $"Rebuild the adapter package with {PulsarPluginMetadataName} included."),
+                new DeploymentPrerequisite("adapter-entry-assembly", "Kontrol adapter runtime", "The shared Kontrol adapter runtime must be packaged beside the Pulsar Modern entry plugin.", adapterAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing, sourceAdapterPath, $"Rebuild the adapter package with {PluginDllName} included."),
+                new DeploymentPrerequisite("harmony-dependency", "Harmony dependency", "The Kontrol adapter runtime requires its packaged Harmony dependency.", harmonyAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing, sourceHarmonyPath, $"Rebuild the adapter package with {HarmonyDllName} included."),
+                new DeploymentPrerequisite("sdk-assembly", "Kontrol SDK assembly", "The Kontrol adapter runtime requires its packaged SDK assembly.", sdkAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing, sourceSdkPath, $"Rebuild the adapter package with {SdkDllName} included."),
+                new DeploymentPrerequisite("pulsar-modern-local-plugin-write-access", "Pulsar Modern local-plugin write access", "Kontrol verifies write access to Pulsar Modern's local-plugin directory immediately before deployment.", writeAvailable ? DeploymentPrerequisiteState.Satisfied : (pulsarAvailable ? DeploymentPrerequisiteState.Failed : DeploymentPrerequisiteState.Missing), localPluginDirectory, "Grant write access to Pulsar Modern's local-plugin directory, then deploy again.")
+            ],
+            [new DeploymentTarget("pulsar-modern-local", "Pulsar Modern local plugins", DeploymentTargetKind.ExternalLoader, destinationDirectory,
+                PulsarPayloadFiles.Select(file => new DeploymentOwnedFile(file, "Kontrol-owned Pulsar Modern deployment file.")).ToArray(), Array.Empty<DeploymentConfigurationEffect>())],
+            new DeploymentLaunchChain([new DeploymentLaunchStep("Pulsar Modern", DeploymentLaunchStepKind.ExternalLauncher, "Kontrol starts Pulsar Modern with the selected Space Engineers 2 executable. Custom launch arguments are appended by the installer.", modernExecutable, $"\"{gameExecutable}\"")]),
+            [new DeploymentManualStep($"Enable {PulsarPluginDllName} in the active Pulsar Modern profile before launching.")],
+            new DeploymentVerification(state, deployed ? $"The Pulsar Modern payload is installed at {destinationDirectory}." : ready ? "The Pulsar Modern deployment is ready but has not been installed." : "The Pulsar Modern deployment prerequisites are not satisfied.", DeploymentRuntimeState.NotRunning, "Runtime readiness is reported after Pulsar Modern loads the enabled Kontrol plugin and the adapter establishes its normal IPC connection."),
+            new DeploymentRollbackPlan($"Remove only the Kontrol-owned Pulsar Modern payload from {destinationDirectory}.", [new DeploymentRollbackEffect(destinationDirectory, $"Delete {string.Join(", ", PulsarPayloadFiles)}; leave Pulsar Modern and Space Engineers 2 files unchanged.")]));
     }
 
     private AdapterDeploymentPlan BuildProcessInjectionPlan(AdapterDeploymentContext context)
@@ -255,6 +330,13 @@ public class SpaceEngineers2Installer : IAdapterInstaller
 
     public bool CheckIsInstalled(string gameDirectory, GameLaunchMethod method)
     {
+        if (method == GameLaunchMethod.BinPluginsFolder)
+        {
+            if (!TryGetPulsarModernPaths(out _, out string localPluginDirectory)) return false;
+            string destinationDirectory = Path.Combine(localPluginDirectory, PulsarPluginFolderName);
+            return PulsarPayloadFiles.All(file => File.Exists(Path.Combine(destinationDirectory, file)));
+        }
+
         string gameExeDir = GetGameExeDir(gameDirectory);
         if (string.IsNullOrEmpty(gameExeDir) || !Directory.Exists(gameExeDir)) return false;
         if (method == GameLaunchMethod.ProcessInjection)
@@ -273,8 +355,14 @@ public class SpaceEngineers2Installer : IAdapterInstaller
 
     public void Install(string gameDirectory, GameLaunchMethod method, string sourceDllPath)
     {
-        if (method != GameLaunchMethod.ProcessInjection && method != GameLaunchMethod.NativePluginParameter)
+        if (method != GameLaunchMethod.ProcessInjection && method != GameLaunchMethod.NativePluginParameter && method != GameLaunchMethod.BinPluginsFolder)
             throw new NotSupportedException($"SE2 does not support the {method} deployment method.");
+
+        if (method == GameLaunchMethod.BinPluginsFolder)
+        {
+            InstallPulsarModernPayload(sourceDllPath);
+            return;
+        }
 
         string gameExeDir = GetGameExeDir(gameDirectory);
         if (!Directory.Exists(gameExeDir))
@@ -332,6 +420,11 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     public void Uninstall(string gameDirectory, GameLaunchMethod method)
     {
         if (method == GameLaunchMethod.ProcessInjection) return;
+        if (method == GameLaunchMethod.BinPluginsFolder)
+        {
+            UninstallPulsarModernPayload();
+            return;
+        }
         if (method != GameLaunchMethod.NativePluginParameter)
             throw new NotSupportedException($"SE2 does not support the {method} deployment method.");
 
@@ -373,6 +466,26 @@ public class SpaceEngineers2Installer : IAdapterInstaller
                 "Process injection is owned by the Kontrol host so the game can be launched through Steam and the adapter can be attached to Steam's actual game process.");
         }
 
+        if (method == GameLaunchMethod.BinPluginsFolder)
+        {
+            if (!CheckIsInstalled(gameDirectory, method))
+                throw new InvalidOperationException("Deploy the Space Engineers 2 adapter to Pulsar Modern before launching.");
+            if (!TryGetPulsarModernPaths(out string modernExecutable, out _))
+                throw new DirectoryNotFoundException(BuildPulsarModernNotFoundMessage());
+
+            var pulsarStartInfo = new ProcessStartInfo
+            {
+                FileName = modernExecutable,
+                WorkingDirectory = Path.GetDirectoryName(modernExecutable),
+                UseShellExecute = true,
+                Arguments = $"\"{gameExePath}\""
+            };
+            if (!string.IsNullOrWhiteSpace(customLaunchArguments))
+                pulsarStartInfo.Arguments += " " + customLaunchArguments.Trim();
+            Process.Start(pulsarStartInfo);
+            return;
+        }
+
         if (method != GameLaunchMethod.NativePluginParameter)
             throw new NotSupportedException($"SE2 does not support the {method} launch method.");
 
@@ -408,7 +521,7 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("SE2 launch shortcuts are supported on Windows only.");
         if (method != GameLaunchMethod.NativePluginParameter)
-            throw new NotSupportedException("Process injection does not provide an adapter-created launch shortcut.");
+            throw new NotSupportedException("Process injection and Pulsar Modern do not provide adapter-created launch shortcuts.");
 
         string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
         string pluginPath = Path.GetFullPath(Path.Combine(GetGameExeDir(gameDirectory), PluginDllName));
@@ -464,6 +577,110 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         {
             steamExecutable = null;
             return false;
+        }
+    }
+
+    private static void InstallPulsarModernPayload(string sourceDllPath)
+    {
+        if (!TryGetPulsarModernPaths(out _, out string localPluginDirectory))
+            throw new DirectoryNotFoundException(BuildPulsarModernNotFoundMessage());
+
+        string sourceDirectory = Path.GetDirectoryName(sourceDllPath) ?? string.Empty;
+        var sourceFiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [PulsarPluginDllName] = Path.Combine(sourceDirectory, PulsarPluginDllName),
+            [PulsarPluginMetadataName] = Path.Combine(sourceDirectory, PulsarPluginMetadataName),
+            [PluginDllName] = Path.Combine(sourceDirectory, PluginDllName),
+            [HarmonyDllName] = ResolveHarmonySourcePath(sourceDirectory),
+            [SdkDllName] = Path.Combine(sourceDirectory, SdkDllName)
+        };
+        foreach ((string name, string path) in sourceFiles)
+            if (!File.Exists(path)) throw new FileNotFoundException($"The packaged Pulsar Modern file '{name}' was not found.", path);
+
+        Directory.CreateDirectory(localPluginDirectory);
+        EnsureDirectoryCanBeWritten(localPluginDirectory);
+        string destinationDirectory = Path.Combine(localPluginDirectory, PulsarPluginFolderName);
+        Directory.CreateDirectory(destinationDirectory);
+        EnsureDirectoryCanBeWritten(destinationDirectory);
+        foreach ((string name, string source) in sourceFiles)
+        {
+            string destination = Path.Combine(destinationDirectory, name);
+            ClearReadOnlyAttribute(destination);
+            File.Copy(source, destination, overwrite: true);
+        }
+    }
+
+    private static void UninstallPulsarModernPayload()
+    {
+        if (!TryGetPulsarModernPaths(out _, out string localPluginDirectory)) return;
+        string destinationDirectory = Path.Combine(localPluginDirectory, PulsarPluginFolderName);
+        foreach (string file in PulsarPayloadFiles)
+        {
+            string path = Path.Combine(destinationDirectory, file);
+            try
+            {
+                ClearReadOnlyAttribute(path);
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch { }
+        }
+
+        try
+        {
+            if (Directory.Exists(destinationDirectory) && !Directory.EnumerateFileSystemEntries(destinationDirectory).Any())
+                Directory.Delete(destinationDirectory);
+        }
+        catch { }
+    }
+
+    private static bool TryGetPulsarModernPaths(out string modernExecutable, out string localPluginDirectory)
+    {
+        foreach (string root in GetPulsarRoots())
+        {
+            string executable = Path.Combine(root, PulsarModernExecutableName);
+            if (!File.Exists(executable)) continue;
+            modernExecutable = executable;
+            localPluginDirectory = Path.Combine(root, PulsarModernDirectoryName, "Local");
+            return true;
+        }
+
+        modernExecutable = string.Empty;
+        localPluginDirectory = string.Empty;
+        return false;
+    }
+
+    private static void GetPulsarModernPaths(out string modernExecutable, out string localPluginDirectory)
+    {
+        if (TryGetPulsarModernPaths(out modernExecutable, out localPluginDirectory)) return;
+        string root = GetPulsarRoots().FirstOrDefault() ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), PulsarDirectoryName);
+        modernExecutable = Path.Combine(root, PulsarModernExecutableName);
+        localPluginDirectory = Path.Combine(root, PulsarModernDirectoryName, "Local");
+    }
+
+    private static IEnumerable<string> GetPulsarRoots()
+    {
+        string? configured = Environment.GetEnvironmentVariable(PulsarDirectoryEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(configured)) yield return configured;
+        yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), PulsarDirectoryName);
+    }
+
+    private static string BuildPulsarModernNotFoundMessage() =>
+        $"Pulsar Modern was not found. Install Pulsar under %APPDATA%\\Pulsar or set {PulsarDirectoryEnvironmentVariable} to its root directory.";
+
+    private static void EnsureDirectoryCanBeWritten(string directory)
+    {
+        string probePath = Path.Combine(directory, $".kontrol-write-probe-{Guid.NewGuid():N}");
+        try
+        {
+            using (File.Open(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new UnauthorizedAccessException($"Pulsar Modern's local-plugin directory is not writable: {directory}", exception);
+        }
+        finally
+        {
+            try { if (File.Exists(probePath)) File.Delete(probePath); } catch { }
         }
     }
 

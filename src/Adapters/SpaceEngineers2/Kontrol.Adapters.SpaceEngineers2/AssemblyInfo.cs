@@ -11,5 +11,5 @@ using Kontrol.Sdk.Attributes;
     "1133870",
     requiresHarmony: true,
     requiresCore: true,
-    supportedMethods: [GameLaunchMethod.NativePluginParameter, GameLaunchMethod.ProcessInjection],
+    supportedMethods: [GameLaunchMethod.NativePluginParameter, GameLaunchMethod.BinPluginsFolder, GameLaunchMethod.ProcessInjection],
     defaultDeploymentMethod: GameLaunchMethod.NativePluginParameter)]

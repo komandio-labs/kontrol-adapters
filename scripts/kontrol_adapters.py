@@ -103,6 +103,19 @@ def resolve_space_engineers(candidate: str | None) -> Path | None:
     return game if (game / "Bin64" / "SpaceEngineers.exe").is_file() else None
 
 
+def steam_build_id(game_directory: Path, app_id: str) -> str | None:
+    """Read the installed Steam build ID without depending on binary metadata."""
+    steamapps = next((parent for parent in (game_directory, *game_directory.parents)
+                      if parent.name.lower() == "steamapps"), None)
+    if steamapps is None:
+        return None
+    manifest_path = steamapps / f"appmanifest_{app_id}.acf"
+    if not manifest_path.is_file():
+        return None
+    match = re.search(r'"buildid"\s+"([^"]+)"', manifest_path.read_text(encoding="utf-8", errors="replace"))
+    return match.group(1) if match else None
+
+
 def steam_candidates() -> list[Path]:
     if os.name != "nt":
         return []
@@ -136,7 +149,10 @@ def sync_space_engineers(game_directory: str | None) -> Path:
     missing = [name for name in SPACE_ENGINEERS_ASSEMBLIES if not (bin64 / name).is_file()]
     if missing:
         raise RuntimeError(f"Required Space Engineers assemblies are missing from {bin64}: {', '.join(missing)}")
-    version = "steam-build-24675677"
+    build_id = steam_build_id(game, "244850")
+    if not build_id:
+        raise RuntimeError(f"Steam build ID was not found for Space Engineers at {game}. Ensure appmanifest_244850.acf is present in the Steam library.")
+    version = f"steam-build-{build_id}"
     adapter_root, _, _ = adapter_paths("spaceengineers")
     destination = adapter_root / "references" / version
     destination.mkdir(parents=True, exist_ok=True)
@@ -148,6 +164,8 @@ def sync_space_engineers(game_directory: str | None) -> Path:
     inspection = {
         "schemaVersion": 1, "adapterId": manifest("spaceengineers")["adapterId"],
         "gameDirectory": r"<Space Engineers installation>", "productVersion": version,
+        "buildIdentity": {"platform": "steam", "platformAppId": "244850", "platformBuildId": build_id,
+                          "productVersion": None, "isProductVersionMeaningful": False, "fingerprintBuildId": None},
         "inspectedAtUtc": datetime.now(timezone.utc).isoformat(), "relevantAssemblies": evidence,
     }
     (destination / "inspection.json").write_text(json.dumps(inspection, indent=2) + "\n", encoding="utf-8")
@@ -181,11 +199,15 @@ def sync_se2(game_directory: str | None) -> Path:
         destination_file = destination / name
         shutil.copy2(game2 / name, destination_file)
         evidence[name] = inspect_assembly(destination_file)
+    build_id = steam_build_id(game2, "1133870")
     inspection = {
         "schemaVersion": 1,
         "adapterId": adapter_id,
         "gameDirectory": r"<SE2 installation>\Game2",
         "productVersion": version,
+        "buildIdentity": {"platform": "steam" if build_id else None, "platformAppId": "1133870" if build_id else None,
+                          "platformBuildId": build_id, "productVersion": version,
+                          "isProductVersionMeaningful": True, "fingerprintBuildId": None},
         "inspectedAtUtc": datetime.now(timezone.utc).isoformat(),
         "relevantAssemblies": evidence,
     }
@@ -248,12 +270,13 @@ def test_adapter(slug: str, game_directory: str | None, skip_sync: bool) -> None
         else:
             reference = adapter_paths(slug)[0] / "references" / "steam-build-24675677"
     _, project, tests = adapter_paths(slug)
-    tool("validate", "adapter", "--adapter", slug)
+    canonical_slug = canonical_adapter_slug(slug)
+    tool("validate", "adapter", "--adapter", canonical_slug)
     if slug == "spaceengineers":
         inspection = reference / "inspection.json"
         if not inspection.is_file():
             raise RuntimeError(f"Space Engineers inspection evidence was not found: {inspection}")
-        tool("validate", "compatibility", "--adapter", "space-engineers", "--inspection", str(inspection))
+        tool("validate", "compatibility", "--adapter", canonical_slug, "--inspection", str(inspection))
     run("dotnet", "build", str(project), "-c", "Debug")
     run("dotnet", "test", str(tests), "-c", "Debug")
     if slug == "spaceengineers":
@@ -402,8 +425,14 @@ def package(slug: str, version: str, game_directory: str | None, output: str | N
     if data["adapterVersion"] != version:
         raise RuntimeError(f"Requested version {version} does not match manifest version {data['adapterVersion']}.")
     test_adapter(slug, game_directory, False)
-    _, project, _ = adapter_paths(slug)
+    adapter_root, project, _ = adapter_paths(slug)
     run("dotnet", "build", str(project), "-c", configuration)
+    for payload_project in sorted(adapter_root.rglob("*.csproj")):
+        relative_parts = payload_project.relative_to(adapter_root).parts
+        if (payload_project == project or payload_project.name.endswith(".Tests.csproj")
+                or any(part.lower() in {"bin", "obj", "scratch", "samples", "testdata"} for part in relative_parts)):
+            continue
+        run("dotnet", "build", str(payload_project), "-c", configuration)
     destination = Path(output).resolve() if output else ROOT / "artifacts" / f"kontrol-adapter-{slug}-{version}-win-x64.zip"
     arguments = ["pack", "--adapter", slug, "--configuration", configuration, "--output", str(destination)]
     if overwrite:

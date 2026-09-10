@@ -11,6 +11,14 @@
   "targetFramework": "net9.0",
   "architectures": ["x64"],
   "gameProductVersion": "2.4.0.95",
+  "gameBuildIdentity": {
+    "platform": "steam",
+    "platformAppId": "1133870",
+    "platformBuildId": "24993846",
+    "productVersion": "2.4.0.95",
+    "isProductVersionMeaningful": true,
+    "fingerprintBuildId": null
+  },
   "relevantAssemblies": [
     "Game2.Client.dll",
     "VRage.Core.dll",
@@ -19,6 +27,8 @@
   "package": {
     "include": [
       "Kontrol.Adapters.SpaceEngineers2.dll",
+      "Kontrol.Adapters.SpaceEngineers2.Pulsar.dll",
+      "Kontrol.Adapters.SpaceEngineers2.Pulsar.xml",
       "Kontrol.Sdk.dll",
       "0Harmony.dll",
       "adapter.manifest.json",

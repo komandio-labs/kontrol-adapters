@@ -6,6 +6,10 @@ namespace Kontrol.Sdk.Diagnostics;
 /// <summary>Reports adapter diagnostics to Kontrol through IPC, with an opt-in disk fallback for diagnostics.</summary>
 public sealed class AdapterLogReporter(string adapterId) : IDisposable
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
     private readonly MmfChannel<TelemetryData> _channel = new($"Local\\Kontrol_Logs_{adapterId}");
     private long _sequence;
     private bool _initialized;
@@ -13,6 +17,8 @@ public sealed class AdapterLogReporter(string adapterId) : IDisposable
     public void Write(string message) => Write(message, AdapterLogLevel.Information);
 
     public void WriteDebug(string message) => Write(message, AdapterLogLevel.Debug);
+
+    public void WriteWarning(string message) => Write($"[Warning] {message}", AdapterLogLevel.Information);
 
     public void WriteError(string message) => Write(message, AdapterLogLevel.Error);
 
@@ -29,9 +35,9 @@ public sealed class AdapterLogReporter(string adapterId) : IDisposable
 
             // The shared IPC payload holds 512 UTF-8 bytes. Keep the JSON valid
             // instead of letting the fixed transport truncate it mid-message.
-            string boundedMessage = message.Length <= 320 ? message : $"{message[..317]}...";
+            string boundedMessage = message.Length <= 320 ? message : $"{message.Substring(0, 317)}...";
             var payload = new TelemetryData();
-            payload.SetJson(JsonSerializer.Serialize(new AdapterLogEvent(++_sequence, boundedMessage, level)));
+            payload.SetJson(JsonSerializer.Serialize(new AdapterLogEvent(++_sequence, boundedMessage, level), SerializerOptions));
             _channel.Write(ref payload);
         }
         catch
