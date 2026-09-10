@@ -6,7 +6,7 @@ using Kontrol.Sdk.Attributes;
 using Kontrol.Sdk.Interfaces;
 using Kontrol.Sdk.Inputs;
 
-[assembly: KontrolAdapter("space-engineers", "Space Engineers", "space-engineers", "SpaceEngineers.exe", "Bin64", "244850", false, false,
+[assembly: KontrolAdapter("space-engineers", "Space Engineers", "space-engineers", "SpaceEngineers.exe", "Bin64", "244850", true, false,
     supportedMethods: [GameLaunchMethod.BinPluginsFolder], defaultDeploymentMethod: GameLaunchMethod.BinPluginsFolder)]
 
 namespace Kontrol.Adapters.SpaceEngineers;
@@ -17,13 +17,14 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
     private const string PulsarDirectoryName = "Pulsar";
     private const string LegacyExecutableName = "Legacy.exe";
     private const string PluginPayloadName = "Kontrol.Adapters.SpaceEngineers.Plugin.dll";
+    private const string HarmonyPayloadName = "0Harmony.dll";
     private const string PluginMetadataName = "Kontrol.Adapters.SpaceEngineers.Plugin.xml";
     private const string LocalPluginDirectoryName = "Local";
     private const string StatusMapName = @"Local\Kontrol_AdapterStatus_space-engineers";
     private const int StatusFrameCapacity = 512;
     private const long ActiveHeartbeatMaximumAgeMilliseconds = 5_000;
 
-    public AdapterInputSchema GetInputSchema() => new(1,
+    public AdapterInputSchema GetInputSchema() => new(2,
     [
         new("flight.pitch", "Pitch", "Nose up / nose down", "Flight controls", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Nose up", "Nose down")),
         new("flight.roll", "Roll", "Bank left / right", "Flight controls", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Bank left", "Bank right")),
@@ -34,7 +35,19 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         new("systems.dampeners", "Dampeners", "Toggle inertial dampeners", "Vehicle systems", 10, InputSignalKind.Discrete, DiscreteBehavior.Toggle, DeliveryMode: DiscreteDeliveryMode.Event),
         new("systems.lights", "Lights", "Toggle vehicle lights", "Vehicle systems", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
         new("systems.landing_gears", "Landing gear", "Toggle landing gear", "Vehicle systems", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("systems.handbrake", "Handbrake", "Toggle handbrake", "Vehicle systems", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event)
+        new("systems.handbrake", "Handbrake", "Toggle handbrake", "Vehicle systems", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("camera.mode_switch", "Camera mode switch", "Switch between Space Engineers camera modes", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_1", "Toolbar slot 1", "Activate toolbar slot 1 while controlling a ship or vehicle", "Toolbar", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_2", "Toolbar slot 2", "Activate toolbar slot 2 while controlling a ship or vehicle", "Toolbar", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_3", "Toolbar slot 3", "Activate toolbar slot 3 while controlling a ship or vehicle", "Toolbar", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_4", "Toolbar slot 4", "Activate toolbar slot 4 while controlling a ship or vehicle", "Toolbar", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_5", "Toolbar slot 5", "Activate toolbar slot 5 while controlling a ship or vehicle", "Toolbar", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_6", "Toolbar slot 6", "Activate toolbar slot 6 while controlling a ship or vehicle", "Toolbar", 60, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_7", "Toolbar slot 7", "Activate toolbar slot 7 while controlling a ship or vehicle", "Toolbar", 70, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_8", "Toolbar slot 8", "Activate toolbar slot 8 while controlling a ship or vehicle", "Toolbar", 80, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_9", "Toolbar slot 9", "Activate toolbar slot 9 while controlling a ship or vehicle", "Toolbar", 90, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_0", "Toolbar slot 10", "Activate toolbar slot 10 (the game's 0 key) while controlling a ship or vehicle", "Toolbar", 100, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("systems.leave_control", "Leave vehicle / cockpit", "Leave the controlled vehicle or cockpit (the game's F action)", "Vehicle systems", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event)
     ]);
 
     public AdapterDeploymentPlan GetDeploymentPlan(AdapterDeploymentContext context)
@@ -44,18 +57,21 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
 
         GetPulsarPlanPaths(out var legacyExecutable, out var localPluginDirectory);
         string sourcePayloadPath = Path.Combine(Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty, PluginPayloadName);
+        string sourceHarmonyPath = Path.Combine(Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty, HarmonyPayloadName);
         string sourceMetadataPath = Path.Combine(Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty, PluginMetadataName);
         string gameExecutable = GetGameExecutablePath(context.GameDirectory);
         bool pulsarAvailable = File.Exists(legacyExecutable);
         bool payloadAvailable = File.Exists(sourcePayloadPath);
+        bool harmonyAvailable = File.Exists(sourceHarmonyPath);
         bool metadataAvailable = File.Exists(sourceMetadataPath);
         bool gameAvailable = File.Exists(gameExecutable);
         bool deployed = pulsarAvailable &&
             File.Exists(Path.Combine(localPluginDirectory, PluginPayloadName)) &&
+            File.Exists(Path.Combine(localPluginDirectory, HarmonyPayloadName)) &&
             File.Exists(Path.Combine(localPluginDirectory, PluginMetadataName));
         var runtimeVerification = GetPulsarRuntimeVerification();
 
-        DeploymentState deploymentState = !payloadAvailable || !metadataAvailable
+        DeploymentState deploymentState = !payloadAvailable || !harmonyAvailable || !metadataAvailable
             ? DeploymentState.Failed
             : !pulsarAvailable
                 ? DeploymentState.NotConfigured
@@ -69,6 +85,7 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
             DeploymentState.Deployed => $"The Pulsar payload and metadata are installed at {localPluginDirectory}.",
             DeploymentState.NotConfigured => "Pulsar Legacy is not configured or installed.",
             DeploymentState.Failed when !payloadAvailable => $"The packaged Pulsar payload was not found at {sourcePayloadPath}.",
+            DeploymentState.Failed when !harmonyAvailable => $"The packaged Harmony runtime was not found at {sourceHarmonyPath}.",
             DeploymentState.Failed when !metadataAvailable => $"The packaged Pulsar metadata was not found at {sourceMetadataPath}.",
             DeploymentState.Failed => $"Space Engineers was not found at {gameExecutable}.",
             _ => "The Pulsar payload is ready to deploy."
@@ -92,9 +109,9 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         return new AdapterDeploymentPlan(
             context.Method,
             new DeploymentMethodCapabilities(CanInstall: true, CanUninstall: true, CanLaunch: true, CanCreateShortcut: false),
-            "Pulsar Legacy plugin",
-            "Kontrol deploys the separate .NET Framework payload to Pulsar Legacy's local-plugin folder, then starts Pulsar Legacy with Space Engineers.",
-            $"Only {PluginPayloadName} and {PluginMetadataName} are copied to Pulsar Legacy at {localPluginDirectory}. No Space Engineers file or Steam launch setting is changed.",
+            "Pulsar Legacy joystick / HOTAS / HOSAS plugin",
+            "Kontrol deploys the separate .NET Framework joystick, HOTAS, HOSAS, controller, and button-box payload to Pulsar Legacy's local-plugin folder, then starts Pulsar Legacy with Space Engineers.",
+            $"Only {PluginPayloadName}, {HarmonyPayloadName}, and {PluginMetadataName} are copied to Pulsar Legacy at {localPluginDirectory}. No Space Engineers file or Steam launch setting is changed.",
             "Confirm the external Pulsar Legacy local-plugin write and the subsequent game launch.",
             [
                 new DeploymentPrerequisite(
@@ -119,6 +136,13 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
                     sourcePayloadPath,
                     $"Rebuild the adapter package with {PluginPayloadName} included."),
                 new DeploymentPrerequisite(
+                    "pulsar-harmony-runtime",
+                    "Packaged Harmony runtime",
+                    "The Pulsar payload uses Harmony to apply joystick input at Space Engineers' final ship-control commit.",
+                    harmonyAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    sourceHarmonyPath,
+                    $"Rebuild the adapter package with {HarmonyPayloadName} included."),
+                new DeploymentPrerequisite(
                     "pulsar-plugin-metadata",
                     "Pulsar plugin metadata",
                     "The package must contain the Pulsar descriptor that supplies the friendly name, description, and documentation link.",
@@ -142,6 +166,9 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
                     PluginPayloadName,
                     "The net48 Pulsar Legacy payload copied by the SE1 installer."),
                  new DeploymentOwnedFile(
+                     HarmonyPayloadName,
+                     "The adapter-owned Harmony runtime used for the final Space Engineers ship-control hook."),
+                 new DeploymentOwnedFile(
                      PluginMetadataName,
                      "The Pulsar descriptor containing the SE1 plugin friendly name, description, and documentation link.")],
                 Array.Empty<DeploymentConfigurationEffect>())],
@@ -162,7 +189,7 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
                 $"Remove only the SE1 payload owned by Kontrol from {localPluginDirectory}.",
                 [new DeploymentRollbackEffect(
                     localPluginDirectory,
-                    $"Delete {PluginPayloadName}; leave Pulsar Legacy and all Space Engineers files unchanged.")
+                    $"Delete {PluginPayloadName} and {HarmonyPayloadName}; leave Pulsar Legacy and all Space Engineers files unchanged.")
                 ]));
     }
 
@@ -170,6 +197,7 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         method == GameLaunchMethod.BinPluginsFolder &&
         TryGetPulsarPaths(out _, out var localPluginDirectory) &&
         File.Exists(Path.Combine(localPluginDirectory, PluginPayloadName)) &&
+        File.Exists(Path.Combine(localPluginDirectory, HarmonyPayloadName)) &&
         File.Exists(Path.Combine(localPluginDirectory, PluginMetadataName));
 
     public void Install(string gameDirectory, GameLaunchMethod method, string sourceDllPath)
@@ -179,15 +207,19 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
             throw new DirectoryNotFoundException(BuildPulsarNotFoundMessage());
 
         string sourcePluginPath = Path.Combine(Path.GetDirectoryName(sourceDllPath) ?? string.Empty, PluginPayloadName);
+        string sourceHarmonyPath = Path.Combine(Path.GetDirectoryName(sourceDllPath) ?? string.Empty, HarmonyPayloadName);
         string sourceMetadataPath = Path.Combine(Path.GetDirectoryName(sourceDllPath) ?? string.Empty, PluginMetadataName);
         if (!File.Exists(sourcePluginPath))
             throw new FileNotFoundException($"The packaged Pulsar payload '{PluginPayloadName}' was not found beside the Kontrol adapter entry assembly.", sourcePluginPath);
+        if (!File.Exists(sourceHarmonyPath))
+            throw new FileNotFoundException($"The packaged Harmony runtime '{HarmonyPayloadName}' was not found beside the Kontrol adapter entry assembly.", sourceHarmonyPath);
         if (!File.Exists(sourceMetadataPath))
             throw new FileNotFoundException($"The packaged Pulsar metadata '{PluginMetadataName}' was not found beside the Kontrol adapter entry assembly.", sourceMetadataPath);
 
         Directory.CreateDirectory(localPluginDirectory);
         EnsureDirectoryCanBeWritten(localPluginDirectory);
         File.Copy(sourcePluginPath, Path.Combine(localPluginDirectory, PluginPayloadName), overwrite: true);
+        File.Copy(sourceHarmonyPath, Path.Combine(localPluginDirectory, HarmonyPayloadName), overwrite: true);
         File.Copy(sourceMetadataPath, Path.Combine(localPluginDirectory, PluginMetadataName), overwrite: true);
     }
 
@@ -196,8 +228,10 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         EnsurePulsarMethod(method);
         if (!TryGetPulsarPaths(out _, out var localPluginDirectory)) return;
         string payloadPath = Path.Combine(localPluginDirectory, PluginPayloadName);
+        string harmonyPath = Path.Combine(localPluginDirectory, HarmonyPayloadName);
         string metadataPath = Path.Combine(localPluginDirectory, PluginMetadataName);
         if (File.Exists(payloadPath)) File.Delete(payloadPath);
+        if (File.Exists(harmonyPath)) File.Delete(harmonyPath);
         if (File.Exists(metadataPath)) File.Delete(metadataPath);
     }
 

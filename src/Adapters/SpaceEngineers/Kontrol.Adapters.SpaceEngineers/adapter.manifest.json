@@ -6,7 +6,7 @@
   "relativeBinPath": "Bin64",
   "pluginDll": "Kontrol.Adapters.SpaceEngineers.dll",
   "steamAppId": "244850",
-  "requiresHarmony": false,
+  "requiresHarmony": true,
   "requiresCore": false,
   "supportedMethods": [ "BinPluginsFolder" ],
   "defaultDeploymentMethod": "BinPluginsFolder",
@@ -15,7 +15,7 @@
     "processName": "Legacy.exe",
     "commandLineTargetExecutable": "SpaceEngineers.exe"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "gameProductVersion": "steam-build-24675677",
-  "relevantAssemblies": [ "VRage.dll", "VRage.Game.dll", "VRage.Math.dll" ]
+  "relevantAssemblies": [ "VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Game.dll" ]
 }

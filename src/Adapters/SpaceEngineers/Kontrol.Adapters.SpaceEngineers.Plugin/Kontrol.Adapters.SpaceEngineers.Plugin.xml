@@ -2,10 +2,10 @@
 <PluginData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="GitHubPlugin">
   <Id>Kontrol.Adapters.SpaceEngineers.Plugin.dll</Id>
   <RepoId>komandio-labs/kontrol-adapters</RepoId>
-  <FriendlyName>Kontrol Space Engineers Adapter</FriendlyName>
+  <FriendlyName>Kontrol Joystick / HOTAS / HOSAS for Space Engineers</FriendlyName>
   <Author>Komandio Labs</Author>
-  <Tooltip>Controller and joystick flight controls for Space Engineers through Kontrol.</Tooltip>
-  <Description>Kontrol adds controller and joystick support to Space Engineers through Pulsar Legacy. Enable this plugin in Pulsar Legacy, then use the Kontrol desktop app to map and send flight and vehicle-system inputs.
+  <Tooltip>Joystick, HOTAS, HOSAS, controller, and button-box flight controls for Space Engineers.</Tooltip>
+  <Description>Fly Space Engineers with your joystick, HOTAS, HOSAS, controller, or button box. This Pulsar Legacy plugin receives your Kontrol desktop-app mappings and applies flight axes plus dampeners, lights, landing gear, and handbrake at the game's final ship-control update.
 
 For setup, controls, and troubleshooting, open: https://github.com/komandio-labs/kontrol-adapters/tree/main/src/Adapters/SpaceEngineers</Description>
   <Runtimes>CLR</Runtimes>

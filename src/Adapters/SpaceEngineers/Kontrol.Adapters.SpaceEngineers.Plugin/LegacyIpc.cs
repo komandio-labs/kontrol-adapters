@@ -78,7 +78,7 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
             var frame = new TelemetryData();
             frame.SetJson(string.Format(
                 System.Globalization.CultureInfo.InvariantCulture,
-                "{\"sequence\":{0},\"state\":\"{1}\",\"processId\":{2},\"timestampUnixMilliseconds\":{3}{4}{5}{6}}}",
+                "{{\"sequence\":{0},\"state\":\"{1}\",\"processId\":{2},\"timestampUnixMilliseconds\":{3}{4}{5}{6}}}",
                 ++_sequence,
                 state,
                 Process.GetCurrentProcess().Id,
@@ -129,7 +129,7 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
             {
                 string json = string.Format(
                     System.Globalization.CultureInfo.InvariantCulture,
-                    "{\"sequence\":{0},\"message\":\"{1}\",\"level\":\"{2}\"}",
+                    "{{\"sequence\":{0},\"message\":\"{1}\",\"level\":\"{2}\"}}",
                     ++_sequence,
                     EscapeJson(boundedMessage),
                     EscapeJson(level));

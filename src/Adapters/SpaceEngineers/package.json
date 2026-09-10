@@ -4,23 +4,25 @@
   "adapterId": "space-engineers",
   "slug": "space-engineers",
   "displayName": "Space Engineers",
-  "adapterVersion": "1.0.0",
+  "adapterVersion": "1.1.0",
   "sdkVersion": "1.4.0",
   "entryAssembly": "Kontrol.Adapters.SpaceEngineers.dll",
-  "inputSchemaVersion": 1,
+  "inputSchemaVersion": 2,
   "targetFramework": "net9.0",
   "architectures": ["x64"],
   "gameProductVersion": "steam-build-24675677",
-  "relevantAssemblies": ["VRage.dll", "VRage.Game.dll", "VRage.Math.dll"],
+  "relevantAssemblies": ["VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Game.dll"],
   "package": {
     "include": [
       "Kontrol.Adapters.SpaceEngineers.dll",
       "Kontrol.Sdk.dll",
       "Kontrol.Adapters.SpaceEngineers.Plugin.dll",
+      "0Harmony.dll",
       "Kontrol.Adapters.SpaceEngineers.Plugin.xml",
       "adapter.manifest.json",
       "LICENSE",
-      "THIRD_PARTY_NOTICES.md"
+      "THIRD_PARTY_NOTICES.md",
+      "HARMONY_LICENSE"
     ]
   }
 }
