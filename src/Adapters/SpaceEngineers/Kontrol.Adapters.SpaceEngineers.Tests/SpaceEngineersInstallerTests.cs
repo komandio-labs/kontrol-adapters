@@ -39,7 +39,9 @@ public class SpaceEngineersInstallerTests
         plan.Title.ShouldBe("Pulsar Legacy plugin");
         plan.Targets.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentTargetKind.ExternalLoader);
         plan.Targets.Single().Location.ShouldEndWith(Path.Combine("Legacy", "Local"));
-        plan.Targets.Single().OwnedFiles.ShouldHaveSingleItem().Path.ShouldBe("Kontrol.Adapters.SpaceEngineers.Plugin.dll");
+        plan.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([
+            "Kontrol.Adapters.SpaceEngineers.Plugin.dll",
+            "Kontrol.Adapters.SpaceEngineers.Plugin.xml"]);
         plan.Prerequisites.Single(prerequisite => prerequisite.Id == "pulsar-local-plugin-write-access")
             .State.ShouldBeOneOf(DeploymentPrerequisiteState.Satisfied, DeploymentPrerequisiteState.Missing, DeploymentPrerequisiteState.Failed);
         plan.LaunchChain.Steps.ShouldHaveSingleItem().Kind.ShouldBe(DeploymentLaunchStepKind.ExternalLauncher);
@@ -70,7 +72,8 @@ public class SpaceEngineersInstallerTests
             .Select(item => item.GetString())
             .ShouldBe(new[] { hostEntry, "Kontrol.Sdk.dll", pulsarPayload, "Kontrol.Adapters.SpaceEngineers.Plugin.xml", "adapter.manifest.json", "LICENSE", "THIRD_PARTY_NOTICES.md" });
         deployment.Summary.ShouldContain("separate .NET Framework payload");
-        deployment.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([pulsarPayload]);
+        deployment.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([
+            pulsarPayload, "Kontrol.Adapters.SpaceEngineers.Plugin.xml"]);
         deployment.Targets.Single().Location.ShouldEndWith(Path.Combine("Legacy", "Local"));
 
         string payloadProject = File.ReadAllText(Path.Combine(
@@ -78,6 +81,18 @@ public class SpaceEngineersInstallerTests
         payloadProject.ShouldContain("<TargetFramework>net48</TargetFramework>");
         payloadProject.ShouldContain($"<AssemblyName>{Path.GetFileNameWithoutExtension(pulsarPayload)}</AssemblyName>");
         payloadProject.ShouldNotContain($"<AssemblyName>{Path.GetFileNameWithoutExtension(hostEntry)}</AssemblyName>");
+    }
+
+    [Test]
+    public void PulsarPluginMetadata_ProvidesFriendlyNameDescriptionAndDocumentationLink()
+    {
+        string adapterRoot = FindAdapterRoot();
+        string xml = File.ReadAllText(Path.Combine(
+            adapterRoot, "Kontrol.Adapters.SpaceEngineers.Plugin", "Kontrol.Adapters.SpaceEngineers.Plugin.xml"));
+
+        xml.ShouldContain("<FriendlyName>Kontrol Space Engineers Adapter</FriendlyName>");
+        xml.ShouldContain("<Description>Kontrol adds controller and joystick support to Space Engineers through Pulsar Legacy.");
+        xml.ShouldContain("https://github.com/komandio-labs/kontrol-adapters/tree/main/src/Adapters/SpaceEngineers");
     }
 
     [Test]
@@ -101,11 +116,14 @@ public class SpaceEngineersInstallerTests
 
         try
         {
+            var installer = new SpaceEngineersInstaller();
             Directory.CreateDirectory(pulsarRoot);
             Directory.CreateDirectory(packageDirectory);
             Directory.CreateDirectory(Path.Combine(gameDirectory, "Bin64"));
             File.WriteAllBytes(Path.Combine(pulsarRoot, "Legacy.exe"), []);
+            File.WriteAllBytes(Path.Combine(packageDirectory, "Kontrol.Adapters.SpaceEngineers.dll"), []);
             File.WriteAllBytes(Path.Combine(packageDirectory, "Kontrol.Adapters.SpaceEngineers.Plugin.dll"), []);
+            File.WriteAllText(Path.Combine(packageDirectory, "Kontrol.Adapters.SpaceEngineers.Plugin.xml"), "plugin metadata");
             File.WriteAllBytes(Path.Combine(gameDirectory, "Bin64", "SpaceEngineers.exe"), []);
             Environment.SetEnvironmentVariable("KONTROL_PULSAR_DIRECTORY", pulsarRoot);
 
@@ -116,6 +134,16 @@ public class SpaceEngineersInstallerTests
 
             plan.Prerequisites.Single(prerequisite => prerequisite.Id == "pulsar-local-plugin-write-access")
                 .State.ShouldBe(DeploymentPrerequisiteState.Satisfied);
+
+            installer.Install(gameDirectory, GameLaunchMethod.BinPluginsFolder,
+                Path.Combine(packageDirectory, "Kontrol.Adapters.SpaceEngineers.dll"));
+            File.Exists(Path.Combine(pulsarRoot, "Legacy", "Local", "Kontrol.Adapters.SpaceEngineers.Plugin.dll")).ShouldBeTrue();
+            File.Exists(Path.Combine(pulsarRoot, "Legacy", "Local", "Kontrol.Adapters.SpaceEngineers.Plugin.xml")).ShouldBeTrue();
+            installer.CheckIsInstalled(gameDirectory, GameLaunchMethod.BinPluginsFolder).ShouldBeTrue();
+
+            installer.Uninstall(gameDirectory, GameLaunchMethod.BinPluginsFolder);
+            File.Exists(Path.Combine(pulsarRoot, "Legacy", "Local", "Kontrol.Adapters.SpaceEngineers.Plugin.dll")).ShouldBeFalse();
+            File.Exists(Path.Combine(pulsarRoot, "Legacy", "Local", "Kontrol.Adapters.SpaceEngineers.Plugin.xml")).ShouldBeFalse();
         }
         finally
         {

@@ -26,11 +26,12 @@ Pulsar root. Its Kontrol entry assembly is the packaged `.NET 9`
 separate `.NET Framework 4.8` payload
 `Kontrol.Adapters.SpaceEngineers.Plugin.dll`.
 
-Kontrol writes that payload to the resolved Pulsar Legacy target
+Kontrol writes the payload and its Pulsar descriptor to the resolved Pulsar Legacy target
 `<Pulsar root>\Legacy\Local`, launches `<Pulsar root>\Legacy.exe` with
 `<Space Engineers root>\Bin64\SpaceEngineers.exe`, and does not write Space
 Engineers files or Steam launch settings. The active Pulsar Legacy profile must
-still be enabled manually. Uninstall removes only the adapter-owned payload;
+still be enabled manually. Uninstall removes only the adapter-owned payload and
+descriptor;
 Pulsar Legacy itself and the game installation remain unchanged. Shortcuts are
 not supported for this adapter.
 
@@ -38,7 +39,7 @@ not supported for this adapter.
 
 1. Install Pulsar separately and choose its **Legacy** runtime for Space Engineers.
 2. Sideload the local adapter ZIP into Kontrol, then select **Plugin folder** deployment for Space Engineers.
-3. Deploy from Kontrol. The adapter uses the net9 discovery entry assembly for Kontrol, but copies only the separate net48 `Kontrol.Adapters.SpaceEngineers.Plugin.dll` payload to `%APPDATA%\Pulsar\Legacy\Local` (or the root configured through `KONTROL_PULSAR_DIRECTORY`).
+3. Deploy from Kontrol. The adapter uses the net9 discovery entry assembly for Kontrol, but copies the separate net48 `Kontrol.Adapters.SpaceEngineers.Plugin.dll` payload and its `Kontrol.Adapters.SpaceEngineers.Plugin.xml` descriptor to `%APPDATA%\Pulsar\Legacy\Local` (or the root configured through `KONTROL_PULSAR_DIRECTORY`). The descriptor supplies the friendly name, description, and clickable documentation link shown by Pulsar.
 4. Enable the plugin in the active Pulsar Legacy profile, then use Kontrol's Launch action.
 5. Complete the ignored `references/<build>/manual-checklist.md` created by the adapter test command.
 

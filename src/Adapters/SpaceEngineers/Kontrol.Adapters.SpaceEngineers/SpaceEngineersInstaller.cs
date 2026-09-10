@@ -17,6 +17,7 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
     private const string PulsarDirectoryName = "Pulsar";
     private const string LegacyExecutableName = "Legacy.exe";
     private const string PluginPayloadName = "Kontrol.Adapters.SpaceEngineers.Plugin.dll";
+    private const string PluginMetadataName = "Kontrol.Adapters.SpaceEngineers.Plugin.xml";
     private const string LocalPluginDirectoryName = "Local";
     private const string StatusMapName = @"Local\Kontrol_AdapterStatus_space-engineers";
     private const int StatusFrameCapacity = 512;
@@ -43,14 +44,18 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
 
         GetPulsarPlanPaths(out var legacyExecutable, out var localPluginDirectory);
         string sourcePayloadPath = Path.Combine(Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty, PluginPayloadName);
+        string sourceMetadataPath = Path.Combine(Path.GetDirectoryName(context.SourceDllPath) ?? string.Empty, PluginMetadataName);
         string gameExecutable = GetGameExecutablePath(context.GameDirectory);
         bool pulsarAvailable = File.Exists(legacyExecutable);
         bool payloadAvailable = File.Exists(sourcePayloadPath);
+        bool metadataAvailable = File.Exists(sourceMetadataPath);
         bool gameAvailable = File.Exists(gameExecutable);
-        bool deployed = pulsarAvailable && File.Exists(Path.Combine(localPluginDirectory, PluginPayloadName));
+        bool deployed = pulsarAvailable &&
+            File.Exists(Path.Combine(localPluginDirectory, PluginPayloadName)) &&
+            File.Exists(Path.Combine(localPluginDirectory, PluginMetadataName));
         var runtimeVerification = GetPulsarRuntimeVerification();
 
-        DeploymentState deploymentState = !payloadAvailable
+        DeploymentState deploymentState = !payloadAvailable || !metadataAvailable
             ? DeploymentState.Failed
             : !pulsarAvailable
                 ? DeploymentState.NotConfigured
@@ -61,9 +66,10 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
                         : DeploymentState.NotDeployed;
         string deploymentMessage = deploymentState switch
         {
-            DeploymentState.Deployed => $"The net48 Pulsar payload is installed at {Path.Combine(localPluginDirectory, PluginPayloadName)}.",
+            DeploymentState.Deployed => $"The Pulsar payload and metadata are installed at {localPluginDirectory}.",
             DeploymentState.NotConfigured => "Pulsar Legacy is not configured or installed.",
             DeploymentState.Failed when !payloadAvailable => $"The packaged Pulsar payload was not found at {sourcePayloadPath}.",
+            DeploymentState.Failed when !metadataAvailable => $"The packaged Pulsar metadata was not found at {sourceMetadataPath}.",
             DeploymentState.Failed => $"Space Engineers was not found at {gameExecutable}.",
             _ => "The Pulsar payload is ready to deploy."
         };
@@ -88,7 +94,7 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
             new DeploymentMethodCapabilities(CanInstall: true, CanUninstall: true, CanLaunch: true, CanCreateShortcut: false),
             "Pulsar Legacy plugin",
             "Kontrol deploys the separate .NET Framework payload to Pulsar Legacy's local-plugin folder, then starts Pulsar Legacy with Space Engineers.",
-            $"Only {PluginPayloadName} is copied to Pulsar Legacy at {localPluginDirectory}. No Space Engineers file or Steam launch setting is changed.",
+            $"Only {PluginPayloadName} and {PluginMetadataName} are copied to Pulsar Legacy at {localPluginDirectory}. No Space Engineers file or Steam launch setting is changed.",
             "Confirm the external Pulsar Legacy local-plugin write and the subsequent game launch.",
             [
                 new DeploymentPrerequisite(
@@ -113,6 +119,13 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
                     sourcePayloadPath,
                     $"Rebuild the adapter package with {PluginPayloadName} included."),
                 new DeploymentPrerequisite(
+                    "pulsar-plugin-metadata",
+                    "Pulsar plugin metadata",
+                    "The package must contain the Pulsar descriptor that supplies the friendly name, description, and documentation link.",
+                    metadataAvailable ? DeploymentPrerequisiteState.Satisfied : DeploymentPrerequisiteState.Missing,
+                    sourceMetadataPath,
+                    $"Rebuild the adapter package with {PluginMetadataName} included."),
+                new DeploymentPrerequisite(
                     "pulsar-local-plugin-write-access",
                     "Pulsar local-plugin write access",
                     "Kontrol verifies write access to Pulsar Legacy's local-plugin directory immediately before deployment.",
@@ -127,7 +140,10 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
                 localPluginDirectory,
                 [new DeploymentOwnedFile(
                     PluginPayloadName,
-                    "The net48 Pulsar Legacy payload copied by the SE1 installer.")],
+                    "The net48 Pulsar Legacy payload copied by the SE1 installer."),
+                 new DeploymentOwnedFile(
+                     PluginMetadataName,
+                     "The Pulsar descriptor containing the SE1 plugin friendly name, description, and documentation link.")],
                 Array.Empty<DeploymentConfigurationEffect>())],
             new DeploymentLaunchChain([
                 new DeploymentLaunchStep(
@@ -153,7 +169,8 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
     public bool CheckIsInstalled(string gameDirectory, GameLaunchMethod method) =>
         method == GameLaunchMethod.BinPluginsFolder &&
         TryGetPulsarPaths(out _, out var localPluginDirectory) &&
-        File.Exists(Path.Combine(localPluginDirectory, PluginPayloadName));
+        File.Exists(Path.Combine(localPluginDirectory, PluginPayloadName)) &&
+        File.Exists(Path.Combine(localPluginDirectory, PluginMetadataName));
 
     public void Install(string gameDirectory, GameLaunchMethod method, string sourceDllPath)
     {
@@ -162,12 +179,16 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
             throw new DirectoryNotFoundException(BuildPulsarNotFoundMessage());
 
         string sourcePluginPath = Path.Combine(Path.GetDirectoryName(sourceDllPath) ?? string.Empty, PluginPayloadName);
+        string sourceMetadataPath = Path.Combine(Path.GetDirectoryName(sourceDllPath) ?? string.Empty, PluginMetadataName);
         if (!File.Exists(sourcePluginPath))
             throw new FileNotFoundException($"The packaged Pulsar payload '{PluginPayloadName}' was not found beside the Kontrol adapter entry assembly.", sourcePluginPath);
+        if (!File.Exists(sourceMetadataPath))
+            throw new FileNotFoundException($"The packaged Pulsar metadata '{PluginMetadataName}' was not found beside the Kontrol adapter entry assembly.", sourceMetadataPath);
 
         Directory.CreateDirectory(localPluginDirectory);
         EnsureDirectoryCanBeWritten(localPluginDirectory);
         File.Copy(sourcePluginPath, Path.Combine(localPluginDirectory, PluginPayloadName), overwrite: true);
+        File.Copy(sourceMetadataPath, Path.Combine(localPluginDirectory, PluginMetadataName), overwrite: true);
     }
 
     public void Uninstall(string gameDirectory, GameLaunchMethod method)
@@ -175,7 +196,9 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         EnsurePulsarMethod(method);
         if (!TryGetPulsarPaths(out _, out var localPluginDirectory)) return;
         string payloadPath = Path.Combine(localPluginDirectory, PluginPayloadName);
+        string metadataPath = Path.Combine(localPluginDirectory, PluginMetadataName);
         if (File.Exists(payloadPath)) File.Delete(payloadPath);
+        if (File.Exists(metadataPath)) File.Delete(metadataPath);
     }
 
     public void Launch(string gameDirectory, GameLaunchMethod method, string sourceDllPath) => Launch(gameDirectory, method, sourceDllPath, null);
