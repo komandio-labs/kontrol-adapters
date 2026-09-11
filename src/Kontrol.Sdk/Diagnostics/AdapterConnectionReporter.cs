@@ -92,11 +92,11 @@ public sealed class AdapterConnectionReporter(string adapterId) : IDisposable
 }
 
 public sealed record AdapterRuntimeStatus(
-    long Sequence,
-    AdapterRuntimeState State,
-    int ProcessId,
-    long TimestampUnixMilliseconds,
-    string? ErrorTitle = null,
-    string? ErrorMessage = null,
-    string? Recommendation = null
+    [property: JsonPropertyName("sequence")] long Sequence,
+    [property: JsonPropertyName("state")] AdapterRuntimeState State,
+    [property: JsonPropertyName("processId")] int ProcessId,
+    [property: JsonPropertyName("timestampUnixMilliseconds")] long TimestampUnixMilliseconds,
+    [property: JsonPropertyName("errorTitle")] string? ErrorTitle = null,
+    [property: JsonPropertyName("errorMessage")] string? ErrorMessage = null,
+    [property: JsonPropertyName("recommendation")] string? Recommendation = null
 );

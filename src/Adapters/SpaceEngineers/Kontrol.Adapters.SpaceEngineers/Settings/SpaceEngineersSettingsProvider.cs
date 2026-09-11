@@ -17,13 +17,15 @@ public sealed class SpaceEngineersSettingsProvider : IAdapterSettingsProvider
     public IReadOnlyList<SettingCategoryGroup> Categories { get; } =
     [
         new("Flight Controls", SettingIcon.Spacecraft, "Tune the final Space Engineers 1 ship-control response for your joystick, HOTAS, or HOSAS.")
+        ,new("Camera", SettingIcon.Eye, "Tune third-person camera controls for your joystick, HOTAS, or HOSAS.")
     ];
 
     public IReadOnlyList<AdapterSettingDescriptor> Descriptors { get; } =
     [
         CreateSensitivity("flight.pitchSensitivity", "Pitch Sensitivity", "Scales nose-up and nose-down response at Space Engineers' final ship-control commit.", FlightSensitivityDefaults.Pitch),
         CreateSensitivity("flight.yawSensitivity", "Yaw Sensitivity", "Scales left and right yaw response at Space Engineers' final ship-control commit.", FlightSensitivityDefaults.Yaw),
-        CreateSensitivity("flight.rollSensitivity", "Roll Sensitivity", "Scales bank-left and bank-right response at Space Engineers' final ship-control commit.", FlightSensitivityDefaults.Roll)
+        CreateSensitivity("flight.rollSensitivity", "Roll Sensitivity", "Scales bank-left and bank-right response at Space Engineers' final ship-control commit.", FlightSensitivityDefaults.Roll),
+        CreateCameraSensitivity()
     ];
 
     public AdapterSettingsSnapshot GetDefaultSnapshot() => AdapterSettingsSnapshot.Create(Descriptors, new Dictionary<string, object?>(), 1);
@@ -63,10 +65,30 @@ public sealed class SpaceEngineersSettingsProvider : IAdapterSettingsProvider
         Description = description
     };
 
+    private static NumberSettingDescriptor CreateCameraSensitivity() => new()
+    {
+        Key = "camera.lookSensitivity",
+        DisplayName = "Camera Look Sensitivity",
+        Category = "Camera",
+        Icon = SettingIcon.Eye,
+        Layout = LayoutSpan.Half,
+        UpdateScope = SettingUpdateScope.Realtime,
+        DefaultValue = FlightSensitivityDefaults.CameraLook,
+        Min = 0.1f,
+        Max = 10f,
+        Step = 0.1f,
+        CanonicalUnit = MeasurementUnit.Multiplier,
+        MinLabel = "0.1× (Gentle)",
+        MidLabel = "2.0× (Recommended)",
+        MaxLabel = "10.0× (Fast)",
+        Description = "Scales horizontal, vertical, and zoom speed while look-around is active."
+    };
+
     private static class FlightSensitivityDefaults
     {
         internal const float Pitch = 20f;
         internal const float Yaw = 20f;
         internal const float Roll = 1f;
+        internal const float CameraLook = 2f;
     }
 }

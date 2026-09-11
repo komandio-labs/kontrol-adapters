@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Kontrol.Sdk.IPC;
 
 namespace Kontrol.Sdk.Diagnostics;
@@ -86,4 +87,7 @@ public sealed class AdapterLogReporter(string adapterId) : IDisposable
 
 public enum AdapterLogLevel { Debug, Information, Error }
 
-public sealed record AdapterLogEvent(long Sequence, string Message, AdapterLogLevel Level = AdapterLogLevel.Information);
+public sealed record AdapterLogEvent(
+    [property: JsonPropertyName("sequence")] long Sequence,
+    [property: JsonPropertyName("message")] string Message,
+    [property: JsonPropertyName("level")] AdapterLogLevel Level = AdapterLogLevel.Information);

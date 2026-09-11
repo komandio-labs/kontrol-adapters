@@ -21,17 +21,7 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
     private const string PluginMetadataName = "Kontrol.Adapters.SpaceEngineers.Plugin.xml";
     private static readonly (string SourceName, string TargetName)[] PulsarRuntimeDependencyFiles =
     [
-        ("Kontrol.Sdk.Pulsar.dll", "Kontrol.Sdk.dll"),
-        ("Microsoft.Bcl.AsyncInterfaces.dll", "Microsoft.Bcl.AsyncInterfaces.dll"),
-        ("System.Buffers.dll", "System.Buffers.dll"),
-        ("System.IO.Pipelines.dll", "System.IO.Pipelines.dll"),
-        ("System.Memory.dll", "System.Memory.dll"),
-        ("System.Numerics.Vectors.dll", "System.Numerics.Vectors.dll"),
-        ("System.Runtime.CompilerServices.Unsafe.dll", "System.Runtime.CompilerServices.Unsafe.dll"),
-        ("System.Text.Encodings.Web.dll", "System.Text.Encodings.Web.dll"),
-        ("System.Text.Json.dll", "System.Text.Json.dll"),
-        ("System.Threading.Tasks.Extensions.dll", "System.Threading.Tasks.Extensions.dll"),
-        ("System.ValueTuple.dll", "System.ValueTuple.dll")
+        ("Kontrol.Sdk.Pulsar.dll", "Kontrol.Sdk.dll")
     ];
     private const string LocalPluginDirectoryName = "Local";
     private const string StatusMapName = @"Local\Kontrol_AdapterStatus_space-engineers";
@@ -40,28 +30,43 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
 
     public AdapterInputSchema GetInputSchema() => new(1,
     [
-        new("flight.pitch", "Pitch", "Nose up / nose down", "Flight controls", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Nose up", "Nose down")),
-        new("flight.roll", "Roll", "Bank left / right", "Flight controls", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Bank left", "Bank right")),
-        new("flight.yaw", "Yaw", "Turn left / right", "Flight controls", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Turn left", "Turn right")),
-        new("movement.forward", "Forward thrust", "Forward / reverse translation", "Translation", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Reverse", "Forward")),
-        new("movement.strafe", "Strafe", "Left / right translation", "Translation", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Left", "Right")),
-        new("movement.lift", "Lift", "Up / down translation", "Translation", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .05f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Down", "Up")),
-        new("systems.dampeners", "Dampeners", "Toggle inertial dampeners", "Vehicle systems", 10, InputSignalKind.Discrete, DiscreteBehavior.Toggle, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("systems.lights", "Lights", "Toggle vehicle lights", "Vehicle systems", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("systems.landing_gears", "Landing gear", "Toggle landing gear", "Vehicle systems", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("flight.pitch", "Pitch", "Nose up/down", "Flight", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Nose up", "Nose down")),
+        new("flight.roll", "Roll", "Roll left/right", "Flight", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Bank left", "Bank right")),
+        new("flight.yaw", "Yaw", "Turn left/right", "Flight", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Turn left", "Turn right")),
+        new("movement.forward", "Forward / Backward", "Forward/reverse thrust", "Flight", 40, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Reverse", "Forward")),
+        new("movement.strafe", "Strafe left / right", "Lateral thrust", "Flight", 50, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1.5f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Left", "Right")),
+        new("movement.lift", "Up / down", "Vertical thrust", "Flight", 60, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .05f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Down", "Up")),
+        new("systems.dampeners", "Inertia dampeners on / off", "Toggle dampeners", "Vehicle systems", 10, InputSignalKind.Discrete, DiscreteBehavior.Toggle, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("systems.lights", "Lights on / off", "Toggle ship lights", "Vehicle systems", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("systems.landing_gears", "Park", "Toggle park state", "Vehicle systems", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
         new("systems.handbrake", "Handbrake", "Toggle handbrake", "Vehicle systems", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("camera.mode_switch", "Camera mode switch", "Switch between Space Engineers camera modes", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_1", "Toolbar slot 1", "Activate toolbar slot 1 while controlling a ship or vehicle", "Toolbar", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_2", "Toolbar slot 2", "Activate toolbar slot 2 while controlling a ship or vehicle", "Toolbar", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_3", "Toolbar slot 3", "Activate toolbar slot 3 while controlling a ship or vehicle", "Toolbar", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_4", "Toolbar slot 4", "Activate toolbar slot 4 while controlling a ship or vehicle", "Toolbar", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_5", "Toolbar slot 5", "Activate toolbar slot 5 while controlling a ship or vehicle", "Toolbar", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_6", "Toolbar slot 6", "Activate toolbar slot 6 while controlling a ship or vehicle", "Toolbar", 60, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_7", "Toolbar slot 7", "Activate toolbar slot 7 while controlling a ship or vehicle", "Toolbar", 70, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_8", "Toolbar slot 8", "Activate toolbar slot 8 while controlling a ship or vehicle", "Toolbar", 80, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_9", "Toolbar slot 9", "Activate toolbar slot 9 while controlling a ship or vehicle", "Toolbar", 90, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("toolbar.select_0", "Toolbar slot 10", "Activate toolbar slot 10 (the game's 0 key) while controlling a ship or vehicle", "Toolbar", 100, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
-        new("systems.leave_control", "Leave vehicle / cockpit", "Leave the controlled vehicle or cockpit (the game's F action)", "Vehicle systems", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event)
+        new("camera.mode_switch", "First-person / Third-person", "Switch camera view", "Camera", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_1", "Toolbar slot 1", "Activate toolbar slot 1", "Toolbar", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_2", "Toolbar slot 2", "Activate toolbar slot 2", "Toolbar", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_3", "Toolbar slot 3", "Activate toolbar slot 3", "Toolbar", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_4", "Toolbar slot 4", "Activate toolbar slot 4", "Toolbar", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_5", "Toolbar slot 5", "Activate toolbar slot 5", "Toolbar", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_6", "Toolbar slot 6", "Activate toolbar slot 6", "Toolbar", 60, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_7", "Toolbar slot 7", "Activate toolbar slot 7", "Toolbar", 70, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_8", "Toolbar slot 8", "Activate toolbar slot 8", "Toolbar", 80, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_9", "Toolbar slot 9", "Activate toolbar slot 9", "Toolbar", 90, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("toolbar.select_0", "Toolbar slot 0", "Activate toolbar slot 0", "Toolbar", 100, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("systems.leave_control", "Use / Interact", "Exit cockpit or interact", "Vehicle control", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("systems.reactors", "Power switch on / off", "Toggle connected-grid power", "Vehicle systems", 60, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("interface.terminal", "Terminal / Inventory", "Open ship terminal", "Interface", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("interface.inventory", "Inventory", "Open inventory", "Interface", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("weapons.primary", "Use tool / Fire weapon", "Primary tool/weapon", "Weapons & tools", 10, InputSignalKind.Discrete, DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
+        new("weapons.secondary", "Secondary mode", "Secondary tool/weapon", "Weapons & tools", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
+        new("systems.broadcasting", "Broadcasting", "Toggle antenna broadcast", "Vehicle systems", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("systems.local_power", "Local power switch on / off", "Toggle local-grid power", "Vehicle systems", 70, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("interface.hud", "HUD on / off", "Toggle HUD display", "Interface", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("communication.chat", "Chat screen", "Open or close chat", "Communication", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("communication.voice", "Voice Chat", "Hold to talk", "Communication", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
+        new("camera.hold_look_around", "Hold to look around", "Hold for camera look", "Camera", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
+        new("camera.toggle_look_around", "Toggle look around", "Toggle camera look", "Camera", 30, InputSignalKind.Discrete, DiscreteBehavior.Toggle, DeliveryMode: DiscreteDeliveryMode.State),
+        new("camera.look_horizontal", "Look Around Horizontal", "Optional camera left/right override", "Camera", 40, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Left", "Right")),
+        new("camera.look_vertical", "Look Around Vertical", "Optional camera up/down override", "Camera", 50, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Down", "Up")),
+        new("camera.zoom", "Look Around Zoom", "Optional smooth camera zoom override", "Camera", 60, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Zoom out", "Zoom in"))
     ]);
 
     public AdapterDeploymentPlan GetDeploymentPlan(AdapterDeploymentContext context)

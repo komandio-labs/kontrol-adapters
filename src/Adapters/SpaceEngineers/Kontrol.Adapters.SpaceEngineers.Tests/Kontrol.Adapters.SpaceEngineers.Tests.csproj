@@ -9,6 +9,8 @@
   <ItemGroup>
     <Compile Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\PulsarStartupTrace.cs" Link="Plugin\PulsarStartupTrace.cs" />
     <Compile Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\LegacyFlightSettings.cs" Link="Plugin\LegacyFlightSettings.cs" />
+    <Compile Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\InputMerge.cs" Link="Plugin\InputMerge.cs" />
+    <Compile Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\CameraInputMath.cs" Link="Plugin\CameraInputMath.cs" />
     <ProjectReference Include="..\Kontrol.Adapters.SpaceEngineers\Kontrol.Adapters.SpaceEngineers.csproj" />
   </ItemGroup>
 </Project>

@@ -27,17 +27,22 @@
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
+    <Compile Remove="Diagnostics\LegacyAdapterConnectionReporter.cs" />
+    <Compile Remove="Diagnostics\LegacyAdapterLogReporter.cs" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="System.Text.Json" Version="9.0.0" />
     <Compile Remove="Compatibility\**\*.cs" />
     <Compile Remove="Interfaces\**\*.cs" />
     <Compile Remove="Inputs\**\*.cs" />
     <Compile Remove="Settings\**\*.cs" />
     <Compile Remove="Telemetry\**\*.cs" />
+    <Compile Remove="Diagnostics\AdapterConnectionReporter.cs" />
+    <Compile Remove="Diagnostics\AdapterLogReporter.cs" />
     <Compile Remove="Diagnostics\AdapterTraceDescriptor.cs" />
     <Compile Include="Compatibility\NetStandardCompilerServices.cs" />
+    <Compile Include="Diagnostics\LegacyAdapterConnectionReporter.cs" />
+    <Compile Include="Diagnostics\LegacyAdapterLogReporter.cs" />
   </ItemGroup>
 
 </Project>

@@ -43,7 +43,7 @@ public class SpaceEngineersInstallerTests
     }
 
     [Test]
-    public void Schema_ExposesApiBackedFlightAndSystemControls()
+    public void Schema_ExposesTheCompleteJoystickControlSet()
     {
         var schema = new SpaceEngineersInstaller().GetInputSchema();
         schema.Version.ShouldBe(1);
@@ -54,8 +54,17 @@ public class SpaceEngineersInstallerTests
             "camera.mode_switch",
             "toolbar.select_1", "toolbar.select_2", "toolbar.select_3", "toolbar.select_4", "toolbar.select_5",
             "toolbar.select_6", "toolbar.select_7", "toolbar.select_8", "toolbar.select_9", "toolbar.select_0",
-            "systems.leave_control"
+            "systems.leave_control", "systems.reactors", "interface.terminal", "interface.inventory",
+            "weapons.primary", "weapons.secondary", "systems.broadcasting", "systems.local_power", "interface.hud",
+            "communication.chat", "communication.voice", "camera.hold_look_around", "camera.toggle_look_around",
+            "camera.look_horizontal", "camera.look_vertical", "camera.zoom"
         });
+
+        schema.Inputs.Single(input => input.Id == "systems.landing_gears").DisplayName.ShouldBe("Park");
+        schema.Inputs.Single(input => input.Id == "systems.reactors").DisplayName.ShouldBe("Power switch on / off");
+        schema.Inputs.Single(input => input.Id == "systems.leave_control").DisplayName.ShouldBe("Use / Interact");
+        schema.Inputs.Single(input => input.Id == "interface.terminal").DisplayName.ShouldBe("Terminal / Inventory");
+        schema.Inputs.ShouldNotContain(input => input.Id == "interface.remote_access");
     }
 
     [Test]
@@ -110,7 +119,7 @@ public class SpaceEngineersInstallerTests
             .ShouldContain("Kontrol.Sdk.dll");
         package.RootElement.GetProperty("package").GetProperty("include").EnumerateArray()
             .Select(item => item.GetString())
-            .ShouldContain("System.Text.Json.dll");
+            .ShouldContain("Kontrol.Sdk.Pulsar.dll");
         deployment.Summary.ShouldContain("joystick, HOTAS, HOSAS, controller, and button-box payload");
         deployment.Targets.Single().OwnedFiles.Select(file => file.Path).ShouldBe([
             pulsarPayload, "0Harmony.dll", "Kontrol.Sdk.dll and JSON runtime dependencies", "Kontrol.Adapters.SpaceEngineers.Plugin.xml"]);
@@ -123,6 +132,8 @@ public class SpaceEngineersInstallerTests
         payloadProject.ShouldContain("<PackageReference Include=\"Lib.Harmony\" Version=\"2.4.2\" />");
         payloadProject.ShouldContain("<ProjectReference Include=\"..\\..\\..\\Kontrol.Sdk\\Kontrol.Sdk.csproj\" />");
         payloadProject.ShouldContain("<Reference Include=\"Sandbox.Game\"");
+        payloadProject.ShouldContain("<Reference Include=\"VRage.Library\"");
+        payloadProject.ShouldContain("<Reference Include=\"VRage.Input\"");
         payloadProject.ShouldNotContain($"<AssemblyName>{Path.GetFileNameWithoutExtension(hostEntry)}</AssemblyName>");
     }
 
@@ -135,7 +146,16 @@ public class SpaceEngineersInstallerTests
 
         xml.ShouldContain("<FriendlyName>Kontrol Joystick / HOTAS / HOSAS for Space Engineers</FriendlyName>");
         xml.ShouldContain("Fly Space Engineers with your joystick, HOTAS, HOSAS, controller, or button box.");
-        xml.ShouldContain("pitch, roll, yaw, forward/reverse thrust, strafe, lift, dampeners, lights, landing gear, handbrake, camera-mode switch, toolbar slots 1-10, and leave vehicle/cockpit (F)");
+        xml.ShouldContain("Use tool / Fire weapon");
+        xml.ShouldContain("Secondary mode");
+        xml.ShouldContain("Inertia dampeners on / off");
+        xml.ShouldContain("Broadcasting");
+        xml.ShouldContain("camera look-around");
+        xml.ShouldContain("third-person zoom");
+        xml.ShouldContain("Chat screen");
+        xml.ShouldContain("Voice Chat");
+        xml.ShouldContain("toolbar slots 1-0");
+        xml.ShouldNotContain("remote access");
         xml.ShouldContain("https://www.komandio.com/kontrol");
     }
 
@@ -147,21 +167,73 @@ public class SpaceEngineersInstallerTests
             adapterRoot, "Kontrol.Adapters.SpaceEngineers.Plugin", "SpaceEngineersPlugin.cs"));
 
         plugin.ShouldContain("ShipControlCommitHook.Install(this);");
-        plugin.ShouldContain("internal void ApplyAtFinalControlCommit(MyShipController controlled)");
-        plugin.ShouldContain("controlled.MoveAndRotate(movement, rotation, frame.ReadAnalog(1) * sensitivities.Roll);");
-        plugin.ShouldContain("[InputTrace] Committed pitch=");
+        plugin.ShouldContain("internal void MergeAtFinalControlCommit(MyShipController controlled, ref Vector3 movement, ref Vector2 rotation, ref float roll)");
+        plugin.ShouldContain("var nativeMovement = movement;");
+        plugin.ShouldContain("var nativeRotation = rotation;");
+        plugin.ShouldNotContain("controlled.MoveAndRotate(movement, rotation, roll);");
+        plugin.ShouldContain("[InputTrace] Merged Kontrol with native SE1 input");
         plugin.ShouldContain("GamePlayScreenTypeName + \":SwitchCamera\"");
         plugin.ShouldContain("SwitchCameraMethod.Invoke(gamePlay, null)");
         plugin.ShouldContain("toolbarOwner.Toolbar.ActivateItemAtSlot(slot)");
         plugin.ShouldContain("controlled.Use()");
+        plugin.ShouldContain("controlled.SwitchReactors()");
+        plugin.ShouldContain("controlled.ShowTerminal()");
+        plugin.ShouldContain("controlled.ShowInventory()");
+        plugin.ShouldContain("ship.BeginShootSync(MyShootActionEnum.PrimaryAction)");
+        plugin.ShouldContain("ship.BeginShootSync(MyShootActionEnum.SecondaryAction)");
+        plugin.ShouldContain("ship.SwitchBroadcasting()");
+        plugin.ShouldContain("ship.SwitchReactorsLocal()");
+        plugin.ShouldContain("MyHud.ToggleGamepadHud()");
+        plugin.ShouldContain("MyVoiceChatSessionComponent.Static");
+        plugin.ShouldContain("ToggleChatScreen()");
+        plugin.ShouldContain("cameraController.Rotate(new Vector2(");
+        plugin.ShouldContain("CameraInputMath.ResolveLookAxis(");
+        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.X, frame.ReadAnalog(4), cameraLookActive)");
+        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.Y, frame.ReadAnalog(5), cameraLookActive)");
+        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.Z, frame.ReadAnalog(3), cameraLookActive)");
+        plugin.ShouldContain("MergeNativeCameraZoom");
+        plugin.ShouldContain("Native camera zoom: control=");
+        plugin.ShouldContain("Camera routing: sensitivity=");
+        plugin.ShouldContain("MyControlsSpace.CAMERA_ZOOM_IN");
+        plugin.ShouldNotContain("spectator.ResetViewerDistance(nextDistance)");
+        plugin.ShouldNotContain("ThirdPersonLookAtField");
 
         string hook = File.ReadAllText(Path.Combine(
             adapterRoot, "Kontrol.Adapters.SpaceEngineers.Plugin", "ShipControlCommitHook.cs"));
-        hook.ShouldContain("MyShipController.UpdateControls() control commit");
-        hook.ShouldContain("Harmony.Patch(TargetMethod, prefix: new HarmonyMethod(PrefixMethod), postfix: new HarmonyMethod(PostfixMethod));");
-        plugin.ShouldContain("Final control prefix rejected:");
-        plugin.ShouldContain("Final control prefix prepared indicators:");
-        plugin.ShouldContain("Final control postfix observed:");
+        hook.ShouldContain("nameof(MyShipController.MoveAndRotate)");
+        hook.ShouldContain("Harmony.Patch(TargetMethod, prefix: new HarmonyMethod(PrefixMethod));");
+        hook.ShouldContain("Harmony.Patch(ZoomTargetMethod, transpiler: new HarmonyMethod(ZoomTranspilerMethod));");
+        hook.ShouldContain("MyControllerHelper.IsControlAnalog(context, control, joystick)");
+        plugin.ShouldContain("Final control merge rejected:");
+        plugin.ShouldContain("Final control argument merge: nativeMove=");
+    }
+
+    [Test]
+    public void MergeAxis_PreservesTheStrongerNativeOrKontrolInput()
+    {
+        InputMerge.StrongerAxis(0.75f, 0.2f).ShouldBe(0.75f);
+        InputMerge.StrongerAxis(-0.4f, -0.8f).ShouldBe(-0.8f);
+        InputMerge.StrongerAxis(0.6f, -0.6f).ShouldBe(0.6f);
+        InputMerge.StrongerAxis(float.NaN, 0.3f).ShouldBe(0.3f);
+    }
+
+    [Test]
+    public void CameraInputMath_UsesTheConfiguredHoldOrToggleStateAndZoomDirection()
+    {
+        ulong hold = 1UL << SpaceEngineersControlLayout.HoldLookAroundAction;
+        ulong toggle = 1UL << SpaceEngineersControlLayout.ToggleLookAroundAction;
+
+        CameraInputMath.IsCameraLookActive(hold).ShouldBeTrue();
+        CameraInputMath.IsCameraLookActive(toggle).ShouldBeTrue();
+        CameraInputMath.IsCameraLookActive(0).ShouldBeFalse();
+        CameraInputMath.ResolveLookAxis(0f, 0.75f).ShouldBe(0.75f);
+        CameraInputMath.ResolveLookAxis(-0.5f, 0.75f).ShouldBe(-0.5f);
+        CameraInputMath.ApplyLookAxis(1f, 0.1f, 1d / 60d).ShouldBeInRange(0.499f, 0.501f);
+        CameraInputMath.ApplyLookAxis(1f, 1f, 1d / 60d).ShouldBeInRange(4.999f, 5.001f);
+        CameraInputMath.ApplyLookAxis(1f, 10f, 1d / 60d).ShouldBeInRange(49.99f, 50.01f);
+        CameraInputMath.ApplyLookAxis(0f, 10f, 1d / 60d).ShouldBe(0f);
+        CameraInputMath.ResolveShipAxis(0.2f, 0.9f, true).ShouldBe(0.2f);
+        CameraInputMath.ResolveShipAxis(0.2f, 0.9f, false).ShouldBe(0.9f);
     }
 
     [Test]
@@ -190,11 +262,12 @@ public class SpaceEngineersInstallerTests
 
         provider.AdapterId.ShouldBe("space-engineers");
         provider.Descriptors.Select(descriptor => descriptor.Key).ShouldBe([
-            "flight.pitchSensitivity", "flight.yawSensitivity", "flight.rollSensitivity"]);
+            "flight.pitchSensitivity", "flight.yawSensitivity", "flight.rollSensitivity", "camera.lookSensitivity"]);
         provider.Descriptors.ShouldAllBe(descriptor => descriptor.UpdateScope == Kontrol.Sdk.Settings.SettingUpdateScope.Realtime);
         provider.GetDefaultSnapshot().GetNumber("flight.pitchSensitivity", 0f).ShouldBe(20f);
         provider.GetDefaultSnapshot().GetNumber("flight.yawSensitivity", 0f).ShouldBe(20f);
         provider.GetDefaultSnapshot().GetNumber("flight.rollSensitivity", 0f).ShouldBe(1f);
+        provider.GetDefaultSnapshot().GetNumber("camera.lookSensitivity", 0f).ShouldBe(2f);
     }
 
     [Test]
@@ -208,11 +281,15 @@ public class SpaceEngineersInstallerTests
 
         settings.ShouldContain("Local\\Kontrol_Settings_space-engineers");
         settings.ShouldContain("flight.pitchSensitivity");
+        settings.ShouldContain("camera.lookSensitivity");
         settings.ShouldContain("return Math.Max(0.1f, Math.Min(40f, value));");
         plugin.ShouldContain("_settings.Refresh();");
         plugin.ShouldContain("frame.ReadAnalog(0) * sensitivities.Pitch");
         plugin.ShouldContain("frame.ReadAnalog(2) * sensitivities.Yaw");
         plugin.ShouldContain("frame.ReadAnalog(1) * sensitivities.Roll");
+        plugin.ShouldContain("sensitivities.CameraLook");
+        plugin.ShouldContain("CameraInputMath.ApplyLookAxis(");
+        plugin.ShouldContain("kontrolValue * _settings.Current.CameraLook");
     }
 
     [Test]
@@ -227,6 +304,24 @@ public class SpaceEngineersInstallerTests
         schema.Inputs[SpaceEngineersControlLayout.ToolbarFirstAction].Id.ShouldBe("toolbar.select_1");
         schema.Inputs[SpaceEngineersControlLayout.ToolbarFirstAction + SpaceEngineersControlLayout.ToolbarActionCount - 1].Id.ShouldBe("toolbar.select_0");
         schema.Inputs[SpaceEngineersControlLayout.LeaveControlAction].Id.ShouldBe("systems.leave_control");
+        schema.Inputs[SpaceEngineersControlLayout.ReactorsAction].Id.ShouldBe("systems.reactors");
+        schema.Inputs[SpaceEngineersControlLayout.ShowTerminalAction].Id.ShouldBe("interface.terminal");
+        schema.Inputs[SpaceEngineersControlLayout.ShowInventoryAction].Id.ShouldBe("interface.inventory");
+        schema.Inputs[SpaceEngineersControlLayout.PrimaryAction].Id.ShouldBe("weapons.primary");
+        schema.Inputs[SpaceEngineersControlLayout.SecondaryAction].Id.ShouldBe("weapons.secondary");
+        schema.Inputs[SpaceEngineersControlLayout.BroadcastingAction].Id.ShouldBe("systems.broadcasting");
+        schema.Inputs[SpaceEngineersControlLayout.LocalPowerAction].Id.ShouldBe("systems.local_power");
+        schema.Inputs[SpaceEngineersControlLayout.ToggleHudAction].Id.ShouldBe("interface.hud");
+        schema.Inputs[SpaceEngineersControlLayout.ChatScreenAction].Id.ShouldBe("communication.chat");
+        schema.Inputs[SpaceEngineersControlLayout.VoiceChatAction].Id.ShouldBe("communication.voice");
+        schema.Inputs[SpaceEngineersControlLayout.HoldLookAroundAction].Id.ShouldBe("camera.hold_look_around");
+        schema.Inputs[SpaceEngineersControlLayout.ToggleLookAroundAction].Id.ShouldBe("camera.toggle_look_around");
+        schema.Inputs.Where(input => input.SignalKind == Kontrol.Sdk.Inputs.InputSignalKind.Analog)
+            .ElementAt(SpaceEngineersControlLayout.CameraLookHorizontalAnalog).Id.ShouldBe("camera.look_horizontal");
+        schema.Inputs.Where(input => input.SignalKind == Kontrol.Sdk.Inputs.InputSignalKind.Analog)
+            .ElementAt(SpaceEngineersControlLayout.CameraLookVerticalAnalog).Id.ShouldBe("camera.look_vertical");
+        schema.Inputs.Where(input => input.SignalKind == Kontrol.Sdk.Inputs.InputSignalKind.Analog)
+            .ElementAt(SpaceEngineersControlLayout.CameraZoomAnalog).Id.ShouldBe("camera.zoom");
     }
 
     [Test]
@@ -287,16 +382,12 @@ public class SpaceEngineersInstallerTests
 
     private static readonly string[] PulsarRuntimeSourceDependencies =
     [
-        "Kontrol.Sdk.Pulsar.dll", "Microsoft.Bcl.AsyncInterfaces.dll", "System.Buffers.dll", "System.IO.Pipelines.dll",
-        "System.Memory.dll", "System.Numerics.Vectors.dll", "System.Runtime.CompilerServices.Unsafe.dll",
-        "System.Text.Encodings.Web.dll", "System.Text.Json.dll", "System.Threading.Tasks.Extensions.dll", "System.ValueTuple.dll"
+        "Kontrol.Sdk.Pulsar.dll"
     ];
 
     private static readonly string[] PulsarRuntimeTargetDependencies =
     [
-        "Kontrol.Sdk.dll", "Microsoft.Bcl.AsyncInterfaces.dll", "System.Buffers.dll", "System.IO.Pipelines.dll",
-        "System.Memory.dll", "System.Numerics.Vectors.dll", "System.Runtime.CompilerServices.Unsafe.dll",
-        "System.Text.Encodings.Web.dll", "System.Text.Json.dll", "System.Threading.Tasks.Extensions.dll", "System.ValueTuple.dll"
+        "Kontrol.Sdk.dll"
     ];
 
     private static string FindAdapterRoot()

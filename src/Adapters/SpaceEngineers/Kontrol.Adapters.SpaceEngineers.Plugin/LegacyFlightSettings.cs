@@ -10,16 +10,19 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
         internal const float DefaultPitch = 20f;
         internal const float DefaultYaw = 20f;
         internal const float DefaultRoll = 1f;
+        internal const float DefaultCameraLook = 2f;
 
         internal float Pitch;
         internal float Yaw;
         internal float Roll;
+        internal float CameraLook;
 
         internal static FlightSensitivitySettings Default => new FlightSensitivitySettings
         {
             Pitch = DefaultPitch,
             Yaw = DefaultYaw,
-            Roll = DefaultRoll
+            Roll = DefaultRoll,
+            CameraLook = DefaultCameraLook
         };
     }
 
@@ -30,7 +33,7 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
     {
         private const string SettingsMapName = @"Local\Kontrol_Settings_space-engineers";
         private static readonly Regex NumberProperty = new Regex(
-            "\\\"(?<key>flight\\.(?:pitchSensitivity|yawSensitivity|rollSensitivity))\\\"\\s*:\\s*(?<value>-?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?)",
+            "\\\"(?<key>(?:flight\\.(?:pitchSensitivity|yawSensitivity|rollSensitivity)|camera\\.lookSensitivity))\\\"\\s*:\\s*(?<value>-?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?)",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private readonly MmfChannel<TelemetryData> _channel = new MmfChannel<TelemetryData>(SettingsMapName);
         private string _lastJson = string.Empty;
@@ -64,6 +67,7 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
                     case "flight.pitchSensitivity": next.Pitch = Clamp(value); break;
                     case "flight.yawSensitivity": next.Yaw = Clamp(value); break;
                     case "flight.rollSensitivity": next.Roll = Clamp(value); break;
+                    case "camera.lookSensitivity": next.CameraLook = ClampCameraLook(value); break;
                 }
             }
 
@@ -71,8 +75,8 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
             _lastJson = json;
             PulsarStartupTrace.Write(string.Format(
                 CultureInfo.InvariantCulture,
-                "Settings IPC applied: pitch={0:0.0}, yaw={1:0.0}, roll={2:0.0}.",
-                Current.Pitch, Current.Yaw, Current.Roll));
+                "Settings IPC applied: pitch={0:0.0}, yaw={1:0.0}, roll={2:0.0}, cameraLook={3:0.0}.",
+                Current.Pitch, Current.Yaw, Current.Roll, Current.CameraLook));
             return true;
         }
 
@@ -82,6 +86,12 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
         {
             if (float.IsNaN(value) || float.IsInfinity(value)) return FlightSensitivitySettings.DefaultPitch;
             return Math.Max(0.1f, Math.Min(40f, value));
+        }
+
+        private static float ClampCameraLook(float value)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value)) return FlightSensitivitySettings.DefaultCameraLook;
+            return Math.Max(0.1f, Math.Min(10f, value));
         }
     }
 }

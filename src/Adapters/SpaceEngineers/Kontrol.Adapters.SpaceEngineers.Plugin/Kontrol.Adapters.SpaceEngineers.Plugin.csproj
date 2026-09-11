@@ -27,6 +27,8 @@
     <Reference Include="VRage"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="VRage.Game"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.Game.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="VRage.Math"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.Math.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VRage.Library"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.Library.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VRage.Input"><HintPath>$(SpaceEngineersReferencesDirectory)\VRage.Input.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Sandbox.Common"><HintPath>$(SpaceEngineersReferencesDirectory)\Sandbox.Common.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Sandbox.Game"><HintPath>$(SpaceEngineersReferencesDirectory)\Sandbox.Game.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>

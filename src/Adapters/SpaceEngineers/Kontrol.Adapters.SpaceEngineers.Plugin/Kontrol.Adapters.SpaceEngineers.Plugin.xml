@@ -4,8 +4,8 @@
   <RepoId>komandio-labs/kontrol-adapters</RepoId>
   <FriendlyName>Kontrol Joystick / HOTAS / HOSAS for Space Engineers</FriendlyName>
   <Author>Komandio Labs</Author>
-  <Tooltip>Joystick, HOTAS, HOSAS, controller, and button-box flight controls for Space Engineers.</Tooltip>
-  <Description>Fly Space Engineers with your joystick, HOTAS, HOSAS, controller, or button box. This Pulsar Legacy plugin receives Kontrol mappings and applies pitch, roll, yaw, forward/reverse thrust, strafe, lift, dampeners, lights, landing gear, handbrake, camera-mode switch, toolbar slots 1-10, and leave vehicle/cockpit (F) at the game's final ship-control update.
+  <Tooltip>Joystick, HOTAS, HOSAS, controller, and button-box controls for Space Engineers.</Tooltip>
+  <Description>Fly Space Engineers with your joystick, HOTAS, HOSAS, controller, or button box. This Pulsar Legacy plugin receives Kontrol mappings for pitch, roll, yaw, forward/reverse thrust, strafe, lift, Use tool / Fire weapon, Secondary mode, Inertia dampeners on / off, Lights on / off, Park, Handbrake, Broadcasting, local and connected-grid power, First-person / Third-person, camera look-around, third-person zoom, HUD, Terminal / Inventory, Inventory, Chat screen, Voice Chat, and toolbar slots 1-0 at the game's final ship-control update.
 
 Learn more about and download Kontrol: https://www.komandio.com/kontrol</Description>
   <Runtimes>CLR</Runtimes>

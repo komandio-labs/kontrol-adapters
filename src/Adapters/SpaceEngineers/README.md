@@ -1,6 +1,6 @@
 # Space Engineers adapter
 
-Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Engineers client. It uses Pulsar Legacy's public `VRage.Plugins.IPlugin` contract and a narrowly scoped Harmony prefix at SE1's final `MyShipController.MoveAndRotate()` commit; it does not modify files in the game installation.
+Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Engineers client. It uses Pulsar Legacy's public `VRage.Plugins.IPlugin` contract and narrowly scoped Harmony patches at SE1's final ship-control and third-person zoom commits; it does not modify files in the game installation.
 
 | Metadata | Value |
 | --- | --- |
@@ -13,11 +13,13 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 
 ## Supported controls
 
-- Pitch, roll, yaw, forward/reverse, strafe, and lift.
-- Dampeners, lights, landing gear, handbrake, camera-mode switch, and leave vehicle/cockpit (F) as edge-triggered actions.
-- Toolbar slots 1–10 as edge-triggered actions.
+- Flight: pitch, roll, yaw, forward/backward, strafe left/right, and up/down.
+- Weapons &amp; tools: Use tool / Fire weapon and Secondary mode.
+- Vehicle controls: Use / Interact, inertia dampeners, broadcasting, lights, Park, handbrake, and local or connected-grid power.
+- Camera: first/third person, held or toggled look-around, camera axes, and smooth analog third-person zoom.
+- Interface and communication: HUD, Terminal / Inventory, Inventory, Chat screen, Voice Chat, and toolbar slots 1–0.
 
-The plugin applies axes immediately before SE1 commits ship thrust and gyro torque, so the game's native input pass cannot overwrite Kontrol's frame. It releases injected movement when Kontrol input is disabled, when no locally controlled entity is available, or when Pulsar unloads it. Axis direction must be checked with the generated local manual checklist before this build is considered validated.
+The plugin merges Kontrol into SE1's native movement arguments immediately before the game consumes them, so keyboard/mouse and joystick input coexist. Look-around reuses the flight pitch/yaw axes by default, with optional Look Around Horizontal and Look Around Vertical overrides; its realtime Camera Look Sensitivity setting defaults to 2.0×. While look-around is active, third-person zoom reuses forward/backward thrust by default, with an optional Look Around Zoom override. The plugin releases injected movement and held fire when Kontrol input is disabled, when no locally controlled entity is available, or when Pulsar unloads it. Axis direction must be checked with the generated local manual checklist before this build is considered validated.
 
 ## Adapter-owned deployment plan
 

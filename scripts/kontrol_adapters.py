@@ -30,7 +30,7 @@ CANONICAL_ADAPTER_SLUGS = {
     "spaceengineers2": "space-engineers-2",
     "spaceengineers": "space-engineers",
 }
-SPACE_ENGINEERS_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Common.dll", "Sandbox.Game.dll")
+SPACE_ENGINEERS_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "VRage.Library.dll", "VRage.Input.dll", "Sandbox.Common.dll", "Sandbox.Game.dll")
 SPACE_ENGINEERS_COMPATIBILITY_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Game.dll")
 SE2_ASSEMBLIES = (
     "Game2.Client.dll", "Game2.Simulation.dll", "VRage.Core.dll", "VRage.Core.Game.dll",
