@@ -46,6 +46,8 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
         private DateTime _lastInputTraceUtc;
         private DateTime _lastHookTraceUtc;
         private DateTime _lastCameraTraceUtc;
+        private DateTime _lastZoomInTraceUtc;
+        private DateTime _lastZoomOutTraceUtc;
         private DateTime _lastCameraLookUtc;
 
         public void Init(object gameInstance)
@@ -182,14 +184,19 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
                 var sensitivities = _settings.Current;
                 var cameraController = controlled as IMyCameraController;
                 bool cameraLookActive = cameraController != null && CameraInputMath.IsCameraLookActive(frame.DiscreteStates);
+                string cameraMode = cameraController != null && cameraController.IsInFirstPersonView
+                    ? "first-person-look-around"
+                    : "third-person-look-around";
+                float forwardAxis = frame.ReadAnalog(3);
+                bool forwardThrustSuppressed = cameraLookActive && CameraInputMath.IsAxisActive(forwardAxis);
                 movement = new Vector3(
-                    CameraInputMath.ResolveShipAxis(nativeMovement.X, frame.ReadAnalog(4), cameraLookActive),
-                    CameraInputMath.ResolveShipAxis(nativeMovement.Y, frame.ReadAnalog(5), cameraLookActive),
-                    CameraInputMath.ResolveShipAxis(nativeMovement.Z, frame.ReadAnalog(3), cameraLookActive));
+                    CameraInputMath.ResolveShipAxis(nativeMovement.X, frame.ReadAnalog(4), false),
+                    CameraInputMath.ResolveShipAxis(nativeMovement.Y, frame.ReadAnalog(5), false),
+                    CameraInputMath.ResolveShipAxis(nativeMovement.Z, forwardAxis, cameraLookActive));
                 rotation = new Vector2(
                     CameraInputMath.ResolveShipAxis(nativeRotation.X, frame.ReadAnalog(0) * sensitivities.Pitch, cameraLookActive),
                     CameraInputMath.ResolveShipAxis(nativeRotation.Y, frame.ReadAnalog(2) * sensitivities.Yaw, cameraLookActive));
-                roll = CameraInputMath.ResolveShipAxis(nativeRoll, frame.ReadAnalog(1) * sensitivities.Roll, cameraLookActive);
+                roll = CameraInputMath.ResolveShipAxis(nativeRoll, frame.ReadAnalog(1) * sensitivities.Roll, false);
                 if (cameraLookActive)
                 {
                     float dedicatedCameraVertical = frame.ReadAnalog(SpaceEngineersControlLayout.CameraLookVerticalAnalog);
@@ -203,22 +210,30 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
                     float cameraHorizontal = CameraInputMath.ApplyLookAxis(CameraInputMath.ResolveLookAxis(
                         dedicatedCameraHorizontal,
                         frame.ReadAnalog(2)), sensitivities.CameraLook, elapsedSeconds);
-                    cameraController.Rotate(new Vector2(
-                        cameraVertical,
-                        cameraHorizontal), 0f);
+                    if (CameraInputMath.IsAxisActive(cameraVertical) || CameraInputMath.IsAxisActive(cameraHorizontal))
+                    {
+                        ShipControlCommitHook.RotateCameraWithoutZoom(cameraController, new Vector2(
+                            cameraVertical,
+                            cameraHorizontal));
+                    }
                     TraceCamera(string.Format(
                         System.Globalization.CultureInfo.InvariantCulture,
-                        "Camera routing: sensitivity={0:0.000}; elapsed={1:0.0000}s; flight[pitch={2:0.000},roll={3:0.000},yaw={4:0.000},forward={5:0.000},strafe={6:0.000},lift={7:0.000}]; dedicated[horizontal={8:0.000},vertical={9:0.000},zoom={10:0.000}]; applied[horizontal={11:0.000},vertical={12:0.000}].",
+                        "Camera routing: mode={0}; sensitivity={1:0.000}; elapsed={2:0.0000}s; flight[pitch={3:0.000},roll={4:0.000},yaw={5:0.000},forward={6:0.000},strafe={7:0.000},lift={8:0.000}]; dedicated[horizontal={9:0.000},vertical={10:0.000},zoom={11:0.000}]; applied[horizontal={12:0.000},vertical={13:0.000}]; thrustSuppression[forward={14:0.000},applied={15}].",
+                        cameraMode,
                         sensitivities.CameraLook,
                         elapsedSeconds,
                         frame.ReadAnalog(0), frame.ReadAnalog(1), frame.ReadAnalog(2), frame.ReadAnalog(3), frame.ReadAnalog(4), frame.ReadAnalog(5),
                         dedicatedCameraHorizontal, dedicatedCameraVertical, frame.ReadAnalog(SpaceEngineersControlLayout.CameraZoomAnalog),
-                        cameraHorizontal, cameraVertical));
+                        cameraHorizontal, cameraVertical, forwardAxis, forwardThrustSuppressed));
+                }
+                else
+                {
+                    _lastCameraLookUtc = default(DateTime);
                 }
                 TraceControlMerge(string.Format(
                     System.Globalization.CultureInfo.InvariantCulture,
-                    "Final control argument merge: nativeMove={0}, nativeRotation={1}, nativeRoll={2:0.000}, cameraLook={3}, merged pitch={4:0.000}, yaw={5:0.000}, roll={6:0.000}, forward={7:0.000}, strafe={8:0.000}, lift={9:0.000}.",
-                    nativeMovement, nativeRotation, nativeRoll, cameraLookActive, rotation.X, rotation.Y, roll, movement.Z, movement.X, movement.Y));
+                    "Final control argument merge: nativeMove={0}, nativeRotation={1}, nativeRoll={2:0.000}, cameraLook={3}, merged pitch={4:0.000}, yaw={5:0.000}, roll={6:0.000}, forward={7:0.000}, strafe={8:0.000}, lift={9:0.000}, forwardThrustSuppressed={10}.",
+                    nativeMovement, nativeRotation, nativeRoll, cameraLookActive, rotation.X, rotation.Y, roll, movement.Z, movement.X, movement.Y, forwardThrustSuppressed));
                 _lastControlled = controlled;
                 TraceInput(string.Format(
                     System.Globalization.CultureInfo.InvariantCulture,
@@ -253,6 +268,39 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
             _logs.WriteDebug("[CameraTrace] " + message);
         }
 
+        private void TraceZoom(bool zoomIn, string message)
+        {
+            DateTime now = DateTime.UtcNow;
+            ref DateTime lastTraceUtc = ref (zoomIn ? ref _lastZoomInTraceUtc : ref _lastZoomOutTraceUtc);
+            if (now - lastTraceUtc < TimeSpan.FromMilliseconds(500)) return;
+            lastTraceUtc = now;
+            PulsarStartupTrace.Write(message);
+            _logs.WriteDebug("[CameraZoomTrace] " + message);
+        }
+
+        internal bool ShouldMergeKontrolCameraZoom()
+        {
+            try
+            {
+                InputFrame frame;
+                _input.Read(out frame);
+                if (frame.IsInputEnabled == 0) return false;
+
+                var controlled = MyAPIGateway.Session == null ? null : MyAPIGateway.Session.ControlledObject;
+                var cameraController = controlled as IMyCameraController;
+                return controlled is MyShipController &&
+                       controlled.ControllerInfo.IsLocallyHumanControlled() &&
+                       cameraController != null &&
+                       !cameraController.IsInFirstPersonView &&
+                       CameraInputMath.IsCameraLookActive(frame.DiscreteStates);
+            }
+            catch (Exception exception)
+            {
+                _logs.WriteError("[ControlTrace] Native third-person zoom eligibility check failed: " + exception);
+                return false;
+            }
+        }
+
         internal float MergeNativeCameraZoom(MyStringId context, MyStringId control, float nativeValue)
         {
             try
@@ -266,20 +314,24 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
 
                 var controlled = MyAPIGateway.Session == null ? null : MyAPIGateway.Session.ControlledObject;
                 var cameraController = controlled as IMyCameraController;
-                if (cameraController == null || cameraController.IsInFirstPersonView ||
+                if (!(controlled is MyShipController) ||
+                    !controlled.ControllerInfo.IsLocallyHumanControlled() ||
+                    cameraController == null || cameraController.IsInFirstPersonView ||
                     !CameraInputMath.IsCameraLookActive(frame.DiscreteStates)) return nativeValue;
 
                 float dedicatedZoomAxis = frame.ReadAnalog(SpaceEngineersControlLayout.CameraZoomAnalog);
                 float fallbackForwardAxis = frame.ReadAnalog(3);
                 float zoomAxis = CameraInputMath.ResolveLookAxis(dedicatedZoomAxis, fallbackForwardAxis);
-                float kontrolValue = control == MyControlsSpace.CAMERA_ZOOM_IN
-                    ? Math.Max(0f, zoomAxis)
-                    : Math.Max(0f, -zoomAxis);
-                float mergedValue = InputMerge.StrongerAxis(nativeValue, kontrolValue * _settings.Current.CameraLook);
-                TraceCamera(string.Format(
+                bool zoomIn = control == MyControlsSpace.CAMERA_ZOOM_IN;
+                float kontrolValue = CameraInputMath.ResolveZoomControlValue(
+                    zoomAxis,
+                    _settings.Current.CameraLook,
+                    zoomIn);
+                float mergedValue = InputMerge.StrongerAxis(nativeValue, kontrolValue);
+                TraceZoom(zoomIn, string.Format(
                     System.Globalization.CultureInfo.InvariantCulture,
-                    "Native camera zoom: control={0}; sensitivity={1:0.000}; dedicated={2:0.000}; fallbackForward={3:0.000}; resolved={4:0.000}; native={5:0.000}; merged={6:0.000}.",
-                    control, _settings.Current.CameraLook, dedicatedZoomAxis, fallbackForwardAxis, zoomAxis, nativeValue, mergedValue));
+                    "Native camera zoom: mode=third-person-look-around; context={0}; direction={1}; sensitivity={2:0.000}; rawKontrol[dedicated={3:0.000},fallbackForward={4:0.000}]; resolvedAxis={5:0.000}; kontrolMagnitude={6:0.000}; nativeBefore={7:0.000}; mergedAfter={8:0.000}.",
+                    context, zoomIn ? "in" : "out", _settings.Current.CameraLook, dedicatedZoomAxis, fallbackForwardAxis, zoomAxis, kontrolValue, nativeValue, mergedValue));
                 return mergedValue;
             }
             catch (Exception exception)
@@ -434,6 +486,7 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
             StopVoiceChat();
             if (_lastControlled != null) _lastControlled.MoveAndRotateStopped();
             _lastControlled = null;
+            _lastCameraLookUtc = default(DateTime);
         }
 
         private void StopWeaponActions()

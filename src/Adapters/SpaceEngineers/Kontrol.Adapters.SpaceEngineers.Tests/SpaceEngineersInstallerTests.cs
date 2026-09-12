@@ -186,14 +186,20 @@ public class SpaceEngineersInstallerTests
         plugin.ShouldContain("MyHud.ToggleGamepadHud()");
         plugin.ShouldContain("MyVoiceChatSessionComponent.Static");
         plugin.ShouldContain("ToggleChatScreen()");
-        plugin.ShouldContain("cameraController.Rotate(new Vector2(");
+        plugin.ShouldContain("ShipControlCommitHook.RotateCameraWithoutZoom(cameraController, new Vector2(");
         plugin.ShouldContain("CameraInputMath.ResolveLookAxis(");
-        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.X, frame.ReadAnalog(4), cameraLookActive)");
-        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.Y, frame.ReadAnalog(5), cameraLookActive)");
-        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.Z, frame.ReadAnalog(3), cameraLookActive)");
+        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.X, frame.ReadAnalog(4), false)");
+        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.Y, frame.ReadAnalog(5), false)");
+        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeMovement.Z, forwardAxis, cameraLookActive)");
+        plugin.ShouldContain("CameraInputMath.ResolveShipAxis(nativeRoll, frame.ReadAnalog(1) * sensitivities.Roll, false)");
+        plugin.ShouldContain("_lastCameraLookUtc = default(DateTime);");
         plugin.ShouldContain("MergeNativeCameraZoom");
-        plugin.ShouldContain("Native camera zoom: control=");
-        plugin.ShouldContain("Camera routing: sensitivity=");
+        plugin.ShouldContain("Native camera zoom: mode=third-person-look-around;");
+        plugin.ShouldContain("Camera routing: mode={0};");
+        plugin.ShouldContain("rawKontrol[dedicated=");
+        plugin.ShouldContain("nativeBefore=");
+        plugin.ShouldContain("mergedAfter=");
+        plugin.ShouldContain("forwardThrustSuppressed=");
         plugin.ShouldContain("MyControlsSpace.CAMERA_ZOOM_IN");
         plugin.ShouldNotContain("spectator.ResetViewerDistance(nextDistance)");
         plugin.ShouldNotContain("ThirdPersonLookAtField");
@@ -202,7 +208,16 @@ public class SpaceEngineersInstallerTests
             adapterRoot, "Kontrol.Adapters.SpaceEngineers.Plugin", "ShipControlCommitHook.cs"));
         hook.ShouldContain("nameof(MyShipController.MoveAndRotate)");
         hook.ShouldContain("Harmony.Patch(TargetMethod, prefix: new HarmonyMethod(PrefixMethod));");
-        hook.ShouldContain("Harmony.Patch(ZoomTargetMethod, transpiler: new HarmonyMethod(ZoomTranspilerMethod));");
+        hook.ShouldContain("prefix: new HarmonyMethod(ZoomPrefixMethod)");
+        hook.ShouldContain("postfix: new HarmonyMethod(ZoomPostfixMethod)");
+        hook.ShouldContain("transpiler: new HarmonyMethod(ZoomTranspilerMethod)");
+        hook.ShouldContain("lookAroundReplacements != 1 || zoomInReplacements != 1 || zoomOutReplacements != 1");
+        hook.ShouldContain("instruction.opcode != OpCodes.Ldsfld");
+        hook.ShouldContain("nameof(MyControlsSpace.CAMERA_ZOOM_IN)");
+        hook.ShouldContain("nameof(MyControlsSpace.CAMERA_ZOOM_OUT)");
+        hook.ShouldContain("input.IsLookAround() || _mergeKontrolZoomForCurrentUpdate");
+        hook.ShouldContain("if (_suppressZoomUpdate)");
+        hook.ShouldContain("Native third-person zoom hook verified: one look-around gate and two directional analog reads.");
         hook.ShouldContain("MyControllerHelper.IsControlAnalog(context, control, joystick)");
         plugin.ShouldContain("Final control merge rejected:");
         plugin.ShouldContain("Final control argument merge: nativeMove=");
@@ -234,6 +249,15 @@ public class SpaceEngineersInstallerTests
         CameraInputMath.ApplyLookAxis(0f, 10f, 1d / 60d).ShouldBe(0f);
         CameraInputMath.ResolveShipAxis(0.2f, 0.9f, true).ShouldBe(0.2f);
         CameraInputMath.ResolveShipAxis(0.2f, 0.9f, false).ShouldBe(0.9f);
+        CameraInputMath.ResolveZoomControlValue(0.25f, 2f, true).ShouldBe(0.25f);
+        CameraInputMath.ResolveZoomControlValue(0.25f, 4f, true).ShouldBe(0.5f);
+        CameraInputMath.ResolveZoomControlValue(0.75f, 10f, true).ShouldBe(1f);
+        CameraInputMath.ResolveZoomControlValue(0.25f, 2f, false).ShouldBe(0f);
+        CameraInputMath.ResolveZoomControlValue(-0.25f, 2f, false).ShouldBe(0.25f);
+        CameraInputMath.ResolveZoomControlValue(-0.25f, 4f, false).ShouldBe(0.5f);
+        CameraInputMath.ResolveZoomControlValue(-0.75f, 10f, false).ShouldBe(1f);
+        CameraInputMath.ResolveZoomControlValue(float.NaN, 2f, true).ShouldBe(0f);
+        CameraInputMath.ResolveZoomControlValue(float.PositiveInfinity, 2f, true).ShouldBe(0f);
     }
 
     [Test]
@@ -268,6 +292,9 @@ public class SpaceEngineersInstallerTests
         provider.GetDefaultSnapshot().GetNumber("flight.yawSensitivity", 0f).ShouldBe(20f);
         provider.GetDefaultSnapshot().GetNumber("flight.rollSensitivity", 0f).ShouldBe(1f);
         provider.GetDefaultSnapshot().GetNumber("camera.lookSensitivity", 0f).ShouldBe(2f);
+        var camera = provider.Descriptors.Single(descriptor => descriptor.Key == "camera.lookSensitivity");
+        camera.ShouldBeOfType<Kontrol.Sdk.Settings.NumberSettingDescriptor>().Min.ShouldBe(0.1f);
+        camera.ShouldBeOfType<Kontrol.Sdk.Settings.NumberSettingDescriptor>().Max.ShouldBe(10f);
     }
 
     [Test]
@@ -289,7 +316,7 @@ public class SpaceEngineersInstallerTests
         plugin.ShouldContain("frame.ReadAnalog(1) * sensitivities.Roll");
         plugin.ShouldContain("sensitivities.CameraLook");
         plugin.ShouldContain("CameraInputMath.ApplyLookAxis(");
-        plugin.ShouldContain("kontrolValue * _settings.Current.CameraLook");
+        plugin.ShouldContain("CameraInputMath.ResolveZoomControlValue(");
     }
 
     [Test]

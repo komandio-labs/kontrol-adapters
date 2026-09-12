@@ -21,6 +21,8 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 
 The plugin merges Kontrol into SE1's native movement arguments immediately before the game consumes them, so keyboard/mouse and joystick input coexist. Look-around reuses the flight pitch/yaw axes by default, with optional Look Around Horizontal and Look Around Vertical overrides; its realtime Camera Look Sensitivity setting defaults to 2.0×. While look-around is active, third-person zoom reuses forward/backward thrust by default, with an optional Look Around Zoom override. The plugin releases injected movement and held fire when Kontrol input is disabled, when no locally controlled entity is available, or when Pulsar unloads it. Axis direction must be checked with the generated local manual checklist before this build is considered validated.
 
+For the SE1 input-frame layout, final flight-control merge, native third-person zoom interception, camera-look routing, diagnostics, and game-update checks, see [SE1 implementation notes](SE1_IMPLEMENTATION.md).
+
 ## Adapter-owned deployment plan
 
 The `BinPluginsFolder` plan is resolved from the selected game directory and the
