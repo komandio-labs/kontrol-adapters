@@ -11,7 +11,7 @@
   "supportedMethods": [ "NativePluginParameter", "BinPluginsFolder", "ProcessInjection" ],
   "defaultDeploymentMethod": "NativePluginParameter",
   "image": "icon.png",
-  "version": "0.4.0-beta.1",
+  "version": "0.4.0",
   "gameProductVersion": "2.4.0.95",
   "gameBuildIdentity": {
     "platform": "steam",
