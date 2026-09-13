@@ -2,15 +2,35 @@
 
 ## 0.4.0 — 2026-09-13
 
+### Added
+
 - Added adapter-owned contextual deployment plans for native plugin and
   process-injection launch paths.
-- Preserved pre-existing `steam_appid.txt` files during native deployment and
-  restores them on uninstall.
+- Added a Pulsar Modern `.NET 10` plugin entry point and metadata for the
+  `BinPluginsFolder` deployment method.
+- Added adapter-owned deployment plans describing prerequisites, owned files,
+  launch chains, manual steps, verification, and rollback effects for every
+  supported loading method.
+- Added compatibility evidence and tests for Space Engineers 2 `2.4.0.95`.
+
+### Improved
+
+- Expanded native plugin installation and uninstallation to preserve and
+  restore pre-existing `steam_appid.txt` files.
+- Added ownership-safe Pulsar payload deployment that leaves unrelated local
+  plugin files untouched.
+- Updated the adapter to target the Kontrol SDK `1.4.0` deployment contract.
+
+### Fixed
+
+- Renamed the deployed launch shortcut to match the current adapter launch
+  flow.
 
 ### Validation
 
 - Validated against Space Engineers 2 `2.4.0.95` (Steam build `24993846`),
   including every loading method claimed by the adapter.
+- Automated adapter tests: 147 passed.
 
 ## 0.3.0 — 2026-09-08
 
