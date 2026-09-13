@@ -43,14 +43,14 @@ jobs:
           test "$scope" = "adapters"
           test -n "$slug" && test -n "$version"
           version="${version#v}"
-          case "$slug" in
-            space-engineers|spaceengineers) adapter_folder=SpaceEngineers ;;
-            space-engineers-2|spaceengineers2) adapter_folder=SpaceEngineers2 ;;
-            dummy-adapter|dummyadapter) adapter_folder=DummyAdapter ;;
-            *) echo "Unsupported adapter slug: $slug" >&2; exit 1 ;;
-          esac
-          manifest="src/Adapters/$adapter_folder/package.json"
-          test -f "$manifest"
+          manifest=""
+          while IFS= read -r candidate; do
+            if test "$(jq -r '.slug // .adapterId // empty' "$candidate")" = "$slug"; then
+              manifest="$candidate"
+              break
+            fi
+          done < <(find src/Adapters -mindepth 2 -maxdepth 2 -name package.json -print | sort)
+          test -n "$manifest" || { echo "No adapter manifest found for slug: $slug" >&2; exit 1; }
           manifest_version="$(jq -r '.adapterVersion' "$manifest")"
           test "$manifest_version" = "$version"
           channel=stable
