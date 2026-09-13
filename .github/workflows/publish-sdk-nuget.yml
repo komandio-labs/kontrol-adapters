@@ -107,9 +107,7 @@ jobs:
 
           Install from the Komandio Labs GitHub Packages NuGet feed:
 
-          ```xml
-          <PackageReference Include="Kontrol.Sdk" Version="$PACKAGE_VERSION" />
-          ```
+          PackageReference: <PackageReference Include="Kontrol.Sdk" Version="$PACKAGE_VERSION" />
 
           Feed: https://nuget.pkg.github.com/komandio-labs/index.json
 
