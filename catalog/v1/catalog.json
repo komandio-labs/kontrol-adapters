@@ -1,7 +1,58 @@
 {
   "catalogVersion": 1,
-  "generatedAtUtc": "2026-09-13T18:59:50Z",
+  "generatedAtUtc": "2026-09-13T19:18:22Z",
   "adapters": [
+    {
+      "adapterId": "space-engineers",
+      "slug": "space-engineers",
+      "displayName": "Space Engineers",
+      "currentVersion": "1.0.0",
+      "releases": [
+        {
+          "descriptorVersion": 1,
+          "adapterId": "space-engineers",
+          "slug": "space-engineers",
+          "adapterVersion": "1.0.0",
+          "sdkVersion": "1.4.0",
+          "channel": "stable",
+          "publishedAtUtc": "2026-09-13T19:18:20Z",
+          "source": {
+            "tag": "adapters/space-engineers/v1.0.0",
+            "commit": "d780bdeebf2fc917ab4373fba409f9f8c51d8bed"
+          },
+          "package": {
+            "fileName": "kontrol-adapter-space-engineers-1.0.0-win-x64.zip",
+            "sha256": "B8F15EDA25712039A95B63052FD9502A02D97E9F380A52CFC79946E019DC0D40",
+            "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers/1.0.0/kontrol-adapter-space-engineers-1.0.0-win-x64.zip",
+            "architecture": "x64"
+          },
+          "gameProductVersion": "steam-build-24675677",
+          "assemblies": {
+            "VRage.dll": {
+              "sha256": "EC2410B3D916ADBD7404C3082CCC25A70C8BAEC89BACB57001C67597068E24CA",
+              "fileVersion": "1.0.0.0"
+            },
+            "VRage.Game.dll": {
+              "sha256": "F0970C2B60335F7690E158A485CD528703717C8C5002F2713556E04F09C508E1",
+              "fileVersion": "1.0.0.0"
+            },
+            "VRage.Math.dll": {
+              "sha256": "953ED575327FFEC5A72BAF13C893843C26F7D248CD1ECE1372EC34D650618F1C",
+              "fileVersion": "1.0.0.0"
+            },
+            "Sandbox.Game.dll": {
+              "sha256": "DE04E9162BCF87FC07CEC377213D99533BCFE1C34C9E1E2231168144C9D67EDF",
+              "fileVersion": "0.1.1"
+            }
+          },
+          "verifiedGameVersions": [
+            "steam-build-24675677"
+          ],
+          "signature": "FBmWqgc\u002BqIWxppzfG9X\u002Bq7p40le6/Q6HCNxwnQBlAvLkiKifp34CmQTXY/XbGo6zmZx89GdEBEVenLo17449Wg==",
+          "status": "current"
+        }
+      ]
+    },
     {
       "adapterId": "space-engineers-2",
       "slug": "space-engineers-2",
@@ -221,5 +272,5 @@
       ]
     }
   ],
-  "signature": "6c/9OGabSSp/RyxoXwFKO/kNEbO56xQnFCr01wTsIOoEr9HMfzsC6C3Dq7L30tm4/6DeCqDXO8AFzJGzSXZjoA=="
+  "signature": "zvG47aHMDYpbOC0GV\u002Bv\u002BP8ftZVTyZH46l9xVzSVYhRJiH7iAkLScefEAPAxyE49cxI1tw\u002Bqac4zsG/h/SPxihg=="
 }
