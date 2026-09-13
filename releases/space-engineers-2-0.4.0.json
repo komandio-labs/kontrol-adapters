@@ -1,0 +1,38 @@
+{
+  "descriptorVersion": 1,
+  "adapterId": "space-engineers-2",
+  "slug": "space-engineers-2",
+  "adapterVersion": "0.4.0",
+  "sdkVersion": "1.4.0",
+  "channel": "stable",
+  "publishedAtUtc": "2026-09-13T18:53:56Z",
+  "source": {
+    "tag": "adapters/space-engineers-2/v0.4.0",
+    "commit": "1092d9f1afcfd9093d24c68b27cc9aef560abd2b"
+  },
+  "package": {
+    "fileName": "kontrol-adapter-space-engineers-2-0.4.0-win-x64.zip",
+    "sha256": "4250ECEEB385FE27CE8CAD3D29DA41DC13112EF87371AB2517B5C69D005A03B3",
+    "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers-2/0.4.0/kontrol-adapter-space-engineers-2-0.4.0-win-x64.zip",
+    "architecture": "x64"
+  },
+  "gameProductVersion": "2.4.0.95",
+  "assemblies": {
+    "Game2.Client.dll": {
+      "sha256": "FDCD1C1EB01433BE994C87893A88F720325BF93C1E797930D79859ED664BB9BA",
+      "fileVersion": "2.4.0.95"
+    },
+    "VRage.Core.dll": {
+      "sha256": "46475534D89BC5E01C5247ADC7DD9C4EA08477B437DCAEDE1AB204B1976F7FA2",
+      "fileVersion": "2.4.0.95"
+    },
+    "VRage.Library.dll": {
+      "sha256": "EA782B58E5D63D5F277D9BEB92CAA843D07239473C20F5220D1FABDCA5564E9D",
+      "fileVersion": "2.4.0.95"
+    }
+  },
+  "verifiedGameVersions": [
+    "2.4.0.95"
+  ],
+  "signature": "HpIq/B0wZ76uHaxxu/RburokiJ048PHApnh4\u002BZP3PIONVl6wwlpkGVgswIsXYuVNClEBNpYfxJodODyw/beRWw=="
+}
