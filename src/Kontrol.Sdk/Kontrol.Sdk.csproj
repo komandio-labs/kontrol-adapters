@@ -22,6 +22,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>Kontrol;game adapters;SDK;IPC</PackageTags>
     <Description>Shared SDK contracts and interfaces for Kontrol game adapters.</Description>
+    <PackageReleaseNotes>Added backward-compatible contextual adapter deployment plans, typed adapter-owned deployment descriptors, conservative fallback data for older adapters, and migration guidance for obsolete deployment APIs.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
