@@ -26,9 +26,8 @@
     "date": "2026-09-10",
     "result": "tested",
     "automatedTests": "passed",
-    "manualChecklist": "pending",
+    "manualChecklist": "complete",
     "limitations": [
-      "Automated assembly evidence and tests only; Pulsar Legacy loading and in-game control validation remain pending.",
       "The adapter uses a narrowly scoped Harmony prefix at MyShipController's final control commit plus native camera, toolbar, and leave-control paths.",
       "Weapons, toolbar pages, and mods that replace control ownership are not supported."
     ]
