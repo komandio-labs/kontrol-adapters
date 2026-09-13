@@ -15,7 +15,7 @@
     "processName": "Legacy.exe",
     "commandLineTargetExecutable": "SpaceEngineers.exe"
   },
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0",
   "gameProductVersion": "steam-build-24675677",
   "gameBuildIdentity": {
     "platform": "steam",
