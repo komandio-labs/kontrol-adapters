@@ -93,6 +93,32 @@ jobs:
             -p:GeneratePackageOnBuild=false \
             --output "$PACKAGE_OUTPUT"
 
+      - name: Prepare release metadata
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          package="$PACKAGE_OUTPUT/Kontrol.Sdk.$PACKAGE_VERSION.nupkg"
+          test -f "$package"
+          sha256="$(sha256sum "$package" | cut -d ' ' -f 1)"
+          cat >> artifacts/sdk-release-notes.md <<EOF
+
+          ## Package
+
+          Install from the Komandio Labs GitHub Packages NuGet feed:
+
+          ```xml
+          <PackageReference Include="Kontrol.Sdk" Version="$PACKAGE_VERSION" />
+          ```
+
+          Feed: https://nuget.pkg.github.com/komandio-labs/index.json
+
+          Package SHA-256: $sha256
+
+          The release asset contains the exact NuGet package published to GitHub Packages.
+          Portable validation tests: Kontrol.AdapterTool.Tests.
+          EOF
+
       - name: Publish package to GitHub Packages
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
@@ -113,4 +139,5 @@ jobs:
             --verify-tag \
             --latest=false \
             --title "Kontrol.Sdk v$PACKAGE_VERSION" \
-            --notes-file artifacts/sdk-release-notes.md
+            --notes-file artifacts/sdk-release-notes.md \
+            "$PACKAGE_OUTPUT/Kontrol.Sdk.$PACKAGE_VERSION.nupkg"
