@@ -5,14 +5,14 @@
   "adapterVersion": "0.4.0",
   "sdkVersion": "1.4.0",
   "channel": "stable",
-  "publishedAtUtc": "2026-09-13T18:53:56Z",
+  "publishedAtUtc": "2026-09-13T18:59:48Z",
   "source": {
     "tag": "adapters/space-engineers-2/v0.4.0",
-    "commit": "1092d9f1afcfd9093d24c68b27cc9aef560abd2b"
+    "commit": "e30e894f12febf688359421c08a48d5ce512f6e2"
   },
   "package": {
     "fileName": "kontrol-adapter-space-engineers-2-0.4.0-win-x64.zip",
-    "sha256": "4250ECEEB385FE27CE8CAD3D29DA41DC13112EF87371AB2517B5C69D005A03B3",
+    "sha256": "BDE89EE16E4C99B69E94C7D092DA2EDFD424D2D9E0652F7A7B16540312699D92",
     "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers-2/0.4.0/kontrol-adapter-space-engineers-2-0.4.0-win-x64.zip",
     "architecture": "x64"
   },
@@ -34,5 +34,5 @@
   "verifiedGameVersions": [
     "2.4.0.95"
   ],
-  "signature": "HpIq/B0wZ76uHaxxu/RburokiJ048PHApnh4\u002BZP3PIONVl6wwlpkGVgswIsXYuVNClEBNpYfxJodODyw/beRWw=="
+  "signature": "WwjElc/8Li9EEv0Nk1RDLMZajUr3zE9nGqZP3roPpT4M4FJSG3vAiHCXxYQk1bGFvbrXO1dKpy3vWvECmbVZPQ=="
 }
