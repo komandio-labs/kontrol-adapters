@@ -259,10 +259,11 @@ Generated for local game build {reference.name} on {datetime.now(timezone.utc).i
 
 
 def test_adapter(slug: str, game_directory: str | None, skip_sync: bool) -> None:
-    if slug == "spaceengineers2":
+    slug = canonical_adapter_slug(slug)
+    if slug == "space-engineers-2":
         test_se2(game_directory, skip_sync)
         return
-    if slug == "spaceengineers":
+    if slug == "space-engineers":
         if not skip_sync:
             reference = sync_space_engineers(game_directory)
         elif not (adapter_paths(slug)[0] / "references" / "ActiveVersion.props").is_file():
@@ -270,16 +271,15 @@ def test_adapter(slug: str, game_directory: str | None, skip_sync: bool) -> None
         else:
             reference = adapter_paths(slug)[0] / "references" / "steam-build-24675677"
     _, project, tests = adapter_paths(slug)
-    canonical_slug = canonical_adapter_slug(slug)
-    tool("validate", "adapter", "--adapter", canonical_slug)
-    if slug == "spaceengineers":
+    tool("validate", "adapter", "--adapter", slug)
+    if slug == "space-engineers":
         inspection = reference / "inspection.json"
         if not inspection.is_file():
             raise RuntimeError(f"Space Engineers inspection evidence was not found: {inspection}")
-        tool("validate", "compatibility", "--adapter", canonical_slug, "--inspection", str(inspection))
+        tool("validate", "compatibility", "--adapter", slug, "--inspection", str(inspection))
     run("dotnet", "build", str(project), "-c", "Debug")
     run("dotnet", "test", str(tests), "-c", "Debug")
-    if slug == "spaceengineers":
+    if slug == "space-engineers":
         checklist = reference / "manual-checklist.md"
         if not checklist.exists():
             checklist.write_text(f"""# Space Engineers manual validation checklist
