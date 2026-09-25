@@ -62,3 +62,6 @@ poc/
 
 ## Local reverse-engineering and scratch work
 .scratch/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
