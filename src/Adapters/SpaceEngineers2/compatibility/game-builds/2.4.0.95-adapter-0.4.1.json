@@ -3,7 +3,7 @@
   "schemaVersion": 2,
   "adapterId": "space-engineers-2",
   "slug": "space-engineers-2",
-  "adapterVersion": "0.4.0",
+  "adapterVersion": "0.4.1",
   "game": {
     "product": "Space Engineers 2",
     "productVersion": "2.4.0.95",
@@ -35,12 +35,13 @@
     }
   },
   "validation": {
-    "date": "2026-09-13",
+    "date": "2026-09-27",
     "result": "tested",
     "automatedTests": "passed",
     "manualChecklist": "passed",
     "limitations": [
-      "Experimental integration against Space Engineers 2 private runtime APIs. Revalidate after every game update."
+      "Experimental integration against Space Engineers 2 private runtime APIs. Revalidate after every game update.",
+      "Manual checklist completion was confirmed by the user for adapter 0.4.1 on Steam build 24993846; no other builds are covered."
     ]
   }
 }

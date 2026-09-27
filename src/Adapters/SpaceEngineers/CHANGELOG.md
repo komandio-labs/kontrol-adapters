@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 — 2026-09-27
+
+- Declares Steam app `244850`, build `24675677` as the package's game build identity.
+- Records user-confirmed manual validation for this exact game build.
+
 ## 1.0.0 - 2026-09-13
 
 - Added the initial stable Space Engineers adapter for Steam build `24675677` (Steam app `244850`).

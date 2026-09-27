@@ -34,6 +34,7 @@
     "signature": { "type": "string", "pattern": "^[A-Za-z0-9+/=]{80,100}$" },
     "publishedAtUtc": { "type": "string" },
     "gameProductVersion": { "type": "string" },
+    "gameBuildIdentity": { "$ref": "#/$defs/gameBuildIdentity" },
     "verifiedGameVersions": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
@@ -41,5 +42,20 @@
     "knownIncompatible": { "type": "boolean" },
     "incompatibleReason": { "type": "string" },
     "assemblies": { "type": "object" }
+  },
+  "$defs": {
+    "gameBuildIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "platformAppId", "platformBuildId", "isProductVersionMeaningful"],
+      "properties": {
+        "platform": { "type": "string", "minLength": 1 },
+        "platformAppId": { "type": "string", "minLength": 1 },
+        "platformBuildId": { "type": "string", "minLength": 1 },
+        "productVersion": { "type": ["string", "null"] },
+        "isProductVersionMeaningful": { "type": "boolean" },
+        "fingerprintBuildId": { "type": ["string", "null"] }
+      }
+    }
   }
 }

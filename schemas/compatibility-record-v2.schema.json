@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://komandio-labs.github.io/kontrol-adapters/schemas/compatibility-record-v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "adapterId", "adapterVersion", "game", "validation"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "adapterId": { "type": "string", "minLength": 1 },
+    "slug": { "type": "string" },
+    "adapterVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "game": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "buildIdentity", "relevantAssemblies"],
+      "properties": {
+        "product": { "type": "string", "minLength": 1 },
+        "productVersion": { "type": "string", "deprecated": true },
+        "steamBuildId": { "type": ["string", "null"], "deprecated": true },
+        "buildIdentity": { "$ref": "#/$defs/gameBuildIdentity" },
+        "relevantAssemblies": { "type": "object", "minProperties": 1 }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "result", "automatedTests", "manualChecklist", "limitations"],
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "result": { "enum": ["tested", "known-incompatible"] },
+        "automatedTests": { "enum": ["passed", "pending", "failed", "not-run"] },
+        "manualChecklist": { "enum": ["passed", "complete", "pending", "failed", "not-run"] },
+        "limitations": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "gameBuildIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "platformAppId", "platformBuildId", "isProductVersionMeaningful"],
+      "properties": {
+        "platform": { "type": "string", "minLength": 1 },
+        "platformAppId": { "type": "string", "minLength": 1 },
+        "platformBuildId": { "type": "string", "minLength": 1 },
+        "productVersion": { "type": ["string", "null"] },
+        "isProductVersionMeaningful": { "type": "boolean" },
+        "fingerprintBuildId": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

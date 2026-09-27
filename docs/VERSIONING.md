@@ -130,20 +130,30 @@ because the host and adapter cannot safely interpret the same contract.
 
 ## Adapter release manifest
 
-Every adapter source tree contains `adapter.manifest.json`. The publishing
-workflow validates it and includes an immutable copy in the release package.
+Every adapter source tree contains `package.json`. The publishing workflow
+validates it and includes an immutable copy in the release package. The
+adapter's runtime `adapter.manifest.json` remains a separate loader manifest.
 
 Required information includes:
 
 ```json
 {
-  "manifestVersion": 1,
+  "manifestVersion": 2,
+  "adapterKind": "game",
   "adapterId": "SpaceEngineers2",
   "adapterVersion": "1.1.0",
   "sdkVersion": "1.0.0",
   "entryAssembly": "Kontrol.Adapters.SpaceEngineers2.dll",
   "inputSchemaVersion": 5,
-  "targetFramework": "net9.0"
+  "targetFramework": "net9.0",
+  "gameBuildIdentity": {
+    "platform": "steam",
+    "platformAppId": "1133870",
+    "platformBuildId": "12345678",
+    "productVersion": null,
+    "isProductVersionMeaningful": false,
+    "fingerprintBuildId": null
+  }
 }
 ```
 
@@ -162,13 +172,21 @@ tested game build:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "catalogRevision": 12,
   "adapterId": "SpaceEngineers2",
   "adapterVersion": "1.1.0",
   "adapterPackageSha256": "ABC123...",
   "gameBuild": {
     "productVersion": "2.3.1.1000",
+    "buildIdentity": {
+      "platform": "steam",
+      "platformAppId": "244850",
+      "platformBuildId": "12345678",
+      "productVersion": null,
+      "isProductVersionMeaningful": false,
+      "fingerprintBuildId": null
+    },
     "steamBuildId": "12345678",
     "relevantAssemblies": {
       "Game2.Client.dll": {
@@ -195,6 +213,14 @@ compatibility/spaceengineers2/r12
 
 Never edit the manifest inside an existing package or replace an existing
 attestation. Publish a new catalog revision instead.
+
+Package manifests write version 2 and continue to read version 1. Version 2
+requires `adapterKind`; game manifests require `gameBuildIdentity` with
+`platform`, `platformAppId`, and `platformBuildId`. Compatibility records write
+version 2 and require `game.buildIdentity`. Version 1 records migrate
+deterministically from `game.steamBuildId` to `platformBuildId`, with the
+platform app ID taken from the adapter's declared identity. Legacy
+`game.productVersion` and `game.steamBuildId` remain optional deprecated fields.
 
 ## Tested game builds
 

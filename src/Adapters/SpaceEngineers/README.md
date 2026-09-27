@@ -4,12 +4,16 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 
 | Metadata | Value |
 | --- | --- |
-| Adapter version | `1.0.0` |
+| Adapter version | `1.0.1` |
 | Target game build | `steam-build-24675677` |
 | Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers.dll` (`net9.0`) |
 | Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers.Plugin.dll` + `0Harmony.dll` (`net48`) |
 | Steam application ID | `244850` |
 | Input channel | `Local\Kontrol_Input_space-engineers` |
+
+Adapter `1.0.1` was manually validated against Steam app `244850`, build
+`24675677`, based on the user's confirmation. This evidence applies only to
+that exact game build.
 
 ## Supported controls
 

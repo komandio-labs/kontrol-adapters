@@ -1,5 +1,11 @@
 # Space Engineers 2 adapter changelog
 
+## 0.4.1 — 2026-09-27
+
+- Declares Steam app `1133870`, build `24993846` (game version `2.4.0.95`) as
+  the package's game build identity.
+- Records user-confirmed manual validation for this exact game build.
+
 ## 0.4.0 — 2026-09-13
 
 ### Added

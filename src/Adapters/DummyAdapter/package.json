@@ -1,6 +1,7 @@
 {
-  "$schema": "../../../schemas/adapter-manifest-v1.schema.json",
-  "manifestVersion": 1,
+  "$schema": "../../../schemas/adapter-manifest-v2.schema.json",
+  "manifestVersion": 2,
+  "adapterKind": "sandbox",
   "adapterId": "dummy-adapter",
   "slug": "dummy-adapter",
   "displayName": "Kontrol Sandbox",
@@ -9,9 +10,13 @@
   "entryAssembly": "Kontrol.Adapters.DummyAdapter.dll",
   "inputSchemaVersion": 1,
   "targetFramework": "net9.0",
-  "architectures": ["x64"],
+  "architectures": [
+    "x64"
+  ],
   "gameProductVersion": "1.0.0",
-  "relevantAssemblies": ["Kontrol.Sandbox.Game.exe"],
+  "relevantAssemblies": [
+    "Kontrol.Sandbox.Game.exe"
+  ],
   "package": {
     "include": [
       "Kontrol.Adapters.DummyAdapter.dll",

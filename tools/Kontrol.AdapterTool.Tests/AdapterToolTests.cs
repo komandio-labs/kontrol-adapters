@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
+using Kontrol.Sdk.Compatibility;
 using NUnit.Framework;
 using Shouldly;
 
@@ -45,6 +46,96 @@ public class AdapterToolTests
         dummy.PackageFiles.ShouldContain("LICENSE");
         File.Exists(Path.Combine(root, "LICENSE")).ShouldBeTrue();
         File.Exists(Path.Combine(AdapterRepository.AdapterRoot(se2), "THIRD_PARTY_NOTICES.md")).ShouldBeTrue();
+    }
+
+    [Test]
+    public void PackageManifests_V2DeclareGameIdentityAndSandboxIsExempt()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        AdapterManifest game = AdapterRepository.GetManifest(root, "space-engineers-2");
+        AdapterManifest sandbox = AdapterRepository.GetManifest(root, "dummy-adapter");
+
+        game.ManifestVersion.ShouldBe(2);
+        game.AdapterKind.ShouldBe("game");
+        AdapterRepository.HasRequiredPlatformIdentity(game.GameBuildIdentity).ShouldBeTrue();
+        game.GameBuildIdentity!.Platform.ShouldBe("steam");
+        game.GameBuildIdentity.PlatformAppId.ShouldBe("1133870");
+        game.GameBuildIdentity.PlatformBuildId.ShouldBe("24993846");
+        sandbox.ManifestVersion.ShouldBe(2);
+        sandbox.AdapterKind.ShouldBe("sandbox");
+        sandbox.GameBuildIdentity.ShouldBeNull();
+    }
+
+    [Test]
+    public void PackageManifestV1_IsReadAsGameWhenItHasLegacyBuildIdentity()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"kontrol-manifest-{Guid.NewGuid():N}.json");
+        try
+        {
+            var manifest = new JsonObject
+            {
+                ["manifestVersion"] = 1,
+                ["adapterId"] = "legacy-game",
+                ["slug"] = "legacy-game",
+                ["displayName"] = "Legacy game",
+                ["adapterVersion"] = "1.0.0",
+                ["sdkVersion"] = "1.4.0",
+                ["entryAssembly"] = "Legacy.dll",
+                ["inputSchemaVersion"] = 1,
+                ["targetFramework"] = "net9.0",
+                ["architectures"] = new JsonArray("x64"),
+                ["gameBuildIdentity"] = new JsonObject
+                {
+                    ["platform"] = "steam",
+                    ["platformAppId"] = "42",
+                    ["platformBuildId"] = "123",
+                    ["productVersion"] = null,
+                    ["isProductVersionMeaningful"] = false,
+                    ["fingerprintBuildId"] = null
+                },
+                ["package"] = new JsonObject { ["include"] = new JsonArray("Legacy.dll") }
+            };
+            File.WriteAllText(path, manifest.ToJsonString());
+
+            AdapterManifest parsed = AdapterRepository.ReadManifest(path);
+
+            parsed.ManifestVersion.ShouldBe(1);
+            parsed.AdapterKind.ShouldBe("game");
+            parsed.GameBuildIdentity!.PlatformBuildId.ShouldBe("123");
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void LegacySteamBuildId_MigratesToPlatformBuildIdWithoutInventingProductVersionMeaning()
+    {
+        var legacyGame = new JsonObject
+        {
+            ["productVersion"] = "2.4.0.95",
+            ["steamBuildId"] = "24993846"
+        };
+
+        GameBuildIdentity identity = AdapterRepository.ReadBuildIdentity(legacyGame, "buildIdentity");
+
+        identity.Platform.ShouldBe("steam");
+        identity.PlatformBuildId.ShouldBe("24993846");
+        identity.PlatformAppId.ShouldBeNull();
+        identity.IsProductVersionMeaningful.ShouldBeFalse();
+        GameBuildIdentity executableVersionOnly = AdapterRepository.ReadBuildIdentity(
+            new JsonObject { ["productVersion"] = "1.0.0" }, "buildIdentity");
+        executableVersionOnly.IsProductVersionMeaningful.ShouldBeFalse();
+        executableVersionOnly.CanonicalIdentifier.ShouldBeNull();
+        AdapterRepository.HasRequiredPlatformIdentity(new("steam", "1133870", "24993846", null, false)).ShouldBeTrue();
+        AdapterRepository.HasRequiredPlatformIdentity(new("steam", null, "24993846", null, false)).ShouldBeFalse();
+        AdapterRepository.HasMatchingBuildIdentity(
+            new("steam", "1133870", "24993846", null, false),
+            new("steam", "244850", "24993846", null, false)).ShouldBeFalse();
+        AdapterRepository.HasMatchingBuildIdentity(
+            new("steam", "1133870", "24993846", null, false),
+            new("steam", "1133870", "24993846", null, false)).ShouldBeTrue();
     }
 
     [Test]
@@ -100,6 +191,28 @@ public class AdapterToolTests
     }
 
     [Test]
+    public void ReleaseDescriptorValidation_RejectsIncompleteGameBuildIdentity()
+    {
+        string temporary = Path.Combine(Path.GetTempPath(), $"kontrol-release-{Guid.NewGuid():N}.json");
+        try
+        {
+            var descriptor = Descriptor("1.0.0");
+            descriptor["gameBuildIdentity"] = new JsonObject
+            {
+                ["platform"] = "steam",
+                ["platformBuildId"] = "123",
+                ["isProductVersionMeaningful"] = false
+            };
+            File.WriteAllText(temporary, descriptor.ToJsonString());
+            Should.Throw<InvalidOperationException>(() => AdapterRelease.Validate(temporary));
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
+    }
+
+    [Test]
     public void CatalogValidation_AcceptsCurrentAndSupersededReleases()
     {
         string temporary = Path.Combine(Path.GetTempPath(), $"kontrol-catalog-{Guid.NewGuid():N}.json");
@@ -109,6 +222,15 @@ public class AdapterToolTests
             oldRelease["status"] = "superseded";
             var currentRelease = Descriptor("1.1.0");
             currentRelease["status"] = "current";
+            currentRelease["gameBuildIdentity"] = new JsonObject
+            {
+                ["platform"] = "steam",
+                ["platformAppId"] = "42",
+                ["platformBuildId"] = "123",
+                ["isProductVersionMeaningful"] = false
+            };
+            currentRelease["gameProductVersion"] = "legacy-version";
+            currentRelease["verifiedGameVersions"] = new JsonArray("legacy-version");
             var catalog = new JsonObject
             {
                 ["catalogVersion"] = 1,
@@ -145,13 +267,28 @@ public class AdapterToolTests
 
         try
         {
-            File.WriteAllText(Path.Combine(releasesDirectory, "dummy-adapter-1.0.0.json"), Descriptor("1.0.0").ToJsonString());
+            var descriptor = Descriptor("1.0.0");
+            descriptor["gameBuildIdentity"] = new JsonObject
+            {
+                ["platform"] = "steam",
+                ["platformAppId"] = "42",
+                ["platformBuildId"] = "123",
+                ["isProductVersionMeaningful"] = false
+            };
+            descriptor["gameProductVersion"] = "legacy-version";
+            descriptor["verifiedGameVersions"] = new JsonArray("legacy-version");
+            File.WriteAllText(Path.Combine(releasesDirectory, "dummy-adapter-1.0.0.json"), descriptor.ToJsonString());
 
             AdapterCatalog.Build(root, releasesDirectory, "1970-01-01T00:00:00.0000000+00:00", catalogPath);
 
             JsonObject catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!.AsObject();
             JsonObject adapter = catalog["adapters"]!.AsArray()[0]!.AsObject();
             adapter["displayName"]!.GetValue<string>().ShouldBe("Kontrol Sandbox");
+            catalog["catalogVersion"]!.GetValue<int>().ShouldBe(1);
+            var release = adapter["releases"]!.AsArray().Single()!.AsObject();
+            release["gameBuildIdentity"]!["platformBuildId"]!.GetValue<string>().ShouldBe("123");
+            release["gameProductVersion"]!.GetValue<string>().ShouldBe("legacy-version");
+            release["verifiedGameVersions"]!.AsArray()[0]!.GetValue<string>().ShouldBe("legacy-version");
         }
         finally
         {
@@ -331,9 +468,13 @@ public class AdapterToolTests
             AdapterRelease.UpdateDescriptors(root, releasesDir);
 
             var updated = JsonNode.Parse(File.ReadAllText(descPath))!.AsObject();
+            var identity = updated["gameBuildIdentity"]!.AsObject();
             var verified = updated["verifiedGameVersions"]!.AsArray().Select(v => v!.GetValue<string>()).ToArray();
             verified.ShouldContain("2.3.0.2798");
             updated["gameProductVersion"]!.GetValue<string>().ShouldBe("2.4.0.93");
+            identity["platform"]!.GetValue<string>().ShouldBe("steam");
+            identity["platformAppId"]!.GetValue<string>().ShouldBe("1133870");
+            identity["platformBuildId"]!.GetValue<string>().ShouldBe("24972061");
             updated["assemblies"]!["Game2.Client.dll"]!["fileVersion"]!.GetValue<string>().ShouldBe("2.4.0.93");
             updated["package"]!["sha256"]!.GetValue<string>().ShouldBe(new string('A', 64));
         }
