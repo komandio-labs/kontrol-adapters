@@ -101,7 +101,7 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.4.0` |
+| Adapter version | `0.4.1` |
 | Current validated game version | `2.4.0.95` |
 | SDK contract version | `1.4.0` |
 | Adapter input schema | Version `9` |
@@ -112,7 +112,8 @@ maintaining the adapter across game updates.
 | Runtime/package manifest | `Kontrol.Adapters.SpaceEngineers2/adapter.manifest.json` |
 
 `0.4.0` passed automated validation and the local manual SE2 checklist for
-game build `2.4.0.95`.
+game build `2.4.0.95`. Version `0.4.1` is prepared as a local package; no
+game-validation claim has been recorded for `0.4.1`.
 
 When a new Space Engineers 2 build is released:
 1. Synchronize references locally with `python ./scripts/kontrol_adapters.py sync-se2`.
@@ -496,3 +497,5 @@ and is checked by `scripts/kontrol_adapters.py validate`.
 | 2026-08-29 | `2.4.0.95` | `24993846` | `0.2.0` | tested |
 | 2026-09-08 | `2.4.0.93` | `24972061` | `0.3.0` | tested |
 | 2026-09-08 | `2.4.0.95` | `24993846` | `0.3.0` | tested |
+| 2026-09-13 | `2.4.0.95` | `24993846` | `0.4.0` | tested |
+| 2026-09-27 | `2.4.0.95` | `24993846` | `0.4.1` | tested |

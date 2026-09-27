@@ -238,7 +238,9 @@ public sealed record AdapterManifest(
     IReadOnlyList<string> PackageFiles,
     string? GameProductVersion = null,
     IReadOnlyList<string>? RelevantAssemblies = null,
-    GameBuildIdentity? GameBuildIdentity = null);
+    GameBuildIdentity? GameBuildIdentity = null,
+    string AdapterKind = "sandbox",
+    int ManifestVersion = 1);
 
 public enum CompatibilityClassification
 {
@@ -268,6 +270,8 @@ public static class AdapterRepository
         return Directory.EnumerateFiles(adapters, "package.json", SearchOption.AllDirectories)
             .Select(ParseManifest).OrderBy(manifest => manifest.Slug, StringComparer.Ordinal).ToArray();
     }
+
+    public static AdapterManifest ReadManifest(string path) => ParseManifest(path);
 
     public static AdapterManifest GetManifest(string root, string slug) =>
         GetManifests(root).SingleOrDefault(manifest => string.Equals(manifest.Slug, slug, StringComparison.OrdinalIgnoreCase))
@@ -331,6 +335,7 @@ public static class AdapterRepository
             GameBuildEvidence observedEvidence = game["buildIdentity"] is null
                 ? ReadBuildEvidence(inspection, "legacyBuildIdentity")
                 : inspectedEvidence;
+            if (!AdapterRepository.HasMatchingBuildIdentity(expectedEvidence.Identity, observedEvidence.Identity)) continue;
             if (GameBuildCompatibility.Evaluate(expectedEvidence, observedEvidence) != GameBuildCompatibilityMatch.Verified) continue;
             classifications.Add(record["validation"]?["result"]?.GetValue<string>() switch
             {
@@ -375,7 +380,11 @@ public static class AdapterRepository
     {
         var document = JsonNode.Parse(File.ReadAllText(path))?.AsObject() ?? throw new InvalidOperationException($"Manifest '{path}' is invalid JSON.");
         if (document["entryPoints"] is not null) throw new InvalidOperationException($"Manifest '{path}' must not duplicate loading entry points.");
-        if (document["manifestVersion"]?.GetValue<int>() != 1) throw new InvalidOperationException($"Manifest '{path}' must use manifestVersion 1.");
+        int manifestVersion = document["manifestVersion"]?.GetValue<int>() ?? 0;
+        if (manifestVersion is not (1 or 2)) throw new InvalidOperationException($"Manifest '{path}' must use manifestVersion 1 or 2.");
+        string adapterKind = document["adapterKind"]?.GetValue<string>() ?? (manifestVersion == 1 && document["gameBuildIdentity"] is JsonObject ? "game" : "sandbox");
+        if (adapterKind is not ("game" or "sandbox")) throw new InvalidOperationException($"Manifest '{path}' has an invalid adapterKind.");
+        if (manifestVersion == 2 && document["adapterKind"] is null) throw new InvalidOperationException($"Manifest '{path}' is missing adapterKind.");
         string Required(string name) => document[name]?.GetValue<string>() ?? throw new InvalidOperationException($"Manifest '{path}' is missing '{name}'.");
         var package = document["package"]?.AsObject() ?? throw new InvalidOperationException($"Manifest '{path}' is missing package metadata.");
         var include = package["include"]?.AsArray().Select(node => node?.GetValue<string>() ?? throw new InvalidOperationException($"Manifest '{path}' has an invalid package include.")).ToArray()
@@ -387,7 +396,7 @@ public static class AdapterRepository
             ? buildIdentity.Deserialize<GameBuildIdentity>()
             : null;
         var relevantAssemblies = document["relevantAssemblies"]?.AsArray().Select(node => node?.GetValue<string>() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToArray();
-        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include, gameProductVersion, relevantAssemblies, gameBuildIdentity);
+        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include, gameProductVersion, relevantAssemblies, gameBuildIdentity, adapterKind, manifestVersion);
     }
 
     private static void ValidateManifest(string root, AdapterManifest manifest)
@@ -397,6 +406,8 @@ public static class AdapterRepository
         if (string.IsNullOrWhiteSpace(manifest.DisplayName)) throw new InvalidOperationException($"Manifest '{manifest.Path}' has an empty displayName.");
         if (!manifest.EntryAssembly.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException($"Manifest '{manifest.Path}' entryAssembly must be a DLL.");
         if (manifest.InputSchemaVersion < 1 || manifest.Architectures.Count == 0) throw new InvalidOperationException($"Manifest '{manifest.Path}' has invalid schema or architecture metadata.");
+        if (manifest.ManifestVersion == 2 && manifest.AdapterKind == "game" && !HasRequiredPlatformIdentity(manifest.GameBuildIdentity))
+            throw new InvalidOperationException($"Game manifest '{manifest.Path}' must declare platform, platformAppId, and platformBuildId.");
         if (!manifest.PackageFiles.Contains(manifest.EntryAssembly, StringComparer.OrdinalIgnoreCase)) throw new InvalidOperationException($"Manifest '{manifest.Path}' package must include its entry assembly.");
         if (!manifest.PackageFiles.Contains("LICENSE", StringComparer.OrdinalIgnoreCase)) throw new InvalidOperationException($"Manifest '{manifest.Path}' package must include the Apache-2.0 LICENSE.");
         if (manifest.PackageFiles.Distinct(StringComparer.OrdinalIgnoreCase).Count() != manifest.PackageFiles.Count) throw new InvalidOperationException($"Manifest '{manifest.Path}' package contains duplicate files.");
@@ -431,12 +442,20 @@ public static class AdapterRepository
     private static void ValidateCompatibilityRecord(string path, IReadOnlyList<AdapterManifest> manifests)
     {
         var document = JsonNode.Parse(File.ReadAllText(path))?.AsObject() ?? throw new InvalidOperationException($"Compatibility record '{path}' is invalid JSON.");
-        if (document["schemaVersion"]?.GetValue<int>() != 1) throw new InvalidOperationException($"Compatibility record '{path}' must use schemaVersion 1.");
+        int schemaVersion = document["schemaVersion"]?.GetValue<int>() ?? 0;
+        if (schemaVersion is not (1 or 2)) throw new InvalidOperationException($"Compatibility record '{path}' must use schemaVersion 1 or 2.");
         string adapterId = document["adapterId"]?.GetValue<string>() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing adapterId.");
         string adapterVersion = document["adapterVersion"]?.GetValue<string>() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing adapterVersion.");
         AdapterManifest manifest = manifests.SingleOrDefault(item => string.Equals(item.AdapterId, adapterId, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"Compatibility record '{path}' references an unknown adapter.");
         if (!SemVersion.IsMatch(adapterVersion)) throw new InvalidOperationException($"Compatibility record '{path}' has an invalid adapter version.");
         var game = document["game"]?.AsObject() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing game metadata.");
+        if (schemaVersion == 2)
+        {
+            if (game["buildIdentity"] is not JsonObject identityNode)
+                throw new InvalidOperationException($"Compatibility record '{path}' is missing game.buildIdentity.");
+            if (manifest.AdapterKind == "game" && !HasRequiredPlatformIdentity(identityNode.Deserialize<GameBuildIdentity>()))
+                throw new InvalidOperationException($"Compatibility record '{path}' game.buildIdentity must declare platform, platformAppId, and platformBuildId.");
+        }
         var assemblies = game["relevantAssemblies"]?.AsObject() ?? throw new InvalidOperationException($"Compatibility record '{path}' is missing relevant assemblies.");
         if (assemblies.Count == 0) throw new InvalidOperationException($"Compatibility record '{path}' contains no relevant assemblies.");
         foreach ((string name, JsonNode? value) in assemblies)
@@ -445,6 +464,20 @@ public static class AdapterRepository
             string? hash = assembly["sha256"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(hash) || !Regex.IsMatch(hash, "^[A-Fa-f0-9]{64}$")) throw new InvalidOperationException($"Compatibility record '{path}' has invalid SHA-256 for '{name}'.");
         }
+    }
+
+    public static bool HasRequiredPlatformIdentity(GameBuildIdentity? identity) => identity is not null &&
+        !string.IsNullOrWhiteSpace(identity.Platform) && !string.IsNullOrWhiteSpace(identity.PlatformAppId) &&
+        !string.IsNullOrWhiteSpace(identity.PlatformBuildId);
+
+    public static bool HasMatchingBuildIdentity(GameBuildIdentity expected, GameBuildIdentity actual)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(actual);
+        if (expected.CanonicalIdentifier is null ||
+            !string.Equals(expected.CanonicalIdentifier, actual.CanonicalIdentifier, StringComparison.OrdinalIgnoreCase)) return false;
+        return string.IsNullOrWhiteSpace(expected.PlatformAppId) ||
+            string.Equals(expected.PlatformAppId, actual.PlatformAppId, StringComparison.Ordinal);
     }
 
     private static GameBuildEvidence ReadBuildEvidence(JsonObject document, string identityProperty)
@@ -461,7 +494,7 @@ public static class AdapterRepository
             }).ToArray());
     }
 
-    private static GameBuildIdentity ReadBuildIdentity(JsonObject document, string identityProperty)
+    public static GameBuildIdentity ReadBuildIdentity(JsonObject document, string identityProperty)
     {
         if (document[identityProperty] is JsonObject identityNode)
         {
@@ -473,7 +506,7 @@ public static class AdapterRepository
         string? steamBuildId = document["steamBuildId"]?.GetValue<string>();
         return !string.IsNullOrWhiteSpace(steamBuildId)
             ? new GameBuildIdentity("steam", null, steamBuildId, productVersion, false)
-            : new GameBuildIdentity(null, null, null, productVersion, !string.IsNullOrWhiteSpace(productVersion));
+            : new GameBuildIdentity(null, null, null, productVersion, false);
     }
 
     public static string NormalizeSlug(string slug) => slug switch
@@ -718,6 +751,10 @@ public static class AdapterRelease
             descriptor["gameProductVersion"] = manifest.GameProductVersion;
         }
 
+        GameBuildIdentity? releaseIdentity = SelectBuildIdentity(manifest, manifest.AdapterVersion);
+        if (releaseIdentity is not null) descriptor["gameBuildIdentity"] = JsonSerializer.SerializeToNode(releaseIdentity);
+        else if (manifest.AdapterKind == "game") throw new InvalidOperationException($"No exact compatibility record for {manifest.Slug} {manifest.AdapterVersion} supplies gameBuildIdentity.");
+
         string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
         if (Directory.Exists(compatibilityRoot))
         {
@@ -759,19 +796,20 @@ public static class AdapterRelease
             {
                 string selectedVersion = !string.IsNullOrWhiteSpace(manifest.GameProductVersion) && verifiedVersions.Contains(manifest.GameProductVersion)
                     ? manifest.GameProductVersion
-                    : verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase).First();
+                    : LatestVerifiedProductVersion(manifest, manifest.AdapterVersion, verifiedVersions);
                 descriptor["gameProductVersion"] = selectedVersion;
                 if (assembliesByVersion.TryGetValue(selectedVersion, out JsonObject? selectedAssemblies))
                 {
                     descriptor["assemblies"] = selectedAssemblies;
                 }
                 var arr = new JsonArray();
-                foreach (string v in verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase))
+                foreach (string v in verifiedVersions.OrderByDescending(v => FindValidationDate(manifest, manifest.AdapterVersion, v)))
                 {
                     arr.Add(v);
                 }
                 descriptor["verifiedGameVersions"] = arr;
             }
+
         }
 
         WriteJson(outputPath, descriptor, overwrite);
@@ -794,6 +832,9 @@ public static class AdapterRelease
         ValidateChannel(channel, version);
         if (descriptor["publishedAtUtc"]?.GetValue<string>() is { } pub && !DateTimeOffset.TryParse(pub, out _))
             throw new InvalidOperationException("Release descriptor publishedAtUtc is invalid.");
+        if (descriptor["gameBuildIdentity"] is JsonObject identity &&
+            !AdapterRepository.HasRequiredPlatformIdentity(identity.Deserialize<GameBuildIdentity>()))
+            throw new InvalidOperationException("Release descriptor gameBuildIdentity must declare platform, platformAppId, and platformBuildId.");
         var source = descriptor["source"]?.AsObject() ?? throw new InvalidOperationException("Release descriptor is missing source metadata.");
         if (!string.Equals(source["tag"]?.GetValue<string>(), $"adapters/{slug}/v{version}", StringComparison.Ordinal) || !Regex.IsMatch(source["commit"]?.GetValue<string>() ?? string.Empty, "^[0-9a-fA-F]{7,64}$")) throw new InvalidOperationException("Release descriptor source metadata is invalid.");
         var package = descriptor["package"]?.AsObject() ?? throw new InvalidOperationException("Release descriptor is missing package metadata.");
@@ -906,19 +947,23 @@ public static class AdapterRelease
             {
                 string selectedVersion = !string.IsNullOrWhiteSpace(manifest.GameProductVersion) && verifiedVersions.Contains(manifest.GameProductVersion)
                     ? manifest.GameProductVersion
-                    : verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase).First();
+                    : LatestVerifiedProductVersion(manifest, adapterVersion, verifiedVersions);
                 descriptor["gameProductVersion"] = selectedVersion;
                 if (assembliesByVersion.TryGetValue(selectedVersion, out JsonObject? selectedAssemblies))
                 {
                     descriptor["assemblies"] = selectedAssemblies;
                 }
                 var arr = new JsonArray();
-                foreach (string v in verifiedVersions.OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase))
+                foreach (string v in verifiedVersions.OrderByDescending(v => FindValidationDate(manifest, adapterVersion, v)))
                 {
                     arr.Add(v);
                 }
                 descriptor["verifiedGameVersions"] = arr;
             }
+
+            GameBuildIdentity? releaseIdentity = SelectBuildIdentity(manifest, adapterVersion);
+            if (releaseIdentity is not null) descriptor["gameBuildIdentity"] = JsonSerializer.SerializeToNode(releaseIdentity);
+            else if (manifest.AdapterKind == "game") throw new InvalidOperationException($"No exact compatibility record for {manifest.Slug} {adapterVersion} supplies gameBuildIdentity.");
 
             File.WriteAllText(descriptorPath, descriptor.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
             Validate(descriptorPath);
@@ -931,6 +976,71 @@ public static class AdapterRelease
         if (channel is not ("stable" or "beta")) throw new InvalidOperationException("Release channel must be 'stable' or 'beta'.");
         if (channel == "stable" && isPrerelease) throw new InvalidOperationException("Stable releases must use a non-prerelease semantic version.");
         if (channel == "beta" && !isPrerelease) throw new InvalidOperationException("Beta releases must use a prerelease semantic version such as 1.2.0-beta.1.");
+    }
+
+    private static GameBuildIdentity? SelectBuildIdentity(AdapterManifest manifest, string adapterVersion)
+    {
+        string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
+        if (!Directory.Exists(compatibilityRoot)) return null;
+        var candidates = Directory.EnumerateFiles(compatibilityRoot, "*.json")
+            .Select(path => JsonNode.Parse(File.ReadAllText(path))?.AsObject())
+            .Where(record => record is not null && string.Equals(record["adapterVersion"]?.GetValue<string>(), adapterVersion, StringComparison.Ordinal))
+            .Select(record => (Record: record!, Game: record!["game"]?.AsObject()))
+            .Where(item => item.Game is not null)
+            .Select(item => (item.Record, Game: item.Game!, Identity: NormalizeLegacyIdentity(AdapterRepository.ReadBuildIdentity(item.Game!, "buildIdentity"), manifest),
+                Date: ReadValidationDate(item.Record)))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Identity.PlatformBuildId))
+            .ToArray();
+        if (candidates.Length == 0) return null;
+
+        if (manifest.GameBuildIdentity is { } baseline)
+        {
+            var exactBaseline = candidates.Where(item =>
+                string.Equals(item.Identity.Platform, baseline.Platform, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(item.Identity.PlatformAppId, baseline.PlatformAppId, StringComparison.Ordinal) &&
+                string.Equals(item.Identity.PlatformBuildId, baseline.PlatformBuildId, StringComparison.Ordinal)).ToArray();
+            if (exactBaseline.Length == 1) return exactBaseline[0].Identity;
+            if (exactBaseline.Length > 1) throw new InvalidOperationException($"Multiple exact compatibility records for {manifest.Slug} {adapterVersion} match the manifest build identity.");
+        }
+        DateTimeOffset newestDate = candidates.Max(item => item.Date);
+        var newest = candidates.Where(item => item.Date == newestDate).ToArray();
+        var identities = newest.Select(item => item.Identity).Distinct().ToArray();
+        if (identities.Length == 1) return identities[0];
+        throw new InvalidOperationException($"Multiple compatibility records for {manifest.Slug} {adapterVersion} have the same latest validation date and different game identities.");
+    }
+
+    private static DateTimeOffset ReadValidationDate(JsonObject record) =>
+        DateTimeOffset.TryParse(record["validation"]?["date"]?.GetValue<string>(), out DateTimeOffset date) ? date : DateTimeOffset.MinValue;
+
+    private static GameBuildIdentity NormalizeLegacyIdentity(GameBuildIdentity identity, AdapterManifest manifest)
+    {
+        if (string.IsNullOrWhiteSpace(identity.PlatformAppId) && !string.IsNullOrWhiteSpace(identity.PlatformBuildId) &&
+            manifest.GameBuildIdentity is { } manifestIdentity &&
+            string.Equals(identity.Platform, manifestIdentity.Platform, StringComparison.OrdinalIgnoreCase))
+            return identity with { PlatformAppId = manifestIdentity.PlatformAppId };
+        return identity;
+    }
+
+    private static string LatestVerifiedProductVersion(AdapterManifest manifest, string adapterVersion, IEnumerable<string> versions)
+    {
+        var datedVersions = versions.Select(version => (Version: version, Date: FindValidationDate(manifest, adapterVersion, version))).ToArray();
+        DateTimeOffset newestDate = datedVersions.Max(item => item.Date);
+        string[] newestVersions = datedVersions.Where(item => item.Date == newestDate).Select(item => item.Version).ToArray();
+        if (newestVersions.Length != 1)
+            throw new InvalidOperationException($"Multiple tested game versions for {manifest.Slug} {adapterVersion} share the latest validation date; the release descriptor needs an explicit gameProductVersion.");
+        return newestVersions[0];
+    }
+
+    private static DateTimeOffset FindValidationDate(AdapterManifest manifest, string adapterVersion, string productVersion)
+    {
+        string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
+        return Directory.EnumerateFiles(compatibilityRoot, "*.json")
+            .Select(path => JsonNode.Parse(File.ReadAllText(path))?.AsObject())
+            .Where(record => record is not null && string.Equals(record["adapterVersion"]?.GetValue<string>(), adapterVersion, StringComparison.Ordinal) &&
+                string.Equals(record["game"]?["productVersion"]?.GetValue<string>(), productVersion, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(record["validation"]?["result"]?.GetValue<string>(), "tested", StringComparison.OrdinalIgnoreCase))
+            .Select(record => DateTimeOffset.TryParse(record!["validation"]?["date"]?.GetValue<string>(), out DateTimeOffset date) ? date : DateTimeOffset.MinValue)
+            .DefaultIfEmpty(DateTimeOffset.MinValue).Max();
     }
 }
 
@@ -993,6 +1103,12 @@ public static class AdapterCatalog
         {
             if (adapter["releases"] is not JsonArray releases || releases.Count == 0 || adapter["currentVersion"] is null) throw new InvalidOperationException("Catalog adapter has no releases.");
             if (releases.Count(item => item?["status"]?.GetValue<string>() == "current") != 1 || releases.Any(item => item?["status"]?.GetValue<string>() is not ("current" or "superseded") || item?["channel"]?.GetValue<string>() is not ("stable" or "beta"))) throw new InvalidOperationException("Catalog release channels or statuses are invalid.");
+            foreach (JsonObject release in releases.Select(item => item?.AsObject() ?? throw new InvalidOperationException("Catalog contains an invalid release.")))
+            {
+                if (release["gameBuildIdentity"] is JsonObject identity &&
+                    !AdapterRepository.HasRequiredPlatformIdentity(identity.Deserialize<GameBuildIdentity>()))
+                    throw new InvalidOperationException("Catalog release gameBuildIdentity must declare platform, platformAppId, and platformBuildId.");
+            }
         }
     }
 

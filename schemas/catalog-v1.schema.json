@@ -27,11 +27,27 @@
               "required": ["channel", "status"],
               "properties": {
                 "channel": { "enum": ["stable", "beta"] },
-                "status": { "enum": ["current", "superseded"] }
+                "status": { "enum": ["current", "superseded"] },
+                "gameBuildIdentity": { "$ref": "#/$defs/gameBuildIdentity" }
               }
             }
           }
         }
+      }
+    }
+  },
+  "$defs": {
+    "gameBuildIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "platformAppId", "platformBuildId", "isProductVersionMeaningful"],
+      "properties": {
+        "platform": { "type": "string", "minLength": 1 },
+        "platformAppId": { "type": "string", "minLength": 1 },
+        "platformBuildId": { "type": "string", "minLength": 1 },
+        "productVersion": { "type": ["string", "null"] },
+        "isProductVersionMeaningful": { "type": "boolean" },
+        "fingerprintBuildId": { "type": ["string", "null"] }
       }
     }
   }

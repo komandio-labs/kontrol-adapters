@@ -1,6 +1,6 @@
 {
-  "$schema": "../../../../../schemas/compatibility-record-v1.schema.json",
-  "schemaVersion": 1,
+  "$schema": "../../../../../schemas/compatibility-record-v2.schema.json",
+  "schemaVersion": 2,
   "adapterId": "space-engineers-2",
   "slug": "space-engineers-2",
   "adapterVersion": "0.2.0",
@@ -24,6 +24,14 @@
         "sha256": "0729CE92BD8F32F5979E0C211C31C376507E44D04B85834C5EF40C0FB2D6A05B",
         "mvid": "ff2e1fbb-6878-47e0-be5d-52eb82038fc7"
       }
+    },
+    "buildIdentity": {
+      "platform": "steam",
+      "platformAppId": "1133870",
+      "platformBuildId": "24972061",
+      "productVersion": null,
+      "isProductVersionMeaningful": false,
+      "fingerprintBuildId": null
     }
   },
   "validation": {

@@ -2,7 +2,7 @@
   "$schema": "../../../../../schemas/compatibility-record-v2.schema.json",
   "schemaVersion": 2,
   "adapterId": "space-engineers",
-  "adapterVersion": "1.0.0",
+  "adapterVersion": "1.0.1",
   "game": {
     "product": "Space Engineers",
     "productVersion": "steam-build-24675677",
@@ -39,13 +39,14 @@
     }
   },
   "validation": {
-    "date": "2026-09-10",
+    "date": "2026-09-27",
     "result": "tested",
     "automatedTests": "passed",
     "manualChecklist": "complete",
     "limitations": [
       "The adapter uses a narrowly scoped Harmony prefix at MyShipController's final control commit plus native camera, toolbar, and leave-control paths.",
-      "Weapons, toolbar pages, and mods that replace control ownership are not supported."
+      "Weapons, toolbar pages, and mods that replace control ownership are not supported.",
+      "Manual checklist completion was confirmed by the user for adapter 1.0.1 on Steam build 24675677; no other builds are covered."
     ]
   }
 }

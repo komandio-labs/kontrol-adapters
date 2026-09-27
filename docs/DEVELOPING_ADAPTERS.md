@@ -7,7 +7,7 @@
 5. Publish telemetry and logs through the SDK rather than writing normal adapter logs directly to disk.
 6. Add unit tests for schema compatibility and input translation.
 7. Document supported game versions, prerequisites, setup, diagnostics, and upgrade checks in the adapter README.
-8. Declare target game build metadata in `package.json`: specify `gameProductVersion` (the verified game build) and `relevantAssemblies` (the engine/core game DLLs to inspect and fingerprint on disk). Keep the manifest limited to package identity, SDK contract, assembly, schema, platform, target game metadata, and package allowlist. Loading entry points remain in adapter code and tests.
+8. Declare `manifestVersion: 2` and `adapterKind` in `package.json`. Game adapters must provide `gameBuildIdentity` with the platform, platform app ID, and platform build ID; Steam targets its public branch and has no branch field. Put a publisher game version in `gameBuildIdentity.productVersion` only when it is meaningful. Sandbox adapters use `adapterKind: sandbox` and omit game identity. Keep `gameProductVersion` only for legacy consumers.
 9. Validate manifests and build a local package with the generic adapter tool before requesting a release.
 
 For adapter-specific deployment and external-loader behavior, implement the

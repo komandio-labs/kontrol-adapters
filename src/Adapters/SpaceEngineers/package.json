@@ -1,15 +1,18 @@
 {
-  "$schema": "../../../schemas/adapter-manifest-v1.schema.json",
-  "manifestVersion": 1,
+  "$schema": "../../../schemas/adapter-manifest-v2.schema.json",
+  "manifestVersion": 2,
+  "adapterKind": "game",
   "adapterId": "space-engineers",
   "slug": "space-engineers",
   "displayName": "Space Engineers",
-  "adapterVersion": "1.0.0",
+  "adapterVersion": "1.0.1",
   "sdkVersion": "1.4.0",
   "entryAssembly": "Kontrol.Adapters.SpaceEngineers.dll",
   "inputSchemaVersion": 1,
   "targetFramework": "net9.0",
-  "architectures": ["x64"],
+  "architectures": [
+    "x64"
+  ],
   "gameProductVersion": "steam-build-24675677",
   "gameBuildIdentity": {
     "platform": "steam",
@@ -19,7 +22,12 @@
     "isProductVersionMeaningful": false,
     "fingerprintBuildId": null
   },
-  "relevantAssemblies": ["VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Game.dll"],
+  "relevantAssemblies": [
+    "VRage.dll",
+    "VRage.Game.dll",
+    "VRage.Math.dll",
+    "Sandbox.Game.dll"
+  ],
   "package": {
     "include": [
       "Kontrol.Adapters.SpaceEngineers.dll",
