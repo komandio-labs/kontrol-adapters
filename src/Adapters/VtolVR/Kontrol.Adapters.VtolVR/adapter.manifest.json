@@ -1,0 +1,25 @@
+{
+  "id": "vtol-vr",
+  "displayName": "VTOL VR",
+  "slug": "vtol-vr",
+  "exeName": "VTOLVR.exe",
+  "relativeBinPath": "",
+  "pluginDll": "Kontrol.Adapters.VtolVR.dll",
+  "steamAppId": "667970",
+  "requiresHarmony": false,
+  "requiresCore": false,
+  "supportedMethods": [ "BinPluginsFolder" ],
+  "defaultDeploymentMethod": "BinPluginsFolder",
+  "image": "",
+  "version": "0.1.0",
+  "gameProductVersion": "unknown",
+  "gameBuildIdentity": {
+    "platform": "steam",
+    "platformAppId": "667970",
+    "platformBuildId": "25514272",
+    "productVersion": null,
+    "isProductVersionMeaningful": false,
+    "fingerprintBuildId": null
+  },
+  "relevantAssemblies": [ "Assembly-CSharp.dll" ]
+}

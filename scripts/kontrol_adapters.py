@@ -24,11 +24,14 @@ ADAPTERS = {
     "spaceengineers2": ("SpaceEngineers2", "Kontrol.Adapters.SpaceEngineers2"),
     "space-engineers": ("SpaceEngineers", "Kontrol.Adapters.SpaceEngineers"),
     "spaceengineers": ("SpaceEngineers", "Kontrol.Adapters.SpaceEngineers"),
+    "vtol-vr": ("VtolVR", "Kontrol.Adapters.VtolVR"),
+    "vtolvr": ("VtolVR", "Kontrol.Adapters.VtolVR"),
 }
 CANONICAL_ADAPTER_SLUGS = {
     "dummyadapter": "dummy-adapter",
     "spaceengineers2": "space-engineers-2",
     "spaceengineers": "space-engineers",
+    "vtolvr": "vtol-vr",
 }
 SPACE_ENGINEERS_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "VRage.Library.dll", "VRage.Input.dll", "Sandbox.Common.dll", "Sandbox.Game.dll")
 SPACE_ENGINEERS_COMPATIBILITY_ASSEMBLIES = ("VRage.dll", "VRage.Game.dll", "VRage.Math.dll", "Sandbox.Game.dll")
@@ -432,7 +435,10 @@ def package(slug: str, version: str, game_directory: str | None, output: str | N
         if (payload_project == project or payload_project.name.endswith(".Tests.csproj")
                 or any(part.lower() in {"bin", "obj", "scratch", "samples", "testdata"} for part in relative_parts)):
             continue
-        run("dotnet", "build", str(payload_project), "-c", configuration)
+        payload_command = ["dotnet", "build", str(payload_project), "-c", configuration]
+        if slug == "vtol-vr" and payload_project.name == "Kontrol.Adapters.VtolVR.Mod.csproj" and game_directory:
+            payload_command.append(f"-p:VtolVrGameDirectory={Path(game_directory).resolve()}")
+        run(*payload_command)
     destination = Path(output).resolve() if output else ROOT / "artifacts" / f"kontrol-adapter-{slug}-{version}-win-x64.zip"
     arguments = ["pack", "--adapter", slug, "--configuration", configuration, "--output", str(destination)]
     if overwrite:

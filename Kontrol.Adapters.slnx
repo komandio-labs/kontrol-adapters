@@ -16,6 +16,9 @@
     <Project Path="src/Adapters/SpaceEngineers/Kontrol.Adapters.SpaceEngineers/Kontrol.Adapters.SpaceEngineers.csproj" />
     <Project Path="src/Adapters/SpaceEngineers/Kontrol.Adapters.SpaceEngineers.Plugin/Kontrol.Adapters.SpaceEngineers.Plugin.csproj" />
     <Project Path="src/Adapters/SpaceEngineers/Kontrol.Adapters.SpaceEngineers.Tests/Kontrol.Adapters.SpaceEngineers.Tests.csproj" />
+    <Project Path="src/Adapters/VtolVR/Kontrol.Adapters.VtolVR/Kontrol.Adapters.VtolVR.csproj" />
+    <Project Path="src/Adapters/VtolVR/Kontrol.Adapters.VtolVR.Tests/Kontrol.Adapters.VtolVR.Tests.csproj" />
+    <Project Path="src/Adapters/VtolVR/Kontrol.Adapters.VtolVR.Mod/Kontrol.Adapters.VtolVR.Mod.csproj" />
   </Folder>
   <Folder Name="/Sandbox/">
     <Project Path="src/Kontrol.Sandbox.Game/Kontrol.Sandbox.Game.csproj" />

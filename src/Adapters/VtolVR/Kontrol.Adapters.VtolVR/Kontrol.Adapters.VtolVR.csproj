@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\AdapterVersion.props" />
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>Kontrol.Adapters.VtolVR</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>$(AdapterVersion)</Version>
+    <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(AdapterAssemblyVersion)</FileVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Kontrol.Sdk\Kontrol.Sdk.csproj" />
+    <None Include="adapter.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Kontrol.Adapters.VtolVR.Mod\item.json" Link="item.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

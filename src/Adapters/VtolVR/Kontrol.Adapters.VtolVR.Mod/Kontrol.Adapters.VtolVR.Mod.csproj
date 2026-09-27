@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\AdapterVersion.props" />
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <AssemblyName>Kontrol.Adapters.VtolVR.Mod</AssemblyName>
+    <Version>$(AdapterVersion)</Version>
+    <AssemblyVersion>$(AdapterAssemblyVersion)</AssemblyVersion>
+    <VtolVrGameDirectory Condition="'$(VtolVrGameDirectory)' == ''">$(VTOL_VR_GAME_DIR)</VtolVrGameDirectory>
+    <VtolVrLoaderDirectory Condition="'$(VtolVrLoaderDirectory)' == ''">$(VTOL_VR_MODLOADER_DIR)</VtolVrLoaderDirectory>
+    <VtolVrLoaderManagedDirectory Condition="'$(VtolVrLoaderDirectory)' != ''">$(VtolVrLoaderDirectory)\Managed</VtolVrLoaderManagedDirectory>
+    <VtolVrLoaderManagedDirectory Condition="'$(VtolVrLoaderManagedDirectory)' == ''">$(VtolVrGameDirectory)\@Mod Loader\Managed</VtolVrLoaderManagedDirectory>
+    <VtolVrGameManagedDirectory>$(VtolVrGameDirectory)\VTOLVR_Data\Managed</VtolVrGameManagedDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Kontrol.Sdk\Kontrol.Sdk.csproj" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    <Compile Include="..\Kontrol.Adapters.VtolVR\ThrottleRateControl.cs" Link="ThrottleRateControl.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony"><HintPath>$(VtolVrLoaderManagedDirectory)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ModLoader.Framework"><HintPath>$(VtolVrLoaderManagedDirectory)\ModLoader.Framework.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(VtolVrGameManagedDirectory)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(VtolVrGameManagedDirectory)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <None Include="item.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="CopyPortableSdkForVtolPackage" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetDir)Kontrol.Sdk.dll" DestinationFiles="$(TargetDir)Kontrol.Sdk.Vtol.dll" />
+  </Target>
+</Project>
