@@ -13,6 +13,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Kontrol.Sdk\Kontrol.Sdk.csproj" />
-    <ProjectReference Include="..\Kontrol.Sdk.LegacyAdapterFixture\Kontrol.Sdk.LegacyAdapterFixture.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>
