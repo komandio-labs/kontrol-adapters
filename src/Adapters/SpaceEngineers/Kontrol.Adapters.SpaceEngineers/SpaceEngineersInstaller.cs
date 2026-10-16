@@ -28,8 +28,10 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
     private const int StatusFrameCapacity = 512;
     private const long ActiveHeartbeatMaximumAgeMilliseconds = 5_000;
 
-    public AdapterInputSchema GetInputSchema() => new(1,
-    [
+    public AdapterInputSchema GetInputSchema()
+    {
+        InputDescriptor[] inputs =
+        [
         new("flight.pitch", "Pitch", "Nose up/down", "Flight", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Nose up", "Nose down")),
         new("flight.roll", "Roll", "Roll left/right", "Flight", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Bank left", "Bank right")),
         new("flight.yaw", "Yaw", "Turn left/right", "Flight", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Turn left", "Turn right")),
@@ -67,7 +69,22 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         new("camera.look_horizontal", "Look Around Horizontal", "Optional camera left/right override", "Camera", 40, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Left", "Right")),
         new("camera.look_vertical", "Look Around Vertical", "Optional camera up/down override", "Camera", 50, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Down", "Up")),
         new("camera.zoom", "Look Around Zoom", "Optional smooth camera zoom override", "Camera", 60, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Zoom out", "Zoom in"))
-    ]);
+        ];
+
+        var globalInputIds = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "interface.hud",
+            "communication.chat",
+            "communication.voice"
+        };
+
+        return new AdapterInputSchema(1, inputs.Select(input => globalInputIds.Contains(input.Id)
+            ? input
+            : input with { ApplicableControlSetIds = ["ship"] }).ToArray())
+        {
+            ControlSets = [new ControlSetDescriptor("ship", "Ship", 10)]
+        };
+    }
 
     public AdapterDeploymentPlan GetDeploymentPlan(AdapterDeploymentContext context)
     {

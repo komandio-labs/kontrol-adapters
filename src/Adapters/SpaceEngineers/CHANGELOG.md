@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 - Unreleased
+
+- Adds SDK 1.5.0 ship control-set metadata while preserving the input IDs,
+  order, schema version, and runtime indexes.
+- Marks HUD, chat, and voice actions global based on their target-independent
+  action handlers. Confirm this mapping with manual in-game validation before
+  making a compatibility claim for this package.
+
 ## 1.0.1 — 2026-09-27
 
 - Declares Steam app `244850`, build `24675677` as the package's game build identity.

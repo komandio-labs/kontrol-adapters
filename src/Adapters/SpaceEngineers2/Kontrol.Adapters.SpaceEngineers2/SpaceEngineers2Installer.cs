@@ -11,8 +11,10 @@ public class SpaceEngineers2Installer : IAdapterInstaller
     public ProcessInjectionEntryPoint GetProcessInjectionEntryPoint() => new(
         "Kontrol.Adapters.SpaceEngineers2.SpaceEngineers2StartupHook");
 
-    public AdapterInputSchema GetInputSchema() => new(9,
-    [
+    public AdapterInputSchema GetInputSchema()
+    {
+        InputDescriptor[] inputs =
+        [
         new("flight.pitch", "Pitch", "Nose up / nose down", "Flight controls", 10, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Nose up", "Nose down")),
         new("flight.roll", "Roll", "Bank left / right", "Flight controls", 20, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .10f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Bank left", "Bank right")),
         new("flight.yaw", "Yaw", "Turn left / right", "Flight controls", 30, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, DefaultExponent: 1f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Turn left", "Turn right")),
@@ -40,7 +42,16 @@ public class SpaceEngineers2Installer : IAdapterInstaller
         new("belt.select_8", "Toolbar slot 8", "Select toolbar item in slot 8 while piloting a cockpit.", "Toolbar", 80, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button, InputSourceKind.Axis], ActionBehavior: DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event, AxisThresholdDefaults: new()),
         new("belt.select_9", "Toolbar slot 9", "Select toolbar item in slot 9 while piloting a cockpit.", "Toolbar", 90, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button, InputSourceKind.Axis], ActionBehavior: DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event, AxisThresholdDefaults: new()),
         new("belt.select_0", "Toolbar slot 10", "Select toolbar item in slot 10 using key 0 while piloting a cockpit.", "Toolbar", 100, InputSignalKind.Discrete, DiscreteBehavior.Trigger, AllowedSourceKinds: [InputSourceKind.Button, InputSourceKind.Axis], ActionBehavior: DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event, AxisThresholdDefaults: new())
-    ]);
+        ];
+
+        return new AdapterInputSchema(9, inputs.Select(input => input with
+        {
+            ApplicableControlSetIds = ["cockpit"]
+        }).ToArray())
+        {
+            ControlSets = [new ControlSetDescriptor("cockpit", "Cockpit / ship", 10)]
+        };
+    }
     private const string HarmonyDllName = "0Harmony.dll";
     private const string SdkDllName = "Kontrol.Sdk.dll";
     private const string SteamAppIdFileName = "steam_appid.txt";
