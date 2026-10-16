@@ -621,6 +621,26 @@ public class CockpitInputPatchTests
         }
     }
 
+    [Test]
+    public void InputSchema_DeclaresCockpitApplicabilityForEveryInput()
+    {
+        var schema = new SpaceEngineers2Installer().GetInputSchema();
+
+        schema.Version.ShouldBe(9);
+        schema.ControlSets.ShouldBe([new ControlSetDescriptor("cockpit", "Cockpit / ship", 10)]);
+        schema.Inputs.Select(input => input.Id).ShouldBe([
+            "flight.pitch", "flight.roll", "flight.yaw", "movement.forward", "movement.strafe", "movement.lift",
+            "systems.dampeners", "systems.lights", "systems.parking_brakes", "systems.power", "systems.exit_grid",
+            "weapons.fire_primary", "weapons.reload", "camera.mode_switch",
+            "flight.cruise_control_set", "flight.cruise_control_increase", "flight.cruise_control_decrease",
+            "belt.select_1", "belt.select_2", "belt.select_3", "belt.select_4", "belt.select_5",
+            "belt.select_6", "belt.select_7", "belt.select_8", "belt.select_9", "belt.select_0"
+        ]);
+        schema.Inputs.ShouldAllBe(input => input.ApplicableControlSetIds.SequenceEqual(new[] { "cockpit" }));
+        schema.Inputs.SelectMany(input => input.ApplicableControlSetIds)
+            .ShouldAllBe(id => schema.ControlSets.Any(controlSet => controlSet.Id == id));
+    }
+
     [TestCase(17, 0)]
     [TestCase(18, 1)]
     [TestCase(25, 8)]

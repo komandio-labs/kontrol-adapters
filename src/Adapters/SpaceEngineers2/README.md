@@ -101,9 +101,9 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.4.1` |
+| Adapter version | `0.4.2` |
 | Current validated game version | `2.4.0.95` |
-| SDK contract version | `1.4.0` |
+| SDK contract version | `1.5.0` |
 | Adapter input schema | Version `9` |
 | Adapter target framework | `net9.0` |
 | Harmony package | `Lib.Harmony 2.4.2` |
@@ -111,9 +111,19 @@ maintaining the adapter across game updates.
 | Package metadata | `package.json` |
 | Runtime/package manifest | `Kontrol.Adapters.SpaceEngineers2/adapter.manifest.json` |
 
+## Control-set metadata
+
+SDK 1.5.0 declares one `cockpit` control set. All current SE2 adapter inputs
+are scoped to the cockpit control context. Movement, systems, camera, cruise,
+and toolbar actions are read from the cockpit input path; fire and reload are
+also routed through SE2's active tool handler. This scope is inferred from the
+adapter's current feature context, and gameplay availability for every action
+has not been manually confirmed for adapter 0.4.2. The metadata does not detect
+the active game target.
+
 `0.4.0` passed automated validation and the local manual SE2 checklist for
-game build `2.4.0.95`. Version `0.4.1` is prepared as a local package; no
-game-validation claim has been recorded for `0.4.1`.
+game build `2.4.0.95`. Adapter `0.4.2` adds schema metadata and has not been
+built or game-validated; no compatibility claim is made for this version.
 
 When a new Space Engineers 2 build is released:
 1. Synchronize references locally with `python ./scripts/kontrol_adapters.py sync-se2`.

@@ -5,6 +5,7 @@ using Kontrol.Sdk.Attributes;
 using Kontrol.Sdk.Diagnostics;
 using Kontrol.Sdk.Interfaces;
 using Kontrol.Sdk.IPC;
+using Kontrol.Sdk.Inputs;
 using NUnit.Framework;
 using Shouldly;
 using System.Text.Json;
@@ -65,6 +66,22 @@ public class SpaceEngineersInstallerTests
         schema.Inputs.Single(input => input.Id == "systems.leave_control").DisplayName.ShouldBe("Use / Interact");
         schema.Inputs.Single(input => input.Id == "interface.terminal").DisplayName.ShouldBe("Terminal / Inventory");
         schema.Inputs.ShouldNotContain(input => input.Id == "interface.remote_access");
+    }
+
+    [Test]
+    public void Schema_DeclaresShipApplicabilityAndKeepsGameLevelActionsGlobal()
+    {
+        var schema = new SpaceEngineersInstaller().GetInputSchema();
+
+        schema.Version.ShouldBe(1);
+        schema.ControlSets.ShouldBe([new ControlSetDescriptor("ship", "Ship", 10)]);
+        schema.Inputs.Where(input => input.Id is "interface.hud" or "communication.chat" or "communication.voice")
+            .SelectMany(input => input.ApplicableControlSetIds)
+            .ShouldBeEmpty();
+        schema.Inputs.Where(input => input.Id is not ("interface.hud" or "communication.chat" or "communication.voice"))
+            .ShouldAllBe(input => input.ApplicableControlSetIds.SequenceEqual(new[] { "ship" }));
+        schema.Inputs.SelectMany(input => input.ApplicableControlSetIds)
+            .ShouldAllBe(id => schema.ControlSets.Any(controlSet => controlSet.Id == id));
     }
 
     [Test]

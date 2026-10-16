@@ -11,6 +11,9 @@ public sealed record AxisThresholdDefaults(float ActivateAt = 60f, float Release
     public bool IsValid => ReleaseBelow >= 0f && ReleaseBelow < ActivateAt && ActivateAt <= 100f;
 }
 
+/// <summary>Describes a stable, adapter-owned set of controls, such as a vehicle or character.</summary>
+public sealed record ControlSetDescriptor(string Id, string DisplayName, int Order);
+
 public sealed record InputDescriptor(
     string Id,
     string DisplayName,
@@ -74,10 +77,18 @@ public sealed record InputDescriptor(
     public DiscreteBehavior EffectiveActionBehavior => ActionBehavior ?? DiscreteBehavior ?? Inputs.DiscreteBehavior.Momentary;
     public DiscreteDeliveryMode EffectiveDeliveryMode => DeliveryMode
         ?? (EffectiveActionBehavior == Inputs.DiscreteBehavior.Momentary ? DiscreteDeliveryMode.State : DiscreteDeliveryMode.Event);
+
+    /// <summary>
+    /// Control-set IDs for which this input is available. An omitted or empty list means the input is global.
+    /// </summary>
+    public IReadOnlyList<string> ApplicableControlSetIds { get; init; } = Array.Empty<string>();
 }
 
 public sealed record AdapterInputSchema(int Version, IReadOnlyList<InputDescriptor> Inputs)
 {
+    /// <summary>Control sets declared by this adapter. Inputs without applicability IDs are global.</summary>
+    public IReadOnlyList<ControlSetDescriptor> ControlSets { get; init; } = Array.Empty<ControlSetDescriptor>();
+
     public static readonly AdapterInputSchema Empty = new(1, Array.Empty<InputDescriptor>());
 
     public static readonly AdapterInputSchema Default6Dof = new(1, new InputDescriptor[]

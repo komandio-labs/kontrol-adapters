@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <AdapterVersion>0.4.1</AdapterVersion>
-    <AdapterAssemblyVersion>0.4.1.0</AdapterAssemblyVersion>
+    <AdapterVersion>0.4.2</AdapterVersion>
+    <AdapterAssemblyVersion>0.4.2.0</AdapterAssemblyVersion>
   </PropertyGroup>
 </Project>

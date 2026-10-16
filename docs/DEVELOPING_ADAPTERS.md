@@ -10,6 +10,43 @@
 8. Declare `manifestVersion: 2` and `adapterKind` in `package.json`. Game adapters must provide `gameBuildIdentity` with the platform, platform app ID, and platform build ID; Steam targets its public branch and has no branch field. Put a publisher game version in `gameBuildIdentity.productVersion` only when it is meaningful. Sandbox adapters use `adapterKind: sandbox` and omit game identity. Keep `gameProductVersion` only for legacy consumers.
 9. Validate manifests and build a local package with the generic adapter tool before requesting a release.
 
+### Control-set applicability
+
+Use `AdapterInputSchema.ControlSets` for stable, adapter-owned targets that
+users may map independently, such as vehicles, robots, or characters. Give each
+set a stable `Id`, a user-facing `DisplayName`, and an `Order` for consistent
+presentation. Set `InputDescriptor.ApplicableControlSetIds` when an action only
+applies to particular targets. An omitted or empty list means the action is
+global and applies to every set. A list with one or more IDs restricts the
+action to those sets, including actions shared by a subset of targets.
+
+`InputDescriptor.Category` continues to group actions by function and is
+independent of target applicability. For example, a helicopter-only collective
+action can use category `Flight controls` and applicability `helicopter`, while
+a shared rotor action can list both `helicopter` and `tiltrotor`.
+
+```csharp
+var schema = new AdapterInputSchema(1, new[]
+{
+    new InputDescriptor("rotor.collective", "Collective", "", "Flight controls", 1, InputSignalKind.Analog)
+    {
+        ApplicableControlSetIds = new[] { "helicopter", "tiltrotor" }
+    },
+    new InputDescriptor("radio.volume", "Radio volume", "", "Avionics", 2, InputSignalKind.Analog)
+})
+{
+    ControlSets = new[]
+    {
+        new ControlSetDescriptor("helicopter", "Helicopter", 1),
+        new ControlSetDescriptor("tiltrotor", "Tiltrotor", 2)
+    }
+};
+```
+
+Keep IDs stable across releases so saved mappings continue to refer to the same
+control set. The Kontrol app's set picker and mapping filters are a separate
+follow-up; this SDK metadata does not detect the active in-game target.
+
 For adapter-specific deployment and external-loader behavior, implement the
 contextual `IAdapterInstaller.GetDeploymentPlan(AdapterDeploymentContext)`
 member. See

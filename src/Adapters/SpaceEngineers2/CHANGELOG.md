@@ -1,5 +1,11 @@
 # Space Engineers 2 adapter changelog
 
+## 0.4.2 - Unreleased
+
+- Adds SDK 1.5.0 cockpit control-set metadata to the existing input schema.
+  Input IDs, order, schema version, and runtime indexes are unchanged.
+- No manual in-game validation has been performed for this adapter version.
+
 ## 0.4.1 — 2026-09-27
 
 - Declares Steam app `1133870`, build `24993846` (game version `2.4.0.95`) as

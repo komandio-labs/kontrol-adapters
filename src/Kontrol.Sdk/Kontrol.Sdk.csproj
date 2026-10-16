@@ -22,7 +22,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>Kontrol;game adapters;SDK;IPC</PackageTags>
     <Description>Shared SDK contracts and interfaces for Kontrol game adapters.</Description>
-    <PackageReleaseNotes>- Added the backward-compatible contextual IAdapterInstaller.GetDeploymentPlan(AdapterDeploymentContext) member and typed adapter-owned deployment descriptors for prerequisites, targets, launch chains, manual steps, verification, and rollback effects.&#xA;- Older adapters automatically receive conservative generic deployment data derived from their existing information and capability members.&#xA;- Marked legacy deployment-description, capability, and non-contextual plan APIs obsolete with migration guidance to the contextual plan API.</PackageReleaseNotes>
+    <PackageReleaseNotes>- Added adapter-owned control-set descriptors and optional input applicability IDs. Empty or omitted applicability remains global.&#xA;- Added the backward-compatible contextual IAdapterInstaller.GetDeploymentPlan(AdapterDeploymentContext) member and typed adapter-owned deployment descriptors for prerequisites, targets, launch chains, manual steps, verification, and rollback effects.&#xA;- Older adapters automatically receive conservative generic deployment data derived from their existing information and capability members.&#xA;- Marked legacy deployment-description, capability, and non-contextual plan APIs obsolete with migration guidance to the contextual plan API.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

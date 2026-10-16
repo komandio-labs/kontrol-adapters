@@ -3,6 +3,18 @@
 All notable changes to the Kontrol SDK contract and package are documented
 here. The SDK version covers both the adapter API and the IPC contract.
 
+## [1.5.0] - 2026-10-16
+
+### Added
+
+- Added adapter-owned `ControlSetDescriptor` metadata to `AdapterInputSchema`
+  and optional `InputDescriptor.ApplicableControlSetIds`. An omitted or empty
+  applicability list means the input is global; one or more IDs restrict it to
+  the named sets. Functional `Category` remains independent.
+- Preserved the existing input descriptor and schema constructor signatures.
+  Control-set metadata does not change the `InputFrame` layout or schema
+  version.
+
 ## [1.4.0] - 2026-09-09
 
 ### Added
@@ -86,6 +98,7 @@ here. The SDK version covers both the adapter API and the IPC contract.
   the exact originating commit for this package is not preserved as a scoped
   SDK release tag.
 
+[1.5.0]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.5.0
 [1.4.0]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.4.0
 [1.3.0]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.3.0
 [1.2.0]: https://github.com/komandio-labs/kontrol-adapters/releases/tag/sdk/v1.2.0
