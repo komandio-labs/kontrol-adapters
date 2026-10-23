@@ -3,6 +3,10 @@
   "displayName": "Space Engineers 2",
   "slug": "space-engineers-2",
   "exeName": "SpaceEngineers2.exe",
+  "hostProcess": {
+    "processName": "Modern.exe",
+    "commandLineTargetExecutable": "SpaceEngineers2.exe"
+  },
   "relativeBinPath": "Game2",
   "pluginDll": "Kontrol.Adapters.SpaceEngineers2.dll",
   "steamAppId": "1133870",
