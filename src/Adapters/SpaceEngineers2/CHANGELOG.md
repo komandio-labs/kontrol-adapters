@@ -1,10 +1,10 @@
 # Space Engineers 2 adapter changelog
 
-## 0.4.2 - Unreleased
+## 0.4.2 — 2026-10-23
 
-- Adds SDK 1.5.0 cockpit control-set metadata to the existing input schema.
-  Input IDs, order, schema version, and runtime indexes are unchanged.
-- No manual in-game validation has been performed for this adapter version.
+- Adds Pulsar Modern installation support.
+- Improves Native Plugin connection startup.
+- Compatible with Space Engineers 2 `4.0.0.3159` (Steam build `26128838`).
 
 ## 0.4.1 — 2026-09-27
 

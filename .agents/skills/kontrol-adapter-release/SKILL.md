@@ -9,6 +9,18 @@ description: Prepare, validate, version, package, tag, publish, or audit Kontrol
 
 Read applicable `AGENTS.md`, `docs/VERSIONING.md`, `docs/BUILDING.md`, the adapter manifest, `AdapterVersion.props`, changelog, compatibility records, and [references/release-gates.md](references/release-gates.md). Inspect Git status and remotes before proposing release operations.
 
+## Write player-facing release copy
+
+Write changelog entries and release notes for players. Include only concise,
+plain-language outcomes they can notice or use, and compatibility details
+that are verified for the exact game build. Do not include implementation
+internals, SDK or schema metadata, assembly fingerprints, test counts, CI
+results, manual checklist status, or other engineering evidence. Keep test and
+manual-validation evidence in compatibility records, checklists, and issue
+tracking. If a change has no verified player-visible outcome, omit it from
+public release copy. Express host compatibility as the required Kontrol app
+version, rather than the internal SDK version.
+
 ## Classify the change
 
 - Publish a new adapter version when code, dependencies, packaging, schema, or runtime behavior changes.

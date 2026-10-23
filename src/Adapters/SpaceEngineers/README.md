@@ -6,24 +6,23 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 | --- | --- |
 | Adapter version | `1.0.2` |
 | SDK contract version | `1.5.0` |
-| Target game build | `steam-build-24675677` |
+| Target game version / Steam build | `1.210.014` / `24675677` |
 | Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers.dll` (`net9.0`) |
 | Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers.Plugin.dll` + `0Harmony.dll` (`net48`) |
 | Steam application ID | `244850` |
 | Input channel | `Local\Kontrol_Input_space-engineers` |
 
-Adapter `1.0.1` was manually validated against Steam app `244850`, build
-`24675677`, based on the user's confirmation. This evidence applies only to
-that exact game build.
+Adapter `1.0.2` was manually validated against Space Engineers `1.210.014`,
+Steam app `244850`, build `24675677`, based on the user's confirmation. This
+evidence applies only to that exact game build.
 
 ## Control-set metadata
 
 SDK 1.5.0 declares one `ship` control set. Ship and cockpit actions are scoped
 to that set. HUD, chat, and voice chat are global because their handlers do not
-require a ship controller. This classification is inferred from the current
-action dispatch code; gameplay availability and the intended user-facing
-applicability have not been confirmed in game. Manual compatibility validation
-remains pending for adapter 1.0.2.
+require a ship controller. The adapter schema and dispatch tests cover this
+mapping; game compatibility was manually validated for adapter 1.0.2 on
+Space Engineers `1.210.014` / Steam build `24675677`.
 
 ## Supported controls
 

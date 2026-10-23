@@ -102,7 +102,7 @@ maintaining the adapter across game updates.
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
 | Adapter version | `0.4.2` |
-| Current validated game version | `2.4.0.95` |
+| Current validated game version | `4.0.0.3159` |
 | SDK contract version | `1.5.0` |
 | Adapter input schema | Version `9` |
 | Adapter target framework | `net9.0` |
@@ -116,14 +116,13 @@ maintaining the adapter across game updates.
 SDK 1.5.0 declares one `cockpit` control set. All current SE2 adapter inputs
 are scoped to the cockpit control context. Movement, systems, camera, cruise,
 and toolbar actions are read from the cockpit input path; fire and reload are
-also routed through SE2's active tool handler. This scope is inferred from the
-adapter's current feature context, and gameplay availability for every action
-has not been manually confirmed for adapter 0.4.2. The metadata does not detect
-the active game target.
+also routed through SE2's active tool handler. The metadata does not detect the
+active game target. Adapter `0.4.2` passed the user-confirmed manual checklist
+on game build `4.0.0.3159` / Steam build `26128838`.
 
-`0.4.0` passed automated validation and the local manual SE2 checklist for
-game build `2.4.0.95`. Adapter `0.4.2` adds schema metadata and has not been
-built or game-validated; no compatibility claim is made for this version.
+The current release source targets `4.0.0.3159` / Steam build `26128838`.
+The user-confirmed manual checklist and exact build evidence are recorded in
+`compatibility/game-builds/4.0.0.3159-adapter-0.4.2.json`.
 
 When a new Space Engineers 2 build is released:
 1. Synchronize references locally with `python ./scripts/kontrol_adapters.py sync-se2`.
@@ -509,3 +508,4 @@ and is checked by `scripts/kontrol_adapters.py validate`.
 | 2026-09-08 | `2.4.0.95` | `24993846` | `0.3.0` | tested |
 | 2026-09-13 | `2.4.0.95` | `24993846` | `0.4.0` | tested |
 | 2026-09-27 | `2.4.0.95` | `24993846` | `0.4.1` | tested |
+| 2026-10-23 | `4.0.0.3159` | `26128838` | `0.4.2` | tested |
