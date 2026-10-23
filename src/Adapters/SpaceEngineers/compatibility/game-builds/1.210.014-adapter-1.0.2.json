@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../../../schemas/compatibility-record-v2.schema.json",
+  "schemaVersion": 2,
+  "adapterId": "space-engineers",
+  "adapterVersion": "1.0.2",
+  "game": {
+    "product": "Space Engineers",
+    "productVersion": "1.210.014",
+    "steamBuildId": "24675677",
+    "buildIdentity": {
+      "platform": "steam",
+      "platformAppId": "244850",
+      "platformBuildId": "24675677",
+      "productVersion": "1.210.014",
+      "isProductVersionMeaningful": true,
+      "fingerprintBuildId": null
+    },
+    "relevantAssemblies": {
+      "VRage.dll": {
+        "fileVersion": "1.0.0.0",
+        "sha256": "EC2410B3D916ADBD7404C3082CCC25A70C8BAEC89BACB57001C67597068E24CA",
+        "mvid": "32e22621-4693-4285-918c-0a0f342b4d58"
+      },
+      "VRage.Game.dll": {
+        "fileVersion": "1.0.0.0",
+        "sha256": "F0970C2B60335F7690E158A485CD528703717C8C5002F2713556E04F09C508E1",
+        "mvid": "6a9e1b61-7c42-4e4e-9d26-347bbf080924"
+      },
+      "VRage.Math.dll": {
+        "fileVersion": "1.0.0.0",
+        "sha256": "953ED575327FFEC5A72BAF13C893843C26F7D248CD1ECE1372EC34D650618F1C",
+        "mvid": "5d141a5d-adcb-4d88-8ad4-3eb8dd11504c"
+      },
+      "Sandbox.Game.dll": {
+        "fileVersion": "0.1.1",
+        "sha256": "DE04E9162BCF87FC07CEC377213D99533BCFE1C34C9E1E2231168144C9D67EDF",
+        "mvid": "438e5140-05de-4ad3-88bd-93cc699e77d0"
+      }
+    }
+  },
+  "validation": {
+    "date": "2026-10-23",
+    "result": "tested",
+    "automatedTests": "passed",
+    "manualChecklist": "passed",
+    "limitations": [
+      "The adapter uses a narrowly scoped Harmony prefix at MyShipController's final control commit plus native camera, toolbar, and leave-control paths.",
+      "Weapons, toolbar pages, and mods that replace control ownership are not supported.",
+      "Manual checklist completion was confirmed by the user for adapter 1.0.2 on Steam app 244850, product 1.210.014, build 24675677 using artifacts/release-candidates/kontrol-adapter-space-engineers-1.0.2-win-x64.zip (SHA-256 5823FC455BD4B3D82C91908E6D405DEE395190ECDFE8D70A4AA544FF5EA3E074); no other builds are covered."
+    ]
+  }
+}

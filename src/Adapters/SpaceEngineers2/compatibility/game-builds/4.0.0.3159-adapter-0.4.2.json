@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../../../schemas/compatibility-record-v2.schema.json",
+  "schemaVersion": 2,
+  "adapterId": "space-engineers-2",
+  "slug": "space-engineers-2",
+  "adapterVersion": "0.4.2",
+  "game": {
+    "product": "Space Engineers 2",
+    "productVersion": "4.0.0.3159",
+    "steamBuildId": "26128838",
+    "buildIdentity": {
+      "platform": "steam",
+      "platformAppId": "1133870",
+      "platformBuildId": "26128838",
+      "productVersion": "4.0.0.3159",
+      "isProductVersionMeaningful": true,
+      "fingerprintBuildId": null
+    },
+    "relevantAssemblies": {
+      "Game2.Client.dll": {
+        "fileVersion": "4.0.0.3159",
+        "sha256": "95AD3F3920CEFA560236BB35B30515A5724B7588D8FAA249631F4089C1D51ABD",
+        "mvid": "7fcc6fab-8d73-420e-b823-5111180bb55c"
+      },
+      "VRage.Core.dll": {
+        "fileVersion": "4.0.0.3159",
+        "sha256": "6CF0F8D2B7A2966EB4C9E6CCB1DC434B9CB5FE4BEE3BDA222B4D90D3C5A78013",
+        "mvid": "3fa19db0-bb8d-4b89-9369-d65ce7dfb16f"
+      },
+      "VRage.Library.dll": {
+        "fileVersion": "4.0.0.3159",
+        "sha256": "0538F2ECB38E2BAC0D29CB3C533A0C3FFFB1A1C33D9C774C970D7D0576D2BB4C",
+        "mvid": "093b99b8-4f73-4f40-b802-ace4faa3464d"
+      }
+    }
+  },
+  "validation": {
+    "date": "2026-10-23",
+    "result": "tested",
+    "automatedTests": "passed",
+    "manualChecklist": "passed",
+    "limitations": [
+      "Experimental integration against Space Engineers 2 private runtime APIs. Revalidate after every game update.",
+      "Manual checklist completion was confirmed by the user for adapter 0.4.2 on Steam app 1133870, product 4.0.0.3159, build 26128838 using artifacts/release-candidates/kontrol-adapter-space-engineers-2-0.4.2-win-x64.zip (SHA-256 276E22A2787BD53EFAF335ECBBD3547F3EB5CF6E7FFFC73B636C65CB3E7033DF).",
+      "Only Steam app 1133870, product 4.0.0.3159, build 26128838 is covered."
+    ]
+  }
+}

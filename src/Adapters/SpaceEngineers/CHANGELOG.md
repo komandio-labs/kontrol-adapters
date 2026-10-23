@@ -1,12 +1,8 @@
 # Changelog
 
-## 1.0.2 - Unreleased
+## 1.0.2 — 2026-10-23
 
-- Adds SDK 1.5.0 ship control-set metadata while preserving the input IDs,
-  order, schema version, and runtime indexes.
-- Marks HUD, chat, and voice actions global based on their target-independent
-  action handlers. Confirm this mapping with manual in-game validation before
-  making a compatibility claim for this package.
+- Compatible with Space Engineers `1.210.014` (Steam build `24675677`).
 
 ## 1.0.1 — 2026-09-27
 

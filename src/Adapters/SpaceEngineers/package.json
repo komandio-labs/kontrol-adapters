@@ -13,13 +13,13 @@
   "architectures": [
     "x64"
   ],
-  "gameProductVersion": "steam-build-24675677",
+  "gameProductVersion": "1.210.014",
   "gameBuildIdentity": {
     "platform": "steam",
     "platformAppId": "244850",
     "platformBuildId": "24675677",
-    "productVersion": null,
-    "isProductVersionMeaningful": false,
+    "productVersion": "1.210.014",
+    "isProductVersionMeaningful": true,
     "fingerprintBuildId": null
   },
   "relevantAssemblies": [
