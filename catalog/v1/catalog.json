@@ -1,13 +1,64 @@
 {
   "catalogVersion": 1,
-  "generatedAtUtc": "2026-09-27T10:08:52Z",
+  "generatedAtUtc": "2026-10-23T13:09:14Z",
   "adapters": [
     {
       "adapterId": "space-engineers",
       "slug": "space-engineers",
       "displayName": "Space Engineers",
-      "currentVersion": "1.0.1",
+      "currentVersion": "1.0.2",
       "releases": [
+        {
+          "descriptorVersion": 1,
+          "adapterId": "space-engineers",
+          "slug": "space-engineers",
+          "adapterVersion": "1.0.2",
+          "sdkVersion": "1.5.0",
+          "channel": "stable",
+          "publishedAtUtc": "2026-10-23T13:09:12Z",
+          "source": {
+            "tag": "adapters/space-engineers/v1.0.2",
+            "commit": "8ab8f724bb0e6dd47787b40daf5218024a707b57"
+          },
+          "package": {
+            "fileName": "kontrol-adapter-space-engineers-1.0.2-win-x64.zip",
+            "sha256": "5693CA6A9AA5397518BD021EC8F2A2EEF8AFCBB2D35C85BC799941FCD64E5AF1",
+            "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers/1.0.2/kontrol-adapter-space-engineers-1.0.2-win-x64.zip",
+            "architecture": "x64"
+          },
+          "gameProductVersion": "1.210.014",
+          "gameBuildIdentity": {
+            "platform": "steam",
+            "platformAppId": "244850",
+            "platformBuildId": "24675677",
+            "productVersion": "1.210.014",
+            "isProductVersionMeaningful": true,
+            "fingerprintBuildId": null
+          },
+          "assemblies": {
+            "VRage.dll": {
+              "sha256": "EC2410B3D916ADBD7404C3082CCC25A70C8BAEC89BACB57001C67597068E24CA",
+              "fileVersion": "1.0.0.0"
+            },
+            "VRage.Game.dll": {
+              "sha256": "F0970C2B60335F7690E158A485CD528703717C8C5002F2713556E04F09C508E1",
+              "fileVersion": "1.0.0.0"
+            },
+            "VRage.Math.dll": {
+              "sha256": "953ED575327FFEC5A72BAF13C893843C26F7D248CD1ECE1372EC34D650618F1C",
+              "fileVersion": "1.0.0.0"
+            },
+            "Sandbox.Game.dll": {
+              "sha256": "DE04E9162BCF87FC07CEC377213D99533BCFE1C34C9E1E2231168144C9D67EDF",
+              "fileVersion": "0.1.1"
+            }
+          },
+          "verifiedGameVersions": [
+            "1.210.014"
+          ],
+          "signature": "60F\u002BwIuwQDhexWILpq6Jdkt6HBX9sgEmYbZxUbF1/kfvZN7kNoQ1uV5Q0fSA7PwGEDMhsdZu6N8Qqo\u002BwxH0EBg==",
+          "status": "current"
+        },
         {
           "descriptorVersion": 1,
           "adapterId": "space-engineers",
@@ -57,7 +108,7 @@
             "steam-build-24675677"
           ],
           "signature": "Nl37Ms8F0EQk7t6szG1CdO03E/KaO4e04IBH\u002Bo4cauFj335\u002BkNVIte9OOFkurxjmWFuh5fuMS8E\u002BxZEVZ0dGRg==",
-          "status": "current"
+          "status": "superseded"
         },
         {
           "descriptorVersion": 1,
@@ -370,5 +421,5 @@
       ]
     }
   ],
-  "signature": "74Pqkp17PqaVgX9/eRFnclNiuKCtXOZ4/yU3lg2MFdM55FyFjrr8EXHwuQGCeuJgTqYdiys1INw3k0\u002BQEMPvgQ=="
+  "signature": "HXTkWjf/Li\u002Bdze5eSOeOrbW1GoIkJ/BIm6yoYDhO1RgJpSdX3bQYt1DZCa1DK3IrqNTsKWcbUp7FJTnHdZOzVQ=="
 }
