@@ -24,32 +24,58 @@ public sealed class AdapterConnectionReporter(string adapterId) : IDisposable
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+    private readonly Lock _sync = new();
     private readonly MmfChannel<TelemetryData> _channel = new($"Local\\Kontrol_AdapterStatus_{adapterId}");
     private readonly AdapterLogReporter _diagnosticReporter = new(adapterId);
     private long _sequence;
     private bool _initialized;
     private (string Title, string Message, string? Recommendation)? _activeError;
+    private bool _disposed;
 
-    public void ReportLoaded() => Send(AdapterRuntimeState.Loaded);
+    public void ReportLoaded()
+    {
+        lock (_sync)
+        {
+            if (!_disposed) Send(AdapterRuntimeState.Loaded);
+        }
+    }
 
     public void ReportActive()
     {
-        _activeError = null;
-        Send(AdapterRuntimeState.Active);
+        lock (_sync)
+        {
+            if (_disposed) return;
+            _activeError = null;
+            Send(AdapterRuntimeState.Active);
+        }
     }
 
-    public void Pulse() => Send(_activeError is not null ? AdapterRuntimeState.Error : AdapterRuntimeState.Active);
+    public void Pulse()
+    {
+        lock (_sync)
+        {
+            if (!_disposed) Send(_activeError is not null ? AdapterRuntimeState.Error : AdapterRuntimeState.Active);
+        }
+    }
 
     public void ReportError(string title, string message, string? recommendation = null)
     {
-        _activeError = (title, message, recommendation);
-        Send(AdapterRuntimeState.Error);
+        lock (_sync)
+        {
+            if (_disposed) return;
+            _activeError = (title, message, recommendation);
+            Send(AdapterRuntimeState.Error);
+        }
     }
 
     public void ClearError()
     {
-        _activeError = null;
-        Send(AdapterRuntimeState.Active);
+        lock (_sync)
+        {
+            if (_disposed) return;
+            _activeError = null;
+            Send(AdapterRuntimeState.Active);
+        }
     }
 
     private void Send(AdapterRuntimeState state)
@@ -59,6 +85,23 @@ public sealed class AdapterConnectionReporter(string adapterId) : IDisposable
             if (!_initialized)
             {
                 _channel.CreateOrOpen();
+                try
+                {
+                    _channel.Read(out var existingFrame);
+                    string existingJson = existingFrame.GetJson();
+                    if (!string.IsNullOrWhiteSpace(existingJson))
+                    {
+                        AdapterRuntimeStatus? existingStatus = JsonSerializer.Deserialize<AdapterRuntimeStatus>(existingJson, SerializerOptions);
+                        if (existingStatus is not null && existingStatus.Sequence > _sequence)
+                        {
+                            _sequence = existingStatus.Sequence;
+                        }
+                    }
+                }
+                catch
+                {
+                    // A malformed prior frame must not prevent a fresh status report.
+                }
                 _initialized = true;
             }
 
@@ -86,9 +129,15 @@ public sealed class AdapterConnectionReporter(string adapterId) : IDisposable
 
     public void Dispose()
     {
-        _channel.Dispose();
-        _diagnosticReporter.Dispose();
+        lock (_sync)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _channel.Dispose();
+            _diagnosticReporter.Dispose();
+        }
     }
+
 }
 
 public sealed record AdapterRuntimeStatus(

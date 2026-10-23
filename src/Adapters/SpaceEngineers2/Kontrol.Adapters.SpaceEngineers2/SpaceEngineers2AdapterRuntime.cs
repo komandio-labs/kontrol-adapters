@@ -14,14 +14,14 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
     private static SpaceEngineers2AdapterRuntime? _current;
 
     private readonly AdapterConnectionReporter _connectionReporter = new("space-engineers-2");
-    private readonly Timer _heartbeatTimer;
+    private readonly AdapterHeartbeatLoop _heartbeat;
     private readonly Harmony? _harmony;
     private bool _disposed;
 
     private SpaceEngineers2AdapterRuntime()
     {
         _connectionReporter.ReportLoaded();
-        _heartbeatTimer = new Timer(_ => _connectionReporter.Pulse(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        _heartbeat = new AdapterHeartbeatLoop(_connectionReporter.Pulse, TimeSpan.FromSeconds(1));
         SpaceEngineers2AdapterDiagnostics.Write("Space Engineers 2 controls adapter started.");
 
         try
@@ -97,9 +97,51 @@ internal sealed class SpaceEngineers2AdapterRuntime : IDisposable
         if (_disposed) return;
         _disposed = true;
         Patches.TranslationPresentationState.Reset();
-        _heartbeatTimer.Dispose();
+        _heartbeat.Dispose();
         _connectionReporter.Dispose();
         if (_harmony is not null) _harmony.UnpatchAll(_harmony.Id);
+    }
+}
+
+/// <summary>
+/// Keeps adapter liveness independent of the target process thread-pool. Native
+/// plugin loading can occupy/starve the game's shared pool during level startup.
+/// </summary>
+internal sealed class AdapterHeartbeatLoop : IDisposable
+{
+    private readonly Action _pulse;
+    private readonly TimeSpan _interval;
+    private readonly ManualResetEvent _stop = new(false);
+    private readonly Thread _thread;
+    private int _disposed;
+
+    internal AdapterHeartbeatLoop(Action pulse, TimeSpan interval)
+    {
+        _pulse = pulse;
+        _interval = interval;
+        _thread = new Thread(Run)
+        {
+            IsBackground = true,
+            Name = "Kontrol adapter IPC heartbeat"
+        };
+        _thread.Start();
+    }
+
+    private void Run()
+    {
+        while (!_stop.WaitOne(_interval))
+        {
+            try { _pulse(); }
+            catch { /* Heartbeats must never affect the game process. */ }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _stop.Set();
+        if (Thread.CurrentThread != _thread) _thread.Join();
+        _stop.Dispose();
     }
 }
 
