@@ -15,6 +15,14 @@ jobs:
   publish:
     if: startsWith(github.event.release.tag_name, 'adapters/')
     runs-on: ubuntu-latest
+    outputs:
+      slug: ${{ steps.release.outputs.slug }}
+      version: ${{ steps.release.outputs.version }}
+      display_name: ${{ steps.release.outputs.display_name }}
+      game_version: ${{ steps.release.outputs.game_version }}
+      game_build: ${{ steps.release.outputs.game_build }}
+      changelog: ${{ steps.release.outputs.changelog }}
+      package_url: ${{ steps.release.outputs.package_url }}
     env:
       TAG: ${{ github.event.release.tag_name }}
       PUBLIC_BASE_URL: https://komandio-labs.github.io/kontrol-adapters
@@ -53,10 +61,22 @@ jobs:
           test -n "$manifest" || { echo "No adapter manifest found for slug: $slug" >&2; exit 1; }
           manifest_version="$(jq -r '.adapterVersion' "$manifest")"
           test "$manifest_version" = "$version"
+          adapter_dir="$(dirname "$manifest")"
+          display_name="$(jq -r '.displayName // .name // empty' "$manifest")"
+          game_version="$(jq -r '.gameProductVersion // .gameBuildIdentity.productVersion // empty' "$manifest")"
+          game_build="$(jq -r '.gameBuildIdentity.platformBuildId // empty' "$manifest")"
+          changelog="$adapter_dir/CHANGELOG.md"
+          test -n "$display_name" && test -n "$game_version"
+          test -f "$changelog" || { echo "Adapter changelog not found: $changelog" >&2; exit 1; }
           channel=stable
           [[ "$version" == *-* ]] && channel=beta
           echo "slug=$slug" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "display_name=$display_name" >> "$GITHUB_OUTPUT"
+          echo "game_version=$game_version" >> "$GITHUB_OUTPUT"
+          echo "game_build=$game_build" >> "$GITHUB_OUTPUT"
+          echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
+          echo "package_url=$PUBLIC_BASE_URL/packages/$slug/$version/kontrol-adapter-$slug-$version-win-x64.zip" >> "$GITHUB_OUTPUT"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
           echo "package=kontrol-adapter-$slug-$version-win-x64.zip" >> "$GITHUB_OUTPUT"
 
@@ -119,3 +139,62 @@ jobs:
           git -C pages add .
           git -C pages commit -m "publish(${{ steps.release.outputs.slug }}): v${{ steps.release.outputs.version }} (${{ steps.release.outputs.channel }})"
           git -C pages push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+
+  announce:
+    name: Announce published adapter
+    needs: publish
+    if: ${{ needs.publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the published adapter source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Build the Discord announcement
+        shell: pwsh
+        env:
+          ADAPTER_NAME: ${{ needs.publish.outputs.display_name }}
+          ADAPTER_VERSION: ${{ needs.publish.outputs.version }}
+          GAME_VERSION: ${{ needs.publish.outputs.game_version }}
+          GAME_BUILD: ${{ needs.publish.outputs.game_build }}
+          CHANGELOG_PATH: ${{ needs.publish.outputs.changelog }}
+          PACKAGE_URL: ${{ needs.publish.outputs.package_url }}
+        run: |
+          $changelog = Get-Content -LiteralPath $env:CHANGELOG_PATH -Raw
+          $escapedVersion = [regex]::Escape($env:ADAPTER_VERSION)
+          $heading = [regex]::Match($changelog, "(?m)^##\s+$escapedVersion(?:\s|$)[^\r\n]*")
+          if (-not $heading.Success) { throw "No changelog section found for $env:ADAPTER_NAME v$env:ADAPTER_VERSION." }
+          $releaseText = $changelog.Substring($heading.Index)
+          $nextHeading = [regex]::Match($releaseText.Substring($heading.Length), '(?m)^##\s+')
+          $sectionLength = if ($nextHeading.Success) { $heading.Length + $nextHeading.Index } else { $releaseText.Length }
+          $section = $releaseText.Substring(0, $sectionLength)
+          $highlights = @([regex]::Matches($section, '(?m)^-\s+(.+)$') | ForEach-Object { '• ' + $_.Groups[1].Value.Trim().Trim('`') })
+          if ($highlights.Count -eq 0) { throw 'The release changelog section has no user-facing highlights.' }
+          $compatibility = "🎮 Compatible with $env:ADAPTER_NAME $env:GAME_VERSION"
+          if (-not [string]::IsNullOrWhiteSpace($env:GAME_BUILD)) { $compatibility += " (Steam build $env:GAME_BUILD)" }
+          $announcement = @(
+            "🚀 **$env:ADAPTER_NAME adapter v$env:ADAPTER_VERSION**",
+            '',
+            $highlights,
+            '',
+            $compatibility,
+            '',
+            "📦 Download the signed adapter: $env:PACKAGE_URL",
+            '📚 Official adapter catalog: https://www.komandio.com/kontrol/adapters.html'
+          ) -join "`n"
+          if ($announcement.Length -gt 2000) { throw "Announcement is $($announcement.Length) characters; Discord allows at most 2000." }
+          New-Item -ItemType Directory -Force artifacts/announcement | Out-Null
+          Set-Content -LiteralPath artifacts/announcement/adapter-release.txt -Value $announcement -Encoding utf8
+
+      - name: Post to #kontrol-announcements
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: python .github/scripts/post_discord_announcement.py --channel-id 1541835027980230706 --file artifacts/announcement/adapter-release.txt
