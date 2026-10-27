@@ -964,7 +964,8 @@ public static class AdapterRelease
 
             GameBuildIdentity? releaseIdentity = SelectBuildIdentity(manifest, adapterVersion, selectedVersion ?? manifest.GameProductVersion);
             if (releaseIdentity is not null) descriptor["gameBuildIdentity"] = JsonSerializer.SerializeToNode(releaseIdentity);
-            else if (manifest.AdapterKind == "game") throw new InvalidOperationException($"No exact compatibility record for {manifest.Slug} {adapterVersion} supplies gameBuildIdentity.");
+            else if (manifest.AdapterKind == "game" && descriptor["gameBuildIdentity"] is null)
+                throw new InvalidOperationException($"No exact compatibility record or existing descriptor for {manifest.Slug} {adapterVersion} supplies gameBuildIdentity.");
 
             File.WriteAllText(descriptorPath, descriptor.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
             Validate(descriptorPath);

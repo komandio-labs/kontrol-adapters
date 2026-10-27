@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Kontrol.Sdk.Compatibility;
 using NUnit.Framework;
@@ -513,6 +514,43 @@ public class AdapterToolTests
             updated["gameProductVersion"]!.GetValue<string>().ShouldBe("2.4.0.95");
             updated["gameBuildIdentity"]!["platformBuildId"]!.GetValue<string>().ShouldBe("24993846");
             updated["assemblies"]!["Game2.Client.dll"]!["fileVersion"]!.GetValue<string>().ShouldBe("2.4.0.95");
+            updated["package"]!["sha256"]!.GetValue<string>().ShouldBe(new string('A', 64));
+        }
+        finally
+        {
+            if (Directory.Exists(releasesDir)) Directory.Delete(releasesDir, recursive: true);
+        }
+    }
+
+    [Test]
+    public void UpdateDescriptors_PreservesExistingIdentityWhenHistoricalReleaseHasNoCompatibilityRecord()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string releasesDir = Path.Combine(Path.GetTempPath(), $"kontrol-releases-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(releasesDir);
+            var descriptor = Descriptor("0.1.0-beta.1");
+            descriptor["slug"] = "space-engineers-2";
+            descriptor["adapterId"] = "space-engineers-2";
+            descriptor["channel"] = "beta";
+            descriptor["gameProductVersion"] = "2.3.0.2798";
+            descriptor["gameBuildIdentity"] = JsonSerializer.SerializeToNode(GameBuildIdentity.Steam("1133870", "24225481", "2.3.0.2798", true));
+            descriptor["source"] = new JsonObject { ["tag"] = "adapters/space-engineers-2/v0.1.0-beta.1", ["commit"] = "abcdef1234567" };
+            descriptor["package"] = new JsonObject
+            {
+                ["fileName"] = "kontrol-adapter-space-engineers-2-0.1.0-beta.1-win-x64.zip",
+                ["sha256"] = new string('A', 64),
+                ["url"] = "https://example.invalid/download.zip",
+                ["architecture"] = "x64"
+            };
+            string descPath = Path.Combine(releasesDir, "space-engineers-2-0.1.0-beta.1.json");
+            File.WriteAllText(descPath, descriptor.ToJsonString());
+
+            AdapterRelease.UpdateDescriptors(root, releasesDir);
+
+            var updated = JsonNode.Parse(File.ReadAllText(descPath))!.AsObject();
+            updated["gameBuildIdentity"]!["platformBuildId"]!.GetValue<string>().ShouldBe("24225481");
             updated["package"]!["sha256"]!.GetValue<string>().ShouldBe(new string('A', 64));
         }
         finally
