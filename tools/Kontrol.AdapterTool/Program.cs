@@ -943,11 +943,12 @@ public static class AdapterRelease
                 }
             }
 
+            string? selectedVersion = null;
             if (verifiedVersions.Count > 0)
             {
-                string selectedVersion = !string.IsNullOrWhiteSpace(manifest.GameProductVersion) && verifiedVersions.Contains(manifest.GameProductVersion)
+                selectedVersion = !string.IsNullOrWhiteSpace(manifest.GameProductVersion) && verifiedVersions.Contains(manifest.GameProductVersion)
                     ? manifest.GameProductVersion
-                    : LatestVerifiedProductVersion(manifest, adapterVersion, verifiedVersions);
+                    : LatestVerifiedProductVersion(manifest, adapterVersion, verifiedVersions, baseGpv);
                 descriptor["gameProductVersion"] = selectedVersion;
                 if (assembliesByVersion.TryGetValue(selectedVersion, out JsonObject? selectedAssemblies))
                 {
@@ -961,7 +962,7 @@ public static class AdapterRelease
                 descriptor["verifiedGameVersions"] = arr;
             }
 
-            GameBuildIdentity? releaseIdentity = SelectBuildIdentity(manifest, adapterVersion);
+            GameBuildIdentity? releaseIdentity = SelectBuildIdentity(manifest, adapterVersion, selectedVersion ?? manifest.GameProductVersion);
             if (releaseIdentity is not null) descriptor["gameBuildIdentity"] = JsonSerializer.SerializeToNode(releaseIdentity);
             else if (manifest.AdapterKind == "game") throw new InvalidOperationException($"No exact compatibility record for {manifest.Slug} {adapterVersion} supplies gameBuildIdentity.");
 
@@ -978,7 +979,7 @@ public static class AdapterRelease
         if (channel == "beta" && !isPrerelease) throw new InvalidOperationException("Beta releases must use a prerelease semantic version such as 1.2.0-beta.1.");
     }
 
-    private static GameBuildIdentity? SelectBuildIdentity(AdapterManifest manifest, string adapterVersion)
+    private static GameBuildIdentity? SelectBuildIdentity(AdapterManifest manifest, string adapterVersion, string? preferredProductVersion = null)
     {
         string compatibilityRoot = Path.Combine(AdapterRepository.AdapterRoot(manifest), "compatibility", "game-builds");
         if (!Directory.Exists(compatibilityRoot)) return null;
@@ -992,6 +993,13 @@ public static class AdapterRelease
             .Where(item => !string.IsNullOrWhiteSpace(item.Identity.PlatformBuildId))
             .ToArray();
         if (candidates.Length == 0) return null;
+
+        if (!string.IsNullOrWhiteSpace(preferredProductVersion))
+        {
+            var preferred = candidates.Where(item =>
+                string.Equals(item.Game["productVersion"]?.GetValue<string>(), preferredProductVersion, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (preferred.Length > 0) candidates = preferred;
+        }
 
         if (manifest.GameBuildIdentity is { } baseline)
         {
@@ -1021,11 +1029,13 @@ public static class AdapterRelease
         return identity;
     }
 
-    private static string LatestVerifiedProductVersion(AdapterManifest manifest, string adapterVersion, IEnumerable<string> versions)
+    private static string LatestVerifiedProductVersion(AdapterManifest manifest, string adapterVersion, IEnumerable<string> versions, string? preferredVersion = null)
     {
         var datedVersions = versions.Select(version => (Version: version, Date: FindValidationDate(manifest, adapterVersion, version))).ToArray();
         DateTimeOffset newestDate = datedVersions.Max(item => item.Date);
         string[] newestVersions = datedVersions.Where(item => item.Date == newestDate).Select(item => item.Version).ToArray();
+        if (!string.IsNullOrWhiteSpace(preferredVersion) && newestVersions.Contains(preferredVersion, StringComparer.OrdinalIgnoreCase))
+            return preferredVersion;
         if (newestVersions.Length != 1)
             throw new InvalidOperationException($"Multiple tested game versions for {manifest.Slug} {adapterVersion} share the latest validation date; the release descriptor needs an explicit gameProductVersion.");
         return newestVersions[0];
