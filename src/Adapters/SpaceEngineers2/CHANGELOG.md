@@ -1,10 +1,18 @@
 # Space Engineers 2 adapter changelog
 
+## Supported game version update — 2026-10-27
+
+- Updates adapter `0.4.2` compatibility metadata to Space Engineers 2
+  `4.0.0.3165` (Steam build `26163761`); no adapter package was published.
+- Records local assembly fingerprints and automated compatibility validation.
+- Records the user-confirmed manual validation for this build.
+
 ## 0.4.2 — 2026-10-23
 
 - Adds Pulsar Modern installation support.
 - Improves Native Plugin connection startup.
-- Compatible with Space Engineers 2 `4.0.0.3159` (Steam build `26128838`).
+- Originally validated against Space Engineers 2 `4.0.0.3159` (Steam build
+  `26128838`); see compatibility history for current supported builds.
 
 ## 0.4.1 — 2026-09-27
 

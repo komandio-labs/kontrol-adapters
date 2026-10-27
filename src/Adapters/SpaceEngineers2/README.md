@@ -102,7 +102,7 @@ maintaining the adapter across game updates.
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
 | Adapter version | `0.4.2` |
-| Current validated game version | `4.0.0.3159` |
+| Current supported game version | `4.0.0.3165` |
 | SDK contract version | `1.5.0` |
 | Adapter input schema | Version `9` |
 | Adapter target framework | `net9.0` |
@@ -120,8 +120,10 @@ also routed through SE2's active tool handler. The metadata does not detect the
 active game target. Adapter `0.4.2` passed the user-confirmed manual checklist
 on game build `4.0.0.3159` / Steam build `26128838`.
 
-The current release source targets `4.0.0.3159` / Steam build `26128838`.
-The user-confirmed manual checklist and exact build evidence are recorded in
+The current release source targets `4.0.0.3165` / Steam build `26163761`.
+Automated and user-confirmed manual validation are recorded in
+`compatibility/game-builds/4.0.0.3165-adapter-0.4.2.json`. The prior
+`4.0.0.3159` build remains recorded in
 `compatibility/game-builds/4.0.0.3159-adapter-0.4.2.json`.
 
 When a new Space Engineers 2 build is released:
@@ -509,3 +511,4 @@ and is checked by `scripts/kontrol_adapters.py validate`.
 | 2026-09-13 | `2.4.0.95` | `24993846` | `0.4.0` | tested |
 | 2026-09-27 | `2.4.0.95` | `24993846` | `0.4.1` | tested |
 | 2026-10-23 | `4.0.0.3159` | `26128838` | `0.4.2` | tested |
+| 2026-10-27 | `4.0.0.3165` | `26163761` | `0.4.2` | tested |

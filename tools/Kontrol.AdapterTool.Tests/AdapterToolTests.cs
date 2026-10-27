@@ -60,7 +60,7 @@ public class AdapterToolTests
         AdapterRepository.HasRequiredPlatformIdentity(game.GameBuildIdentity).ShouldBeTrue();
         game.GameBuildIdentity!.Platform.ShouldBe("steam");
         game.GameBuildIdentity.PlatformAppId.ShouldBe("1133870");
-        game.GameBuildIdentity.PlatformBuildId.ShouldBe("26128838");
+        game.GameBuildIdentity.PlatformBuildId.ShouldBe("26163761");
         sandbox.ManifestVersion.ShouldBe(2);
         sandbox.AdapterKind.ShouldBe("sandbox");
         sandbox.GameBuildIdentity.ShouldBeNull();

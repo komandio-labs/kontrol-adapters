@@ -325,7 +325,7 @@ def validate_se2_consistency() -> None:
     harmony_match = re.search(r'Include="Lib\.Harmony" Version="([^"]+)"', harmony_project)
     expected_readme_values = {
         "Adapter version": f"`{package['adapterVersion']}`",
-        "Current validated game version": f"`{package['gameProductVersion']}`",
+        "Current supported game version": f"`{package['gameProductVersion']}`",
         "SDK contract version": f"`{package['sdkVersion']}`",
         "Adapter input schema": f"Version `{package['inputSchemaVersion']}`",
         "Adapter target framework": f"`{package['targetFramework']}`",
