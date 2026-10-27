@@ -38,5 +38,13 @@
     "2.4.0.95",
     "2.4.0.93"
   ],
-  "signature": "mOUJK5Q\u002BP40O5V9bNIcv5PzjadAn7azwUM1yrBJAzpNC77SZoI\u002BrpNeNylcxXhs6x82EK2C75iGepwyet5I8oA=="
+  "gameBuildIdentity": {
+    "platform": "steam",
+    "platformAppId": "1133870",
+    "platformBuildId": "24993846",
+    "productVersion": null,
+    "isProductVersionMeaningful": false,
+    "fingerprintBuildId": null
+  },
+  "signature": "Q1C6VMx11fSJRE4tddvziixEcMLlNozg2mwjFysksbchhTCyyCfVefELrs2foTFALVKdAqNt4JT3cXkxDbr8Gw=="
 }

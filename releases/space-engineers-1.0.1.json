@@ -27,24 +27,28 @@
   },
   "assemblies": {
     "VRage.dll": {
+      "fileVersion": "1.0.0.0",
       "sha256": "EC2410B3D916ADBD7404C3082CCC25A70C8BAEC89BACB57001C67597068E24CA",
-      "fileVersion": "1.0.0.0"
+      "mvid": "32e22621-4693-4285-918c-0a0f342b4d58"
     },
     "VRage.Game.dll": {
+      "fileVersion": "1.0.0.0",
       "sha256": "F0970C2B60335F7690E158A485CD528703717C8C5002F2713556E04F09C508E1",
-      "fileVersion": "1.0.0.0"
+      "mvid": "6a9e1b61-7c42-4e4e-9d26-347bbf080924"
     },
     "VRage.Math.dll": {
+      "fileVersion": "1.0.0.0",
       "sha256": "953ED575327FFEC5A72BAF13C893843C26F7D248CD1ECE1372EC34D650618F1C",
-      "fileVersion": "1.0.0.0"
+      "mvid": "5d141a5d-adcb-4d88-8ad4-3eb8dd11504c"
     },
     "Sandbox.Game.dll": {
+      "fileVersion": "0.1.1",
       "sha256": "DE04E9162BCF87FC07CEC377213D99533BCFE1C34C9E1E2231168144C9D67EDF",
-      "fileVersion": "0.1.1"
+      "mvid": "438e5140-05de-4ad3-88bd-93cc699e77d0"
     }
   },
   "verifiedGameVersions": [
     "steam-build-24675677"
   ],
-  "signature": "Nl37Ms8F0EQk7t6szG1CdO03E/KaO4e04IBH\u002Bo4cauFj335\u002BkNVIte9OOFkurxjmWFuh5fuMS8E\u002BxZEVZ0dGRg=="
+  "signature": "C61fjoO3RdXS\u002Br9kr0cYzgtejuCrAjGwc8ZhJA8w6\u002BRcGiS\u002B6/y9FyxG7RRdShts7Q4dJlMoVTP\u002BCsjPiddEUg=="
 }
