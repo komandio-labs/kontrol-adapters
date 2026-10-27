@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Kontrol.Sdk.Compatibility;
 using NUnit.Framework;
@@ -523,7 +522,7 @@ public class AdapterToolTests
     }
 
     [Test]
-    public void UpdateDescriptors_PreservesExistingIdentityWhenHistoricalReleaseHasNoCompatibilityRecord()
+    public void UpdateDescriptors_PreservesMissingIdentityWhenHistoricalReleaseHasNoCompatibilityRecord()
     {
         string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
         string releasesDir = Path.Combine(Path.GetTempPath(), $"kontrol-releases-{Guid.NewGuid():N}");
@@ -535,7 +534,6 @@ public class AdapterToolTests
             descriptor["adapterId"] = "space-engineers-2";
             descriptor["channel"] = "beta";
             descriptor["gameProductVersion"] = "2.3.0.2798";
-            descriptor["gameBuildIdentity"] = JsonSerializer.SerializeToNode(GameBuildIdentity.Steam("1133870", "24225481", "2.3.0.2798", true));
             descriptor["source"] = new JsonObject { ["tag"] = "adapters/space-engineers-2/v0.1.0-beta.1", ["commit"] = "abcdef1234567" };
             descriptor["package"] = new JsonObject
             {
@@ -550,7 +548,7 @@ public class AdapterToolTests
             AdapterRelease.UpdateDescriptors(root, releasesDir);
 
             var updated = JsonNode.Parse(File.ReadAllText(descPath))!.AsObject();
-            updated["gameBuildIdentity"]!["platformBuildId"]!.GetValue<string>().ShouldBe("24225481");
+            updated["gameBuildIdentity"].ShouldBeNull();
             updated["package"]!["sha256"]!.GetValue<string>().ShouldBe(new string('A', 64));
         }
         finally
