@@ -13,7 +13,6 @@ from pathlib import Path
 
 
 MAX_MESSAGE_LENGTH = 2000
-PUBLIC_BASE_URL = "https://komandio-labs.github.io/kontrol-adapters"
 CATALOG_URL = "https://www.komandio.com/kontrol/adapters.html"
 TAG_PATTERN = re.compile(
     r"^adapters/(?P<slug>[a-z0-9][a-z0-9-]*)/v(?P<version>[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)$"
@@ -65,11 +64,7 @@ def load_release(tag: str, repo: str) -> dict:
     return release
 
 
-def build_message(release: dict, tag: str) -> str:
-    match = TAG_PATTERN.fullmatch(tag)
-    assert match is not None
-    slug, version = match.group("slug", "version")
-
+def build_message(release: dict) -> str:
     highlights: list[str] = []
     compatibility: str | None = None
     for line in (release.get("body") or "").splitlines():
@@ -88,17 +83,13 @@ def build_message(release: dict, tag: str) -> str:
     if not highlights:
         raise ValueError("Published release notes contain no player-facing highlights.")
 
-    package_url = (
-        f"{PUBLIC_BASE_URL}/packages/{slug}/{version}/"
-        f"kontrol-adapter-{slug}-{version}-win-x64.zip"
-    )
     lines = [f"🚀 **{release['name']}**", "", *highlights]
     if compatibility:
         lines.extend(["", compatibility])
     lines.extend([
         "",
-        f"📦 Download the signed adapter: {package_url}",
-        f"📚 Official adapter catalog: {CATALOG_URL}",
+        "📚 Browse the adapter catalog or check for updates in the Kontrol app:",
+        CATALOG_URL,
     ])
     message = "\n".join(lines)
     if len(message) > MAX_MESSAGE_LENGTH:
@@ -114,7 +105,7 @@ def main() -> int:
     args = parse_args()
     try:
         release = load_release(args.tag, args.repo)
-        message = build_message(release, args.tag)
+        message = build_message(release)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(message + "\n", encoding="utf-8")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
