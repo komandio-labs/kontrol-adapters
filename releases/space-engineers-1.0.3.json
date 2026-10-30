@@ -1,0 +1,29 @@
+{
+  "descriptorVersion": 1,
+  "adapterId": "space-engineers",
+  "slug": "space-engineers",
+  "adapterVersion": "1.0.3",
+  "sdkVersion": "1.5.0",
+  "channel": "stable",
+  "publishedAtUtc": "2026-10-30T10:12:53Z",
+  "source": {
+    "tag": "adapters/space-engineers/v1.0.3",
+    "commit": "0bf2caca2f9dc9049751b7f6ff7bd13a1db9de4c"
+  },
+  "package": {
+    "fileName": "kontrol-adapter-space-engineers-1.0.3-win-x64.zip",
+    "sha256": "D344D75FD48D690B486AD9C6D494E233FC7670794F4890E18595B385727D418E",
+    "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers/1.0.3/kontrol-adapter-space-engineers-1.0.3-win-x64.zip",
+    "architecture": "x64"
+  },
+  "gameProductVersion": "1.210.014",
+  "gameBuildIdentity": {
+    "platform": "steam",
+    "platformAppId": "244850",
+    "platformBuildId": "24675677",
+    "productVersion": "1.210.014",
+    "isProductVersionMeaningful": true,
+    "fingerprintBuildId": null
+  },
+  "signature": "S7gJxbsMLKvqbZN87TLL9HV0t/VvSp7qBRVtxDQo0UEvD42c9y47tw\u002BKurYwvhjUunYdgU\u002BJ5aQZ3tG0GVD/FQ=="
+}
