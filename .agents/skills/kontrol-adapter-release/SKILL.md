@@ -44,6 +44,8 @@ Require a clean, reviewed source state. Run repository validation and the select
 
 Create and verify the package through the Python CLI. Ensure the package contains only manifest-allowlisted public runtime files and per-file checksums. Reject game DLLs, references, logs, dumps, PDBs, build directories, native object files, and undeclared files. All adapter packages follow `kontrol-adapter-<slug>-<version>-win-x64.zip`.
 
+Building or packaging an adapter into repository-owned build/artifact directories does not require stopping Kontrol or the game when those outputs are separate from deployed runtime files. Before installing, copying over, replacing, or deleting a deployed DLL or other runtime file, check whether the game or Kontrol process may have that exact target loaded; ask the user to close only the affected process if the target is locked. Do not use process checks as a blanket prerequisite for adapter builds or packages.
+
 For every game adapter, run `python scripts/kontrol_adapters.py test --adapter
 <slug>`, inspect the generated manual checklist, and do not mark a game build
 `tested` until the user confirms completion of that exact in-game checklist.

@@ -69,7 +69,7 @@ After user confirmation, identify the exact product version, platform build ID, 
 
 ## Validate
 
-Before a normal-output build on Windows, inspect whether Kontrol or the target game is running. If either process can lock changed outputs, ask the user to close it. Do not create alternate output directories to bypass locks.
+Do not block an adapter build, test, or package because Kontrol or the target game is running when those operations write only to the adapter repository's own build/artifact directories. Those outputs are separate from the deployed runtime files. Check process state before copying, installing, replacing, or deleting files in a deployed/runtime location: determine whether the running game or Kontrol process may have that exact target DLL or file loaded, and ask the user to close only the affected process if needed. Do not create alternate output directories to bypass a real lock on the deployed target.
 
 Use the repository command as the user-facing validation entry point:
 
