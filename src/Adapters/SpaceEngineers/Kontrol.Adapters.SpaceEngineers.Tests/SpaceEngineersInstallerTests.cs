@@ -58,13 +58,17 @@ public class SpaceEngineersInstallerTests
             "systems.leave_control", "systems.reactors", "interface.terminal", "interface.inventory",
             "weapons.primary", "weapons.secondary", "systems.broadcasting", "systems.local_power", "interface.hud",
             "communication.chat", "communication.voice", "camera.hold_look_around", "camera.toggle_look_around",
-            "camera.look_horizontal", "camera.look_vertical", "camera.zoom"
+            "camera.look_horizontal", "camera.look_vertical", "camera.zoom",
+            "systems.relative_dampening", "interface.signal_display", "weapons.reload"
         });
 
         schema.Inputs.Single(input => input.Id == "systems.landing_gears").DisplayName.ShouldBe("Park");
         schema.Inputs.Single(input => input.Id == "systems.reactors").DisplayName.ShouldBe("Power switch on / off");
         schema.Inputs.Single(input => input.Id == "systems.leave_control").DisplayName.ShouldBe("Use / Interact");
         schema.Inputs.Single(input => input.Id == "interface.terminal").DisplayName.ShouldBe("Terminal / Inventory");
+        schema.Inputs.Single(input => input.Id == "weapons.reload").DisplayName.ShouldBe("Reload");
+        schema.Inputs.Single(input => input.Id == "weapons.reload").Category.ShouldBe("Weapons & tools");
+        schema.Inputs.Single(input => input.Id == "weapons.reload").DiscreteBehavior.ShouldBe(DiscreteBehavior.Trigger);
         schema.Inputs.ShouldNotContain(input => input.Id == "interface.remote_access");
     }
 
@@ -75,10 +79,10 @@ public class SpaceEngineersInstallerTests
 
         schema.Version.ShouldBe(1);
         schema.ControlSets.ShouldBe([new ControlSetDescriptor("ship", "Ship", 10)]);
-        schema.Inputs.Where(input => input.Id is "interface.hud" or "communication.chat" or "communication.voice")
+        schema.Inputs.Where(input => input.Id is "interface.hud" or "communication.chat" or "communication.voice" or "interface.signal_display")
             .SelectMany(input => input.ApplicableControlSetIds)
             .ShouldBeEmpty();
-        schema.Inputs.Where(input => input.Id is not ("interface.hud" or "communication.chat" or "communication.voice"))
+        schema.Inputs.Where(input => input.Id is not ("interface.hud" or "communication.chat" or "communication.voice" or "interface.signal_display"))
             .ShouldAllBe(input => input.ApplicableControlSetIds.SequenceEqual(new[] { "ship" }));
         schema.Inputs.SelectMany(input => input.ApplicableControlSetIds)
             .ShouldAllBe(id => schema.ControlSets.Any(controlSet => controlSet.Id == id));
@@ -360,6 +364,7 @@ public class SpaceEngineersInstallerTests
         schema.Inputs[SpaceEngineersControlLayout.VoiceChatAction].Id.ShouldBe("communication.voice");
         schema.Inputs[SpaceEngineersControlLayout.HoldLookAroundAction].Id.ShouldBe("camera.hold_look_around");
         schema.Inputs[SpaceEngineersControlLayout.ToggleLookAroundAction].Id.ShouldBe("camera.toggle_look_around");
+        schema.Inputs[SpaceEngineersControlLayout.ReloadAction].Id.ShouldBe("weapons.reload");
         schema.Inputs.Where(input => input.SignalKind == Kontrol.Sdk.Inputs.InputSignalKind.Analog)
             .ElementAt(SpaceEngineersControlLayout.CameraLookHorizontalAnalog).Id.ShouldBe("camera.look_horizontal");
         schema.Inputs.Where(input => input.SignalKind == Kontrol.Sdk.Inputs.InputSignalKind.Analog)

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3 — 2026-10-30
+
+- Added **Toggle relative dampening** to enable dampeners and set the ship's current heading as its relative reference.
+- Added **Cycle signal display** to change signal marker display modes.
+- Added **Reload** to switch the selected ship weapon's ammo magazine.
+- Clarified the secondary control label as **Secondary mode / Target**.
+- Manually tested with Space Engineers `1.210.014` (Steam build `24675677`).
+
 ## 1.0.2 — 2026-10-23
 
 - Compatible with Space Engineers `1.210.014` (Steam build `24675677`).

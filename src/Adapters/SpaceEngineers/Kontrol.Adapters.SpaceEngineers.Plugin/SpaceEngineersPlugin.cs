@@ -5,14 +5,18 @@ using HarmonyLib;
 using Sandbox.Game;
 using Kontrol.Sdk.Diagnostics;
 using Kontrol.Sdk.IPC;
+using Sandbox.Engine.Multiplayer;
 using Sandbox.Engine.Utils;
 using Sandbox.Game.Gui;
+using Sandbox.Game.Multiplayer;
+using Sandbox.Game.Screens.Helpers.RadialMenuActions;
 using Sandbox.Game.VoiceChat;
 using MyShipController = Sandbox.Game.Entities.MyShipController;
 using SpaceEngineersControllableEntity = Sandbox.Game.Entities.IMyControllableEntity;
 using Sandbox.ModAPI;
 using VRage.Game.ModAPI;
 using VRage.Game.ModAPI.Interfaces;
+using VRage.Network;
 using VRage.Utils;
 using VRageMath;
 
@@ -360,6 +364,20 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
                     ship.SwitchReactorsLocal();
                     _logs.Write("[ControlTrace] Local power switch action applied.");
                 }
+                if ((edges & (1UL << SpaceEngineersControlLayout.RelativeDampeningAction)) != 0)
+                {
+                    if (!controlled.EnabledDamping)
+                        controlled.SwitchDamping();
+                    MyMultiplayer.RaiseStaticEvent(
+                        (IMyEventOwner s) => MyPlayerCollection.SetDampeningEntity,
+                        controlled.Entity.EntityId);
+                    _logs.Write("[ControlTrace] Relative dampening target action applied.");
+                }
+                if ((edges & (1UL << SpaceEngineersControlLayout.ReloadAction)) != 0)
+                {
+                    ((SpaceEngineersControllableEntity)ship).SwitchAmmoMagazine();
+                    _logs.Write("[ControlTrace] Reload action applied.");
+                }
 
                 ApplyWeaponActions(ship, states);
             }
@@ -371,6 +389,11 @@ namespace Kontrol.Adapters.SpaceEngineers.Plugin
             }
             if ((edges & (1UL << SpaceEngineersControlLayout.ChatScreenAction)) != 0)
                 ToggleChatScreen();
+            if ((edges & (1UL << SpaceEngineersControlLayout.SignalDisplayAction)) != 0)
+            {
+                new MyActionToggleSignals().ExecuteAction();
+                _logs.Write("[ControlTrace] Signal display mode cycled.");
+            }
 
             ApplyVoiceChat(states);
         }

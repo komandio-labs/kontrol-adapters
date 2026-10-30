@@ -23,6 +23,9 @@ public static class SpaceEngineersControlLayout
     public const int VoiceChatAction = ChatScreenAction + 1;
     public const int HoldLookAroundAction = VoiceChatAction + 1;
     public const int ToggleLookAroundAction = HoldLookAroundAction + 1;
+    public const int RelativeDampeningAction = 37;
+    public const int SignalDisplayAction = 38;
+    public const int ReloadAction = 39;
     // Analog values are packed separately from discrete schema positions.
     public const int CameraLookHorizontalAnalog = 6;
     public const int CameraLookVerticalAnalog = 7;

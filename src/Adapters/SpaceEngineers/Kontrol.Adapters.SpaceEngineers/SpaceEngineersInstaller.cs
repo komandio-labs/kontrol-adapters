@@ -58,7 +58,7 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         new("interface.terminal", "Terminal / Inventory", "Open ship terminal", "Interface", 20, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
         new("interface.inventory", "Inventory", "Open inventory", "Interface", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
         new("weapons.primary", "Use tool / Fire weapon", "Primary tool/weapon", "Weapons & tools", 10, InputSignalKind.Discrete, DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
-        new("weapons.secondary", "Secondary mode", "Secondary tool/weapon", "Weapons & tools", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
+        new("weapons.secondary", "Secondary mode / Target", "Secondary tool/weapon", "Weapons & tools", 20, InputSignalKind.Discrete, DiscreteBehavior.Momentary, DeliveryMode: DiscreteDeliveryMode.State),
         new("systems.broadcasting", "Broadcasting", "Toggle antenna broadcast", "Vehicle systems", 50, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
         new("systems.local_power", "Local power switch on / off", "Toggle local-grid power", "Vehicle systems", 70, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
         new("interface.hud", "HUD on / off", "Toggle HUD display", "Interface", 10, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
@@ -68,14 +68,18 @@ public sealed class SpaceEngineersInstaller : IAdapterInstaller
         new("camera.toggle_look_around", "Toggle look around", "Toggle camera look", "Camera", 30, InputSignalKind.Discrete, DiscreteBehavior.Toggle, DeliveryMode: DiscreteDeliveryMode.State),
         new("camera.look_horizontal", "Look Around Horizontal", "Optional camera left/right override", "Camera", 40, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Left", "Right")),
         new("camera.look_vertical", "Look Around Vertical", "Optional camera up/down override", "Camera", 50, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Down", "Up")),
-        new("camera.zoom", "Look Around Zoom", "Optional smooth camera zoom override", "Camera", 60, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Zoom out", "Zoom in"))
+        new("camera.zoom", "Look Around Zoom", "Optional smooth camera zoom override", "Camera", 60, InputSignalKind.Analog, AllowInvert: true, DefaultDeadzone: .08f, AllowedSourceKinds: [InputSourceKind.Axis, InputSourceKind.ButtonPair], DirectionLabels: new("Zoom out", "Zoom in")),
+        new("systems.relative_dampening", "Toggle relative dampening", "Enable dampeners and set the ship straight ahead as the relative damping reference.", "Vehicle systems", 70, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("interface.signal_display", "Cycle signal display", "Cycle the signal marker display modes.", "Interface", 40, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event),
+        new("weapons.reload", "Reload", "Switch the selected ship weapon's ammo magazine.", "Weapons & tools", 30, InputSignalKind.Discrete, DiscreteBehavior.Trigger, DeliveryMode: DiscreteDeliveryMode.Event)
         ];
 
         var globalInputIds = new HashSet<string>(StringComparer.Ordinal)
         {
             "interface.hud",
             "communication.chat",
-            "communication.voice"
+            "communication.voice",
+            "interface.signal_display"
         };
 
         return new AdapterInputSchema(1, inputs.Select(input => globalInputIds.Contains(input.Id)

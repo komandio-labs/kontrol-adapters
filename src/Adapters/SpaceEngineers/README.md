@@ -4,7 +4,7 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 
 | Metadata | Value |
 | --- | --- |
-| Adapter version | `1.0.2` |
+| Adapter version | `1.0.3` |
 | SDK contract version | `1.5.0` |
 | Target game version / Steam build | `1.210.014` / `24675677` |
 | Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers.dll` (`net9.0`) |
@@ -12,27 +12,31 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 | Steam application ID | `244850` |
 | Input channel | `Local\Kontrol_Input_space-engineers` |
 
-Adapter `1.0.2` was manually validated against Space Engineers `1.210.014`,
-Steam app `244850`, build `24675677`, based on the user's confirmation. This
-evidence applies only to that exact game build.
+Adapters `1.0.2` and `1.0.3` were manually validated against Space Engineers
+`1.210.014`, Steam app `244850`, build `24675677`. This evidence applies only
+to that exact game build.
+
+Adapter `1.0.3` targets the same game build and adds relative dampening, signal
+display mode cycling, and ship weapon ammo magazine switching through Reload.
+The updated actions were manually verified for this build.
 
 ## Control-set metadata
 
 SDK 1.5.0 declares one `ship` control set. Ship and cockpit actions are scoped
-to that set. HUD, chat, and voice chat are global because their handlers do not
-require a ship controller. The adapter schema and dispatch tests cover this
-mapping; game compatibility was manually validated for adapter 1.0.2 on
-Space Engineers `1.210.014` / Steam build `24675677`.
+to that set. HUD, signal display, chat, and voice chat are global because their
+handlers do not require a ship controller. Game compatibility was manually
+validated for adapters 1.0.2 and 1.0.3 on Space Engineers `1.210.014` / Steam
+build `24675677`.
 
 ## Supported controls
 
 - Flight: pitch, roll, yaw, forward/backward, strafe left/right, and up/down.
-- Weapons &amp; tools: Use tool / Fire weapon and Secondary mode.
-- Vehicle controls: Use / Interact, inertia dampeners, broadcasting, lights, Park, handbrake, and local or connected-grid power.
+- Weapons &amp; tools: Use tool / Fire weapon, Secondary mode / Target, and Reload (switch the selected ship weapon's ammo magazine).
+- Vehicle systems: Use / Interact, inertia dampeners, relative dampening, broadcasting, lights, Park, handbrake, and local or connected-grid power.
 - Camera: first/third person, held or toggled look-around, camera axes, and smooth analog third-person zoom.
-- Interface and communication: HUD, Terminal / Inventory, Inventory, Chat screen, Voice Chat, and toolbar slots 1–0.
+- Interface and communication: HUD, signal display mode, Terminal / Inventory, Inventory, Chat screen, Voice Chat, and toolbar slots 1–0.
 
-The plugin merges Kontrol into SE1's native movement arguments immediately before the game consumes them, so keyboard/mouse and joystick input coexist. Look-around reuses the flight pitch/yaw axes by default, with optional Look Around Horizontal and Look Around Vertical overrides; its realtime Camera Look Sensitivity setting defaults to 2.0×. While look-around is active, third-person zoom reuses forward/backward thrust by default, with an optional Look Around Zoom override. The plugin releases injected movement and held fire when Kontrol input is disabled, when no locally controlled entity is available, or when Pulsar unloads it. Axis direction must be checked with the generated local manual checklist before this build is considered validated.
+The plugin merges Kontrol into SE1's native movement arguments immediately before the game consumes them, so keyboard/mouse and joystick input coexist. Look-around reuses the flight pitch/yaw axes by default, with optional Look Around Horizontal and Look Around Vertical overrides; its realtime Camera Look Sensitivity setting defaults to 2.0×. While look-around is active, third-person zoom reuses forward/backward thrust by default, with an optional Look Around Zoom override. The plugin releases injected movement and held fire when Kontrol input is disabled, when no locally controlled entity is available, or when Pulsar unloads it. Axis direction was checked as part of the 1.0.3 manual validation for Steam build `24675677`.
 
 For the SE1 input-frame layout, final flight-control merge, native third-person zoom interception, camera-look routing, diagnostics, and game-update checks, see [SE1 implementation notes](SE1_IMPLEMENTATION.md).
 
@@ -57,7 +61,7 @@ not supported for this adapter.
 
 1. Install Pulsar separately and choose its **Legacy** runtime for Space Engineers.
 2. Sideload the local adapter ZIP into Kontrol, then select **Plugin folder** deployment for Space Engineers.
-3. Deploy from Kontrol. The adapter uses the net9 discovery entry assembly for Kontrol, but copies the separate net48 `Kontrol.Adapters.SpaceEngineers.Plugin.dll` payload, `0Harmony.dll`, and its `Kontrol.Adapters.SpaceEngineers.Plugin.xml` descriptor to `%APPDATA%\Pulsar\Legacy\Local` (or the root configured through `KONTROL_PULSAR_DIRECTORY`). The descriptor supplies the friendly name, description, and clickable documentation link shown by Pulsar.
+3. Deploy from Kontrol. The adapter uses the net9 discovery entry assembly for Kontrol, but copies the separate net48 `Kontrol.Adapters.SpaceEngineers.Plugin.dll` payload, `0Harmony.dll`, and its `Kontrol.Adapters.SpaceEngineers.Plugin.xml` descriptor to `<Pulsar root>\Legacy\Local` (or the root configured through `KONTROL_PULSAR_DIRECTORY`). The descriptor supplies the friendly name, description, and clickable documentation link shown by Pulsar.
 4. Enable the plugin in the active Pulsar Legacy profile, then use Kontrol's Launch action.
 5. Complete the ignored `references/<build>/manual-checklist.md` created by the adapter test command.
 
