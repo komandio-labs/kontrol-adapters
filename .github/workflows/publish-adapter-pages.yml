@@ -159,40 +159,15 @@ jobs:
           python-version: '3.x'
 
       - name: Build the Discord announcement
-        shell: pwsh
+        shell: bash
         env:
-          ADAPTER_NAME: ${{ needs.publish.outputs.display_name }}
-          ADAPTER_VERSION: ${{ needs.publish.outputs.version }}
-          GAME_VERSION: ${{ needs.publish.outputs.game_version }}
-          GAME_BUILD: ${{ needs.publish.outputs.game_build }}
-          CHANGELOG_PATH: ${{ needs.publish.outputs.changelog }}
-          PACKAGE_URL: ${{ needs.publish.outputs.package_url }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          $changelog = Get-Content -LiteralPath $env:CHANGELOG_PATH -Raw
-          $escapedVersion = [regex]::Escape($env:ADAPTER_VERSION)
-          $heading = [regex]::Match($changelog, "(?m)^##\s+$escapedVersion(?:\s|$)[^\r\n]*")
-          if (-not $heading.Success) { throw "No changelog section found for $env:ADAPTER_NAME v$env:ADAPTER_VERSION." }
-          $releaseText = $changelog.Substring($heading.Index)
-          $nextHeading = [regex]::Match($releaseText.Substring($heading.Length), '(?m)^##\s+')
-          $sectionLength = if ($nextHeading.Success) { $heading.Length + $nextHeading.Index } else { $releaseText.Length }
-          $section = $releaseText.Substring(0, $sectionLength)
-          $highlights = @([regex]::Matches($section, '(?m)^-\s+(.+)$') | ForEach-Object { '• ' + $_.Groups[1].Value.Trim().Trim('`') })
-          if ($highlights.Count -eq 0) { throw 'The release changelog section has no user-facing highlights.' }
-          $compatibility = "🎮 Compatible with $env:ADAPTER_NAME $env:GAME_VERSION"
-          if (-not [string]::IsNullOrWhiteSpace($env:GAME_BUILD)) { $compatibility += " (Steam build $env:GAME_BUILD)" }
-          $announcement = @(
-            "🚀 **$env:ADAPTER_NAME adapter v$env:ADAPTER_VERSION**",
-            '',
-            $highlights,
-            '',
-            $compatibility,
-            '',
-            "📦 Download the signed adapter: $env:PACKAGE_URL",
-            '📚 Official adapter catalog: https://www.komandio.com/kontrol/adapters.html'
-          ) -join "`n"
-          if ($announcement.Length -gt 2000) { throw "Announcement is $($announcement.Length) characters; Discord allows at most 2000." }
-          New-Item -ItemType Directory -Force artifacts/announcement | Out-Null
-          Set-Content -LiteralPath artifacts/announcement/adapter-release.txt -Value $announcement -Encoding utf8
+          python .github/scripts/build_discord_announcement.py \
+            --tag "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --output artifacts/announcement/adapter-release.txt
 
       - name: Post to #kontrol-announcements
         env:

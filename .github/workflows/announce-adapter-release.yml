@@ -1,0 +1,45 @@
+name: Announce adapter release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published adapter tag, for example adapters/space-engineers/v1.0.3
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: adapter-announcement-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  announce:
+    name: Announce an existing adapter release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out workflow scripts
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Build announcement from published release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/build_discord_announcement.py \
+            --tag "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --output artifacts/announcement/adapter-release.txt
+
+      - name: Post the missing announcement
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: python .github/scripts/post_discord_announcement.py --channel-id 1541835027980230706 --file artifacts/announcement/adapter-release.txt
