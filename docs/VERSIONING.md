@@ -10,9 +10,9 @@ The repository currently implements local validation, deterministic local
 packaging, manifests, compatibility records, immutable release descriptors,
 catalog generation, signed-package verification, and generic test selection.
 Game-specific validation is intentionally run by a developer on a local Windows
-machine with locally prepared game references. The GitHub release workflow signs
-the release package and publishes the signed package, descriptor, and catalog to
-GitHub Pages. Kontrol consumes that signed public catalog. See
+machine with locally prepared game references. The GitHub release workflow
+publishes the exact release ZIP bytes and signs the descriptor and catalog that
+bind its hash. Kontrol consumes that signed public catalog. See
 [PUBLISHING.md](PUBLISHING.md) for the only supported release procedure.
 
 ## Goals
@@ -299,7 +299,7 @@ Each catalog entry includes:
 - Known incompatible builds.
 - Git tag and source URL.
 - Release package URL.
-- Package SHA-256 and cryptographic signature.
+- Package SHA-256, authenticated by the signed descriptor and catalog.
 - Publication time and release channel.
 - Release status: `current` or `superseded`.
 
@@ -314,7 +314,8 @@ The catalog retains beta descriptors, but its `currentVersion` selects the
 newest stable release when one exists. Consumers must show and select stable
 releases by default, and require explicit user opt-in before offering a beta
 package for installation. This channel is not a compatibility claim: beta
-packages still require their own signed package and exact compatibility data.
+releases still require a signed descriptor/catalog and exact compatibility
+data.
 
 The catalog schema is versioned independently as a document format. Its version
 does not describe SDK or adapter compatibility.
@@ -357,12 +358,22 @@ The release workflow:
 2. Confirm that the manifest version matches the tag.
 3. Confirm that the tag does not already have a published artifact.
 4. downloads the already locally validated ZIP from the private GitHub Release.
-5. signs and verifies that ZIP with the repository signing secret.
-6. generates a descriptor bound to the signed package hash and source tag.
-7. marks the previous catalog entry for that adapter as superseded without
+5. verifies the downloaded ZIP against GitHub's asset digest and validates its
+   package contents without modifying it.
+6. generates a descriptor bound to that exact ZIP hash, source tag, and commit;
+   the tested compatibility record must match the same hash.
+7. signs the descriptor and catalog, then publishes a byte-for-byte copy of the
+   verified ZIP to Pages.
+8. marks the previous catalog entry for that adapter as superseded without
     modifying its immutable release artifacts.
-8. regenerates, validates, signs, and publishes the public adapter catalog with the
+9. regenerates, validates, signs, and publishes the public adapter catalog with the
     new current release and historical superseded metadata.
+
+If the release event workflow fails before Pages publication, the workflow can
+be dispatched from `main` with the existing published tag. This recovery path
+does not move the tag or replace the GitHub Release asset. It refuses to
+overwrite an existing Pages package or descriptor. The optional `announce`
+input controls whether a recovery run posts the normal announcement.
 
 A release failure publishes neither a partial adapter release nor a catalog
 entry.

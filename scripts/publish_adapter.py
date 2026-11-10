@@ -46,8 +46,8 @@ def main() -> int:
     print("This wizard does local work only until the final confirmation:\n"
           "  • your PC validates, tests, and creates the ZIP;\n"
           "  • the final step creates a private GitHub Release containing that ZIP;\n"
-          "  • GitHub Actions signs the ZIP and its metadata with the repository secret and deploys only\n"
-          "    the ZIP, signed descriptor, and signed catalog to public GitHub Pages.\n"
+          "  • GitHub Actions preserves the ZIP bytes and signs its descriptor and catalog with the repository secret.\n"
+          "    The signed metadata binds the exact ZIP hash published to GitHub Pages.\n"
           "\nBefore starting, update and commit the adapter version, changelog, and\ncompatibility evidence. Never publish a version or tag that already exists.")
     confirm("Have the source/version changes been committed and reviewed?")
 
@@ -109,9 +109,9 @@ def main() -> int:
         release_args.append("--prerelease")
     run(*release_args)
 
-    heading("Step 5 of 6 — GitHub signs and deploys")
-    print("GitHub Actions now downloads the local ZIP from the private release, adds and verifies its publisher signature,\n"
-          "creates a signed descriptor, rebuilds and signs the catalog, and publishes generated files to the gh-pages branch.\n"
+    heading("Step 5 of 6 — GitHub signs metadata and deploys")
+    print("GitHub Actions downloads the local ZIP from the private release and verifies its digest and package contents.\n"
+          "It preserves the ZIP bytes, creates a signed descriptor, rebuilds and signs the catalog, and publishes generated files to the gh-pages branch.\n"
           "Open the Actions run and wait for it to pass before testing Kontrol.")
     run("gh", "run", "list", "--repo", "komandio-labs/kontrol-adapters", "--workflow", "publish-adapter-pages.yml", "--limit", "3")
     print("\nAfter the workflow succeeds and Pages deploys, verify these anonymous URLs:\n"

@@ -103,8 +103,8 @@ commands. The package tool includes the Apache-2.0 license automatically and
 enforces each adapter's declared runtime-file allowlist.
 
 For releases, use the single [publishing procedure](docs/PUBLISHING.md). It
-explains how a locally verified ZIP becomes a signed public Pages package,
-descriptor, and catalog entry.
+explains how the exact locally verified ZIP is published to Pages with a signed
+descriptor and catalog entry that bind its hash.
 
 ## Architecture
 
