@@ -38,6 +38,7 @@ SE2_ASSEMBLIES = (
     "Avalonia.Base.dll", "Avalonia.Controls.dll", "VRage.UI.dll", "VRage.UI.Shared.dll",
 )
 SE2_COMPATIBILITY_ASSEMBLIES = ("Game2.Client.dll", "VRage.Core.dll", "VRage.Library.dll")
+SHA256_PATTERN = re.compile(r"^[A-Fa-f0-9]{64}$")
 SE2_IPC_CHANNELS = (
     r"Local\Kontrol_Input_space-engineers-2",
     r"Local\Kontrol_Settings_space-engineers-2",
@@ -77,6 +78,10 @@ def canonical_adapter_slug(slug: str) -> str:
 def manifest(slug: str) -> dict:
     root, _, _ = adapter_paths(slug)
     return json.loads((root / "package.json").read_text(encoding="utf-8"))
+
+
+def is_sha256(value: object) -> bool:
+    return isinstance(value, str) and SHA256_PATTERN.fullmatch(value) is not None
 
 
 def inspect_assembly(path: Path) -> dict:
@@ -348,6 +353,9 @@ def validate_se2_consistency() -> None:
     records = se2_compatibility_records()
     record_fingerprints: dict[str, dict[tuple[str, str], set[str]]] = {}
     for path, record in records:
+        package_hash = record.get("adapterPackageSha256")
+        if package_hash is not None and not is_sha256(package_hash):
+            errors.append(f"Compatibility record '{path}' has an invalid adapter package SHA-256.")
         version = record.get("game", {}).get("productVersion")
         expected_stem = str(version)
         allowed_stems = {expected_stem, f"{expected_stem}-adapter-{record.get('adapterVersion')}"}

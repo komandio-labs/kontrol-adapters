@@ -112,9 +112,11 @@ internal static class BeltSelectionPatch
         }
     }
 
-    [HarmonyPatch(typeof(ToolbarScreenViewModel), nameof(ToolbarScreenViewModel.Dispose))]
+    // Dispose was public in older SE2 builds and became private in 4.0.0.3169.
+    // OnDispose remains the protected virtual lifecycle hook across both builds.
+    [HarmonyPatch(typeof(ToolbarScreenViewModel), "OnDispose")]
     [HarmonyPrefix]
-    private static void DisposePrefix(ToolbarScreenViewModel __instance)
+    private static void OnDisposePrefix(ToolbarScreenViewModel __instance)
     {
         Unregister(__instance);
     }

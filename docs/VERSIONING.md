@@ -240,6 +240,13 @@ A tested record should include:
 - Exact adapter package SHA-256 used during validation.
 - Manual validation result and any known limitations.
 
+Compatibility record schema v2 accepts the optional `adapterPackageSha256`
+field for records that bind validation to an exact package. New tested records
+must include it. Release creation and descriptor refresh include a tested record
+only when its package hash matches the release package; a mismatch for the
+release's adapter version fails closed. Older records without a package hash
+remain compatible and continue to be selected by adapter version.
+
 Do not fingerprint every game DLL. Each adapter declares the small set of files
 that can affect its integration. Full hashes are a conservative first
 implementation; an adapter-specific API/symbol fingerprint may replace them

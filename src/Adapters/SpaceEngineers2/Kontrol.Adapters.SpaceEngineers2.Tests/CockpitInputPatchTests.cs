@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using HarmonyLib;
 using NUnit.Framework;
 using NSubstitute;
 using Shouldly;
@@ -12,6 +13,7 @@ using Kontrol.Sdk.Inputs;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers;
 using Keen.Game2.Client.GameSystems.PlayerControl.PlayerInput.InputHandlers.BlockTools;
 using Keen.Game2.Client.GameSystems.CameraSystems;
+using Keen.Game2.Client.UI.HUD.Toolbar;
 using Keen.Game2.Simulation.WorldObjects.Movement;
 using Keen.Game2.Simulation.WorldObjects.CubeBlocks.Movement;
 using Keen.VRage.Library.Mathematics;
@@ -656,6 +658,26 @@ public class CockpitInputPatchTests
     public void BeltActionBits_RejectBitsOutsideTheTenSlotRange(int actionBit)
     {
         BeltSelectionPatch.TryGetTileIndex(actionBit, out _).ShouldBeFalse();
+    }
+
+    [Test]
+    public void BeltToolbarCleanup_UsesStableOnDisposeLifecycleHook()
+    {
+        var cleanupHook = typeof(ToolbarScreenViewModel).GetMethod(
+            "OnDispose", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        cleanupHook.ShouldNotBeNull();
+        cleanupHook!.IsFamily.ShouldBeTrue();
+        cleanupHook.IsVirtual.ShouldBeTrue();
+        cleanupHook.GetParameters().ShouldBeEmpty();
+
+        var patchMethod = typeof(BeltSelectionPatch).GetMethod(
+            "OnDisposePrefix", BindingFlags.Static | BindingFlags.NonPublic);
+        patchMethod.ShouldNotBeNull();
+        var patch = patchMethod!.GetCustomAttributesData()
+            .Single(attribute => attribute.AttributeType == typeof(HarmonyPatch));
+        patch.ConstructorArguments.Select(argument => argument.Value)
+            .ShouldContain("OnDispose");
     }
 
     [Test]

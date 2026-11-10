@@ -8,6 +8,13 @@ import kontrol_adapters
 
 
 class KontrolAdaptersDispatchTests(unittest.TestCase):
+    def test_adapter_package_sha256_accepts_only_64_hex_characters(self):
+        self.assertTrue(kontrol_adapters.is_sha256("A" * 64))
+        self.assertTrue(kontrol_adapters.is_sha256("a" * 64))
+        self.assertFalse(kontrol_adapters.is_sha256("A" * 63))
+        self.assertFalse(kontrol_adapters.is_sha256("G" * 64))
+        self.assertFalse(kontrol_adapters.is_sha256(None))
+
     def test_both_se1_spellings_run_the_full_se1_test_flow(self):
         for slug in ("spaceengineers", "space-engineers"):
             with self.subTest(slug=slug):

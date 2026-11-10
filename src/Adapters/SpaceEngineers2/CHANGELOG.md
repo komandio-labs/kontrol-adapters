@@ -1,5 +1,10 @@
 # Space Engineers 2 adapter changelog
 
+## 0.4.3 — 2026-11-10
+
+- Adds compatibility with Space Engineers 2 `4.0.0.3169` (Steam build
+  `26536832`).
+
 ## Supported game version update — 2026-10-27
 
 - Updates adapter `0.4.2` compatibility metadata to Space Engineers 2

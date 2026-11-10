@@ -60,7 +60,7 @@ public class AdapterToolTests
         AdapterRepository.HasRequiredPlatformIdentity(game.GameBuildIdentity).ShouldBeTrue();
         game.GameBuildIdentity!.Platform.ShouldBe("steam");
         game.GameBuildIdentity.PlatformAppId.ShouldBe("1133870");
-        game.GameBuildIdentity.PlatformBuildId.ShouldBe("26163761");
+        game.GameBuildIdentity.PlatformBuildId.ShouldBe("26536832");
         sandbox.ManifestVersion.ShouldBe(2);
         sandbox.AdapterKind.ShouldBe("sandbox");
         sandbox.GameBuildIdentity.ShouldBeNull();
@@ -553,6 +553,50 @@ public class AdapterToolTests
         }
         finally
         {
+            if (Directory.Exists(releasesDir)) Directory.Delete(releasesDir, recursive: true);
+        }
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void UpdateDescriptors_EnforcesTestedRecordPackageHash(bool hashesMatch)
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string releasesDir = Path.Combine(Path.GetTempPath(), $"kontrol-releases-{Guid.NewGuid():N}");
+        string compatibilityDir = Path.Combine(root, "src", "Adapters", "SpaceEngineers2", "compatibility", "game-builds");
+        string recordPath = Path.Combine(compatibilityDir, $"package-hash-{Guid.NewGuid():N}.json");
+        string packageHash = "26C422A3D941D1F8AE752459308879B48963A4F8B27922B7EB6514E86FE8CE94";
+        string recordHash = hashesMatch ? packageHash : new string('B', 64);
+        try
+        {
+            Directory.CreateDirectory(releasesDir);
+            Directory.CreateDirectory(compatibilityDir);
+            var descriptor = Descriptor("0.4.3");
+            descriptor["slug"] = "space-engineers-2";
+            descriptor["adapterId"] = "space-engineers-2";
+            descriptor["source"] = new JsonObject { ["tag"] = "adapters/space-engineers-2/v0.4.3", ["commit"] = "abcdef1234567" };
+            descriptor["package"]!["fileName"] = "kontrol-adapter-space-engineers-2-0.4.3-win-x64.zip";
+            descriptor["package"]!["sha256"] = packageHash;
+            string descriptorPath = Path.Combine(releasesDir, "space-engineers-2-0.4.3.json");
+            File.WriteAllText(descriptorPath, descriptor.ToJsonString());
+            File.WriteAllText(recordPath,
+                $"{{\"schemaVersion\":2,\"adapterId\":\"space-engineers-2\",\"slug\":\"space-engineers-2\",\"adapterVersion\":\"0.4.3\",\"adapterPackageSha256\":\"{recordHash}\",\"game\":{{\"product\":\"Space Engineers 2\",\"productVersion\":\"9.8.7\",\"buildIdentity\":{{\"platform\":\"steam\",\"platformAppId\":\"1133870\",\"platformBuildId\":\"26536832\",\"productVersion\":\"9.8.7\",\"isProductVersionMeaningful\":true,\"fingerprintBuildId\":null}},\"relevantAssemblies\":{{\"Game2.Client.dll\":{{\"fileVersion\":\"9.8.7\",\"sha256\":\"{new string('C', 64)}\",\"mvid\":\"1dcbe04e-5801-4ae9-a312-62daa83673e5\"}}}}}},\"validation\":{{\"date\":\"2026-11-10\",\"result\":\"tested\"}}}}");
+
+            if (hashesMatch)
+            {
+                AdapterRelease.UpdateDescriptors(root, releasesDir);
+                var updated = JsonNode.Parse(File.ReadAllText(descriptorPath))!.AsObject();
+                updated["verifiedGameVersions"]!.AsArray().Select(v => v!.GetValue<string>()).ShouldContain("9.8.7");
+            }
+            else
+            {
+                Should.Throw<InvalidOperationException>(() => AdapterRelease.UpdateDescriptors(root, releasesDir))
+                    .Message.ShouldContain(recordHash);
+            }
+        }
+        finally
+        {
+            if (File.Exists(recordPath)) File.Delete(recordPath);
             if (Directory.Exists(releasesDir)) Directory.Delete(releasesDir, recursive: true);
         }
     }
