@@ -9,6 +9,11 @@
     "adapterId": { "type": "string", "minLength": 1 },
     "slug": { "type": "string" },
     "adapterVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "adapterPackageSha256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$",
+      "description": "SHA-256 of the exact adapter package used for validation, when known."
+    },
     "game": {
       "type": "object",
       "additionalProperties": false,

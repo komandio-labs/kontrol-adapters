@@ -101,8 +101,8 @@ maintaining the adapter across game updates.
 | --- | --- |
 | Steam application ID | `1133870` |
 | Game binary directory | `<SE2 installation>\Game2` |
-| Adapter version | `0.4.2` |
-| Current supported game version | `4.0.0.3165` |
+| Adapter version | `0.4.3` |
+| Current supported game version | `4.0.0.3169` |
 | SDK contract version | `1.5.0` |
 | Adapter input schema | Version `9` |
 | Adapter target framework | `net9.0` |
@@ -117,12 +117,14 @@ SDK 1.5.0 declares one `cockpit` control set. All current SE2 adapter inputs
 are scoped to the cockpit control context. Movement, systems, camera, cruise,
 and toolbar actions are read from the cockpit input path; fire and reload are
 also routed through SE2's active tool handler. The metadata does not detect the
-active game target. Adapter `0.4.2` passed the user-confirmed manual checklist
-on game build `4.0.0.3159` / Steam build `26128838`.
+active game target. Adapter `0.4.3` passed user-confirmed manual testing on
+game build `4.0.0.3169` / Steam build `26536832`.
 
-The current release source targets `4.0.0.3165` / Steam build `26163761`.
-Automated and user-confirmed manual validation are recorded in
-`compatibility/game-builds/4.0.0.3165-adapter-0.4.2.json`. The prior
+The exact tested package hash and assembly fingerprints are recorded in
+`compatibility/game-builds/4.0.0.3169-adapter-0.4.3.json`. Adapter `0.4.2`
+also has a separate compatibility record for this build. The prior
+`4.0.0.3165` build remains recorded in
+`compatibility/game-builds/4.0.0.3165-adapter-0.4.2.json`; the earlier
 `4.0.0.3159` build remains recorded in
 `compatibility/game-builds/4.0.0.3159-adapter-0.4.2.json`.
 
@@ -512,3 +514,5 @@ and is checked by `scripts/kontrol_adapters.py validate`.
 | 2026-09-27 | `2.4.0.95` | `24993846` | `0.4.1` | tested |
 | 2026-10-23 | `4.0.0.3159` | `26128838` | `0.4.2` | tested |
 | 2026-10-27 | `4.0.0.3165` | `26163761` | `0.4.2` | tested |
+| 2026-11-10 | `4.0.0.3169` | `26536832` | `0.4.2` | tested |
+| 2026-11-10 | `4.0.0.3169` | `26536832` | `0.4.3` | tested |

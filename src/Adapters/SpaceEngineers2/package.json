@@ -5,7 +5,7 @@
   "adapterId": "space-engineers-2",
   "slug": "space-engineers-2",
   "displayName": "Space Engineers 2",
-  "adapterVersion": "0.4.2",
+  "adapterVersion": "0.4.3",
   "sdkVersion": "1.5.0",
   "entryAssembly": "Kontrol.Adapters.SpaceEngineers2.dll",
   "inputSchemaVersion": 9,
@@ -13,12 +13,12 @@
   "architectures": [
     "x64"
   ],
-  "gameProductVersion": "4.0.0.3165",
+  "gameProductVersion": "4.0.0.3169",
   "gameBuildIdentity": {
     "platform": "steam",
     "platformAppId": "1133870",
-    "platformBuildId": "26163761",
-    "productVersion": "4.0.0.3165",
+    "platformBuildId": "26536832",
+    "productVersion": "4.0.0.3169",
     "isProductVersionMeaningful": true,
     "fingerprintBuildId": null
   },
