@@ -727,6 +727,7 @@ public static class AdapterRelease
             timestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
         }
 
+        string packageHash = AdapterRepository.HashFile(packagePath);
         var descriptor = new JsonObject
         {
             ["descriptorVersion"] = 1,
@@ -740,7 +741,7 @@ public static class AdapterRelease
             ["package"] = new JsonObject
             {
                 ["fileName"] = fileName,
-                ["sha256"] = AdapterRepository.HashFile(packagePath),
+                ["sha256"] = packageHash,
                 ["url"] = packageUrl,
                 ["architecture"] = "x64"
             }
@@ -766,6 +767,7 @@ public static class AdapterRelease
                 var record = JsonNode.Parse(File.ReadAllText(recordPath))?.AsObject();
                 if (record is null || !string.Equals(record["adapterVersion"]?.GetValue<string>(), manifest.AdapterVersion, StringComparison.Ordinal)) continue;
                 if (!string.Equals(record["validation"]?["result"]?.GetValue<string>(), "tested", StringComparison.OrdinalIgnoreCase)) continue;
+                EnsurePackageHashMatches(record, manifest.AdapterVersion, packageHash, recordPath);
 
                 var game = record["game"]?.AsObject();
                 if (game?["productVersion"]?.GetValue<string>() is { } gpv && !string.IsNullOrWhiteSpace(gpv))
@@ -895,6 +897,7 @@ public static class AdapterRelease
             if (!Directory.Exists(compatibilityRoot)) continue;
 
             var verifiedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string descriptorPackageHash = descriptor["package"]?["sha256"]?.GetValue<string>() ?? "";
             if (descriptor["verifiedGameVersions"] is JsonArray existingVersions)
             {
                 foreach (var v in existingVersions)
@@ -921,6 +924,7 @@ public static class AdapterRelease
                 if (record is null) continue;
                 if (!string.Equals(record["adapterVersion"]?.GetValue<string>(), adapterVersion, StringComparison.Ordinal)) continue;
                 if (!string.Equals(record["validation"]?["result"]?.GetValue<string>(), "tested", StringComparison.OrdinalIgnoreCase)) continue;
+                EnsurePackageHashMatches(record, adapterVersion, descriptorPackageHash, recordPath);
 
                 var game = record["game"]?.AsObject();
                 if (game?["productVersion"]?.GetValue<string>() is { } gpv && !string.IsNullOrWhiteSpace(gpv))
@@ -967,6 +971,16 @@ public static class AdapterRelease
 
             File.WriteAllText(descriptorPath, descriptor.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
             Validate(descriptorPath);
+        }
+    }
+
+    private static void EnsurePackageHashMatches(JsonObject record, string adapterVersion, string packageHash, string recordPath)
+    {
+        string? expectedHash = record["adapterPackageSha256"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(expectedHash)) return;
+        if (!string.Equals(expectedHash, packageHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Tested compatibility record '{recordPath}' for adapter {adapterVersion} is bound to package SHA-256 {expectedHash}, but the release package SHA-256 is {packageHash}.");
         }
     }
 
