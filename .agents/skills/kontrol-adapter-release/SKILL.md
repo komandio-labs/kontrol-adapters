@@ -60,7 +60,7 @@ README, changelog, compatibility records, and package metadata aligned,
 including the latest verified game product version and relevant assembly
 fingerprints.
 
-Create an external release descriptor bound to the exact package SHA-256, adapter version, source tag, commit, architecture, and final release URL. Validate the descriptor against the package before publication.
+Create an external release descriptor bound to the exact package SHA-256, adapter version, source tag, commit, architecture, and final release URL. Validate the descriptor against the package before publication. The publication workflow must preserve the validated ZIP bytes; do not append or rewrite `signature.json` after the package was tested. Sign the descriptor and catalog, which bind and authenticate the exact ZIP hash. Validate an embedded package signature if one is already present.
 
 ## Guard external actions
 
@@ -73,13 +73,14 @@ Treat commit, tag, push, GitHub Release creation, asset upload, and catalog publ
 
 Publish the locally built package and descriptor; GitHub-hosted workflows may verify artifacts and publish catalog metadata but must not build adapters requiring proprietary game references.
 
-After publication, download or query the published assets, verify their hashes, and confirm catalog current/superseded status. Never delete or overwrite a release to repair it; issue a new adapter version or append-only compatibility revision.
+After publication, download or query the published assets, verify that the GitHub Release ZIP and Pages ZIP have the same hash as the tested package, verify the signed descriptor/catalog, and confirm catalog current/superseded status. Never delete or overwrite a release to repair it. A failed Pages publication may be recovered through the supported workflow dispatch for the existing tag when no Pages descriptor exists; never move the immutable tag or replace its release asset.
 
 After explicit publication authorization and successful gates, create the
 annotated tag `adapters/<slug>/v<version>` from the reviewed commit merged into
 `origin/main`, then let the GitHub Release workflow publish the immutable ZIP
 and signed descriptor/catalog. Do not tag a feature-branch tip. Verify the
-workflow, signed public package hash, release descriptor, catalog, and public
+workflow, unchanged public package hash, signed release descriptor, signed
+catalog, and public
 download URLs before reporting success. If Pages is unavailable, report the
 exact failure and do not claim the adapter is downloadable.
 

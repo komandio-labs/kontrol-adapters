@@ -1,8 +1,19 @@
-name: Sign and publish adapter distribution
+name: Publish adapter distribution
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published adapter release tag to publish to Pages
+        required: true
+        type: string
+      announce:
+        description: Post the normal Discord announcement after successful publication
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -13,7 +24,7 @@ concurrency:
 
 jobs:
   publish:
-    if: startsWith(github.event.release.tag_name, 'adapters/')
+    if: ${{ (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'adapters/')) || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.tag, 'adapters/')) }}
     runs-on: ubuntu-latest
     outputs:
       slug: ${{ steps.release.outputs.slug }}
@@ -23,8 +34,9 @@ jobs:
       game_build: ${{ steps.release.outputs.game_build }}
       changelog: ${{ steps.release.outputs.changelog }}
       package_url: ${{ steps.release.outputs.package_url }}
+      published_at: ${{ steps.release.outputs.published_at }}
     env:
-      TAG: ${{ github.event.release.tag_name }}
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
       PUBLIC_BASE_URL: https://komandio-labs.github.io/kontrol-adapters
       SIGNING_PRIVATE_KEY: ${{ secrets.KONTROL_SIGNING_PRIVATE_KEY }}
       SIGNING_PUBLIC_KEY: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhI24Bm7Lmc6eBMc17hlZu6T/TXzNnJfq/t7enTqihtr3Vw6gSSiltl+5GZ29klmSkY5E1NMuX4A5qhBGl18cQ==
@@ -35,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
           fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
@@ -47,6 +59,13 @@ jobs:
         shell: bash
         run: |
           test -n "$SIGNING_PRIVATE_KEY" || { echo "KONTROL_SIGNING_PRIVATE_KEY is not configured." >&2; exit 1; }
+          release_json="$(gh release view "$TAG" --json tagName,isDraft)"
+          release_tag="$(jq -r '.tagName' <<<"$release_json")"
+          release_is_draft="$(jq -r '.isDraft' <<<"$release_json")"
+          test "$release_tag" = "$TAG" || { echo "GitHub Release tag does not match the requested tag: $TAG" >&2; exit 1; }
+          test "$release_is_draft" = "false" || { echo "The GitHub Release must be published before adapter distribution." >&2; exit 1; }
+          published_at="$(gh release view "$TAG" --json publishedAt --jq '.publishedAt')"
+          test -n "$published_at" && test "$published_at" != "null" || { echo "GitHub Release has no publication timestamp: $TAG" >&2; exit 1; }
           IFS=/ read -r scope slug version <<< "$TAG"
           test "$scope" = "adapters"
           test -n "$slug" && test -n "$version"
@@ -76,6 +95,7 @@ jobs:
           echo "game_version=$game_version" >> "$GITHUB_OUTPUT"
           echo "game_build=$game_build" >> "$GITHUB_OUTPUT"
           echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
+          echo "published_at=$published_at" >> "$GITHUB_OUTPUT"
           echo "package_url=$PUBLIC_BASE_URL/packages/$slug/$version/kontrol-adapter-$slug-$version-win-x64.zip" >> "$GITHUB_OUTPUT"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
           echo "package=kontrol-adapter-$slug-$version-win-x64.zip" >> "$GITHUB_OUTPUT"
@@ -86,13 +106,25 @@ jobs:
       - name: Restore publication tool
         run: dotnet restore tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj
 
-      - name: Sign official adapter package
+      - name: Verify unchanged release package
+        id: package
         shell: bash
         run: |
-          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- sign-package \
-            --package "release-input/${{ steps.release.outputs.package }}" --private-key "$SIGNING_PRIVATE_KEY"
+          package="${{ steps.release.outputs.package }}"
+          file="release-input/$package"
+          test -f "$file" || { echo "Release package not found: $file" >&2; exit 1; }
+          release_json="$(gh release view "$TAG" --json assets)"
+          asset_digest="$(jq -r --arg package "$package" '.assets[] | select(.name == $package) | .digest // empty' <<<"$release_json")"
+          test -n "$asset_digest" || { echo "GitHub did not provide a SHA-256 digest for release asset $package." >&2; exit 1; }
+          local_sha256="$(sha256sum "$file" | cut -d' ' -f1 | tr '[:upper:]' '[:lower:]')"
+          release_sha256="$(sed 's/^sha256://' <<<"$asset_digest" | tr '[:upper:]' '[:lower:]')"
+          test "$local_sha256" = "$release_sha256" || {
+            echo "Downloaded package SHA-256 $local_sha256 does not match GitHub release asset digest $asset_digest." >&2
+            exit 1
+          }
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- verify-package \
-            --package "release-input/${{ steps.release.outputs.package }}" --require-signature true --public-key "$SIGNING_PUBLIC_KEY"
+            --package "$file" --public-key "$SIGNING_PUBLIC_KEY"
+          echo "sha256=$local_sha256" >> "$GITHUB_OUTPUT"
 
       - name: Load existing public Pages content
         shell: bash
@@ -117,15 +149,28 @@ jobs:
           version="${{ steps.release.outputs.version }}"
           package="${{ steps.release.outputs.package }}"
           commit="$(git rev-parse HEAD)"
+          descriptor="pages/releases/$slug-$version.json"
+          public_package="pages/packages/$slug/$version/$package"
           mkdir -p "pages/packages/$slug/$version" "pages/releases" "pages/catalog/v1"
-          cp "release-input/$package" "pages/packages/$slug/$version/$package"
+          test ! -e "$descriptor" || { echo "Release descriptor already exists: $descriptor. Existing public releases are immutable." >&2; exit 1; }
+          test ! -e "$public_package" || { echo "Release package already exists: $public_package. Existing public releases are immutable." >&2; exit 1; }
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release create \
             --adapter "$slug" --package "release-input/$package" \
             --package-url "$PUBLIC_BASE_URL/packages/$slug/$version/$package" \
             --tag "$TAG" --commit "$commit" --channel "${{ steps.release.outputs.channel }}" \
-            --output "pages/releases/$slug-$version.json" --overwrite true
+            --published-at "${{ steps.release.outputs.published_at }}" --output "$descriptor"
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release validate \
+            --descriptor "$descriptor" --package "release-input/$package"
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- release sign \
-            --descriptor "pages/releases/$slug-$version.json" --private-key "$SIGNING_PRIVATE_KEY"
+            --descriptor "$descriptor" --private-key "$SIGNING_PRIVATE_KEY"
+          cp "release-input/$package" "$public_package"
+          pages_sha256="$(sha256sum "$public_package" | cut -d' ' -f1 | tr '[:upper:]' '[:lower:]')"
+          test "$pages_sha256" = "${{ steps.package.outputs.sha256 }}" || {
+            echo "Pages package SHA-256 $pages_sha256 differs from the verified release asset ${{ steps.package.outputs.sha256 }}." >&2
+            exit 1
+          }
+          dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- verify-package \
+            --package "$public_package"
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog build \
             --releases pages/releases --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --output pages/catalog/v1/catalog.json
           dotnet run --project tools/Kontrol.AdapterTool/Kontrol.AdapterTool.csproj -- catalog sign \
@@ -143,7 +188,7 @@ jobs:
   announce:
     name: Announce published adapter
     needs: publish
-    if: ${{ needs.publish.result == 'success' }}
+    if: ${{ needs.publish.result == 'success' && (github.event_name == 'release' || github.event.inputs.announce == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -151,7 +196,7 @@ jobs:
       - name: Check out the published adapter source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -162,7 +207,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
         run: |
           python .github/scripts/build_discord_announcement.py \
             --tag "$TAG" \

@@ -6,8 +6,8 @@ GitHub Release, ZIP, descriptor, and catalog entry are immutable.
 ## What gets published
 
 The source repository may be private. The GitHub Release holds the locally
-validated input ZIP. The release workflow then signs that ZIP and publishes only
-these generated files to public GitHub Pages:
+validated input ZIP. The release workflow publishes those exact ZIP bytes and
+creates a signed descriptor and catalog on public GitHub Pages:
 
 ```text
 catalog/v1/catalog.json
@@ -16,7 +16,11 @@ packages/<adapter>/<version>/<package>.zip
 ```
 
 Kontrol downloads the package from Pages, not from the GitHub Release. The
-Pages package, descriptor, and catalog are all signed.
+descriptor and catalog are cryptographically signed and bind the exact package
+SHA-256. The ZIP is not changed after testing. Catalog installs authenticate
+the package through the signed descriptor and its exact hash; an embedded
+`signature.json` remains required for direct manual sideload outside that
+authenticated catalog path.
 
 ## Before the first public release
 
@@ -90,6 +94,24 @@ path:
 The human-guided `scripts/publish_adapter.py` wizard is for an interactive
 maintainer. AI agents must not invoke it; they follow the same checks directly
 and wait for explicit authorization before external publication.
+
+## Recover a release whose Pages workflow failed
+
+Do not move its tag or replace the GitHub Release asset. After merging a
+workflow fix to the default branch, rerun the publication workflow against that
+branch and pass the existing adapter tag:
+
+```powershell
+gh workflow run publish-adapter-pages.yml --ref main `
+  --field tag=adapters/<slug>/v<version> `
+  --field announce=true
+```
+
+Set the `announce` input to `true` only when the corresponding Discord
+announcement is authorized. The recovery run checks that the release is
+published, verifies the downloaded ZIP against GitHub's asset digest and its
+tested compatibility record, and refuses to replace an existing Pages
+package or descriptor.
 
 ## Publish the Kontrol SDK
 
