@@ -113,6 +113,41 @@ published, verifies the downloaded ZIP against GitHub's asset digest and its
 tested compatibility record, and refuses to replace an existing Pages
 package or descriptor.
 
+## Publish compatibility metadata without an adapter version bump
+
+Use this workflow when an unchanged published adapter ZIP has been validated
+against a new game build. The package users install from the catalog is the ZIP
+at the signed Pages descriptor's `package.url`.
+
+1. Resolve the current catalog release by canonical adapter ID/slug. Fetch its
+   Pages descriptor and ZIP, then independently query and hash the GitHub
+   Release asset. Confirm each hash against its own published metadata.
+2. If the GitHub Release asset hash differs from the Pages ZIP hash, validate
+   the Pages ZIP. Historical workflows may have added `signature.json` to the
+   Pages copy after the Release asset was tested. Do not use the Release ZIP's
+   hash for an attestation of the Pages ZIP or infer equivalence from matching
+   ZIP contents. Require manual testing of the exact Pages ZIP and game build.
+3. Synchronize and inspect the new local game references. Run the adapter's
+   automated tests and complete its manual checklist against that exact
+   package. Do not include proprietary game assemblies in source control.
+4. Add a new compatibility record for the existing adapter version with the
+   game identity, relevant fingerprints, validation evidence, and
+   `adapterPackageSha256` equal to the Pages descriptor's `package.sha256`.
+   Update the source package metadata, README, and changelog. Do not change the
+   adapter version, release tag, GitHub Release asset, or Pages ZIP.
+5. Before opening the PR, simulate `release update-descriptors` on a local
+   copy of the current Pages descriptor. Confirm the new build is included,
+   its identity/fingerprints are selected, and `package.sha256` is unchanged.
+   This catches compatibility record fields the refresh tool may not consume.
+   Open and merge a PR with the append-only record and metadata. Then dispatch
+   `.github/workflows/refresh-catalog.yml` from `main` with a reason. This
+   metadata-only workflow updates and signs existing descriptors and the
+   catalog; it verifies the compatibility record hash against the immutable
+   descriptor package hash and fails on a mismatch.
+6. Verify the signed descriptor and catalog, confirm the new game build is
+   listed as tested/current for the existing adapter release, and re-hash the
+   public Pages ZIP to confirm it is unchanged.
+
 ## Publish the Kontrol SDK
 
 The SDK is a separate contract package published to the organization's GitHub

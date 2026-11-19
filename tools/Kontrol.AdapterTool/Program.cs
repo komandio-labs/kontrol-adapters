@@ -770,13 +770,14 @@ public static class AdapterRelease
                 EnsurePackageHashMatches(record, manifest.AdapterVersion, packageHash, recordPath);
 
                 var game = record["game"]?.AsObject();
-                if (game?["productVersion"]?.GetValue<string>() is { } gpv && !string.IsNullOrWhiteSpace(gpv))
+                string? gpv = CompatibilityProductVersion(game);
+                if (!string.IsNullOrWhiteSpace(gpv))
                 {
                     verifiedVersions.Add(gpv);
                 }
 
                 if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0 &&
-                    game["productVersion"]?.GetValue<string>() is { } assemblyVersion && !string.IsNullOrWhiteSpace(assemblyVersion))
+                    !string.IsNullOrWhiteSpace(gpv))
                 {
                     var assemblySnapshot = new JsonObject();
                     foreach ((string name, JsonNode? val) in assembliesObj)
@@ -790,7 +791,7 @@ public static class AdapterRelease
                             };
                         }
                     }
-                    assembliesByVersion[assemblyVersion] = assemblySnapshot;
+                    assembliesByVersion[gpv] = assemblySnapshot;
                 }
             }
 
@@ -927,13 +928,14 @@ public static class AdapterRelease
                 EnsurePackageHashMatches(record, adapterVersion, descriptorPackageHash, recordPath);
 
                 var game = record["game"]?.AsObject();
-                if (game?["productVersion"]?.GetValue<string>() is { } gpv && !string.IsNullOrWhiteSpace(gpv))
+                string? gpv = CompatibilityProductVersion(game);
+                if (!string.IsNullOrWhiteSpace(gpv))
                 {
                     verifiedVersions.Add(gpv);
                 }
 
                 if (game?["relevantAssemblies"] is JsonObject assembliesObj && assembliesObj.Count > 0 &&
-                    game["productVersion"]?.GetValue<string>() is { } assemblyVersion && !string.IsNullOrWhiteSpace(assemblyVersion))
+                    !string.IsNullOrWhiteSpace(gpv))
                 {
                     var assemblySnapshot = new JsonObject();
                     foreach ((string name, JsonNode? val) in assembliesObj)
@@ -943,7 +945,7 @@ public static class AdapterRelease
                             assemblySnapshot[name] = entryObj.DeepClone();
                         }
                     }
-                    assembliesByVersion[assemblyVersion] = assemblySnapshot;
+                    assembliesByVersion[gpv] = assemblySnapshot;
                 }
             }
 
@@ -1010,7 +1012,7 @@ public static class AdapterRelease
         if (!string.IsNullOrWhiteSpace(preferredProductVersion))
         {
             var preferred = candidates.Where(item =>
-                string.Equals(item.Game["productVersion"]?.GetValue<string>(), preferredProductVersion, StringComparison.OrdinalIgnoreCase)).ToArray();
+                string.Equals(CompatibilityProductVersion(item.Game), preferredProductVersion, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (preferred.Length > 0) candidates = preferred;
         }
 
@@ -1060,11 +1062,14 @@ public static class AdapterRelease
         return Directory.EnumerateFiles(compatibilityRoot, "*.json")
             .Select(path => JsonNode.Parse(File.ReadAllText(path))?.AsObject())
             .Where(record => record is not null && string.Equals(record["adapterVersion"]?.GetValue<string>(), adapterVersion, StringComparison.Ordinal) &&
-                string.Equals(record["game"]?["productVersion"]?.GetValue<string>(), productVersion, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(CompatibilityProductVersion(record["game"]?.AsObject()), productVersion, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(record["validation"]?["result"]?.GetValue<string>(), "tested", StringComparison.OrdinalIgnoreCase))
             .Select(record => DateTimeOffset.TryParse(record!["validation"]?["date"]?.GetValue<string>(), out DateTimeOffset date) ? date : DateTimeOffset.MinValue)
             .DefaultIfEmpty(DateTimeOffset.MinValue).Max();
     }
+
+    private static string? CompatibilityProductVersion(JsonObject? game) =>
+        game?["productVersion"]?.GetValue<string>() ?? game?["buildIdentity"]?["productVersion"]?.GetValue<string>();
 }
 
 public static class AdapterCatalog

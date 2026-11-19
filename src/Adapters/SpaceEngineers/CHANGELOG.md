@@ -1,5 +1,9 @@
 # Changelog
 
+## Compatibility update — 2026-11-19
+
+- Extends adapter `1.0.3` compatibility to Space Engineers `1.211` (Steam build `26329893`).
+
 ## 1.0.3 — 2026-10-30
 
 - Added **Toggle relative dampening** to enable dampeners and set the ship's current heading as its relative reference.

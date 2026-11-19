@@ -30,6 +30,45 @@ version, rather than the internal SDK version.
 
 Confirm semantic-version impact and keep `AdapterVersion.props`, manifest, assembly metadata, tag, package filename, and release descriptor consistent. Keep SDK API and IPC under the single SDK contract version.
 
+## Compatibility-only publication (no adapter version bump)
+
+Use this path when an unchanged published adapter package is validated against
+a new game build. The catalog-served Pages ZIP is the package users install;
+the GitHub Release asset and Pages ZIP may have different hashes on older
+releases if a workflow rewrote the archive to add `signature.json`.
+
+1. Resolve the exact current release by canonical adapter ID/slug. Fetch the
+   signed Pages descriptor and download the package from its `package.url`.
+   Separately query the GitHub Release asset digest. Hash both ZIPs and compare
+   each value with its matching descriptor/asset.
+2. If the Release asset and Pages ZIP hashes differ, do not treat the files as
+   interchangeable, even if their entries appear identical or differ only by
+   `signature.json`. The Pages ZIP is the compatibility-test candidate because
+   it is the artifact installed from the catalog. Stop until the user confirms
+   manual testing of that exact Pages ZIP and game build.
+3. Run automated tests against local references for the new game build, then
+   require the user's manual checklist confirmation for the exact Pages ZIP.
+   Record the existing adapter version, build identity, relevant fingerprints,
+   automated/manual results, and `adapterPackageSha256` equal to the Pages
+   descriptor's package SHA-256. Keep the attestation append-only.
+4. Update the adapter's source `package.json`, README, and changelog for the
+   latest verified build without changing the already-published ZIP, adapter
+   version, release tag, or immutable descriptor in Pages.
+5. Validate the repository, adapter, compatibility evidence, and exact package.
+   Before opening the PR, run `release update-descriptors` against a local copy
+   of the current Pages descriptor. Confirm `verifiedGameVersions`, the current
+   game identity/fingerprints, and the unchanged `package.sha256` are correct.
+   This catches compatibility record fields the refresh tool may not consume.
+   The `refresh-catalog.yml` workflow runs the same update, signs the result,
+   and must be checked after publication.
+6. Merge the reviewed PR, then dispatch `refresh-catalog.yml` from `main` with
+   a reason. Do not dispatch `publish-adapter-pages.yml` for an existing
+   descriptor; that workflow is for first publication/recovery and refuses to
+   replace immutable Pages files.
+7. Verify the workflow succeeded, the signed descriptor includes the new
+   tested game version, the signed catalog remains valid/current, and the
+   public Pages ZIP hash is unchanged. Do not repack or replace the adapter ZIP.
+
 ### Version and SDK compatibility discipline
 
 - A local build, pack, or repack is not a release and must not bump adapter versions or consume prerelease numbers. Before changing a version, check published tags/releases/catalog; never infer publication from local artifacts or commits. Change source versions only when the user requests a version/channel or authorizes release preparation.

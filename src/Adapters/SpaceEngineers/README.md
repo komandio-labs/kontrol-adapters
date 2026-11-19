@@ -6,27 +6,29 @@ Joystick, HOTAS, HOSAS, controller, and button-box adapter for the Space Enginee
 | --- | --- |
 | Adapter version | `1.0.3` |
 | SDK contract version | `1.5.0` |
-| Target game version / Steam build | `1.210.014` / `24675677` |
+| Target game version / Steam build | `1.211` / `26329893` |
 | Kontrol discovery entry (`pluginDll`) | `Kontrol.Adapters.SpaceEngineers.dll` (`net9.0`) |
 | Pulsar Legacy payload | `Kontrol.Adapters.SpaceEngineers.Plugin.dll` + `0Harmony.dll` (`net48`) |
 | Steam application ID | `244850` |
 | Input channel | `Local\Kontrol_Input_space-engineers` |
 
-Adapters `1.0.2` and `1.0.3` were manually validated against Space Engineers
-`1.210.014`, Steam app `244850`, build `24675677`. This evidence applies only
-to that exact game build.
+Adapter `1.0.3` was manually validated against Space Engineers `1.211`, Steam
+app `244850`, build `26329893`. Adapters `1.0.2` and `1.0.3` were also manually
+validated against `1.210.014`, build `24675677`. Each compatibility record
+applies only to its exact game build.
 
-Adapter `1.0.3` targets the same game build and adds relative dampening, signal
-display mode cycling, and ship weapon ammo magazine switching through Reload.
-The updated actions were manually verified for this build.
+Adapter `1.0.3` adds relative dampening, signal display mode cycling, and ship
+weapon ammo magazine switching through Reload. These actions were manually
+verified on `1.210.014`; adapter `1.0.3` also passed the compatibility
+checklist on `1.211`.
 
 ## Control-set metadata
 
 SDK 1.5.0 declares one `ship` control set. Ship and cockpit actions are scoped
 to that set. HUD, signal display, chat, and voice chat are global because their
-handlers do not require a ship controller. Game compatibility was manually
-validated for adapters 1.0.2 and 1.0.3 on Space Engineers `1.210.014` / Steam
-build `24675677`.
+handlers do not require a ship controller. Adapter `1.0.3` was manually
+validated on Space Engineers `1.211` / Steam build `26329893`; adapters 1.0.2
+and 1.0.3 were also validated on `1.210.014` / build `24675677`.
 
 ## Supported controls
 
