@@ -1,6 +1,6 @@
 {
   "catalogVersion": 1,
-  "generatedAtUtc": "2026-11-10T20:00:03Z",
+  "generatedAtUtc": "2026-11-19T19:54:22Z",
   "adapters": [
     {
       "adapterId": "space-engineers",
@@ -26,16 +26,42 @@
             "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers/1.0.3/kontrol-adapter-space-engineers-1.0.3-win-x64.zip",
             "architecture": "x64"
           },
-          "gameProductVersion": "1.210.014",
+          "gameProductVersion": "1.211",
           "gameBuildIdentity": {
             "platform": "steam",
             "platformAppId": "244850",
-            "platformBuildId": "24675677",
-            "productVersion": "1.210.014",
+            "platformBuildId": "26329893",
+            "productVersion": "1.211",
             "isProductVersionMeaningful": true,
             "fingerprintBuildId": null
           },
-          "signature": "S7gJxbsMLKvqbZN87TLL9HV0t/VvSp7qBRVtxDQo0UEvD42c9y47tw\u002BKurYwvhjUunYdgU\u002BJ5aQZ3tG0GVD/FQ==",
+          "assemblies": {
+            "VRage.dll": {
+              "fileVersion": "1.0.0.0",
+              "sha256": "56B86CA4C3AED0689C2A0090E770F6087E7CC02BC47A45D7FF7F5902CD504AE3",
+              "mvid": "e21d70ba-0b6c-4180-ba72-c53f55b1a87a"
+            },
+            "VRage.Game.dll": {
+              "fileVersion": "1.0.0.0",
+              "sha256": "A82E5D31E001AAD9CD1D0C9A97A59831F6A6BCA113C9EA29F169AB19A8F6B90D",
+              "mvid": "e66d41fe-11d7-4448-be54-435613698732"
+            },
+            "VRage.Math.dll": {
+              "fileVersion": "1.0.0.0",
+              "sha256": "980215E712558A7B2C09971BB21460294E8E122F78FD022F30C3E32350E5A972",
+              "mvid": "bc5e2c0d-bd42-4ae8-950a-9257cc780556"
+            },
+            "Sandbox.Game.dll": {
+              "fileVersion": "0.1.1",
+              "sha256": "EA7B202437A3342645747E7E9E7BB1B3275DC8C45B839F51B0C6A8079BD332AD",
+              "mvid": "937e6208-cdbd-4a7d-a798-a01dbbeefd09"
+            }
+          },
+          "verifiedGameVersions": [
+            "1.211",
+            "1.210.014"
+          ],
+          "signature": "zXSl\u002BpL0tcDzMDBFEjRc/KMgMvpeMphsmaEk/FArgSoVS9tpCUVO8n3B9c9\u002BdcUhXsh\u002BXx3D\u002BOYC/Aq/H8jpZQ==",
           "status": "current"
         },
         {
@@ -90,7 +116,7 @@
           "verifiedGameVersions": [
             "1.210.014"
           ],
-          "signature": "MUdIoPQaFuKEKq4PC/5xEBrVA4xYg\u002Bz/rmCji4aIALINse11k9Xn/EbZ/PPFwqVpXTlk57Dj80v1J1rAA5xNBA==",
+          "signature": "hU3ctkXceesbEwSy3IQCzy27u31deCjSbYy6cKLdOsb1KU2JR7zLROSOQfbbvQdpyCtV5PhN7UATKWKTFXMKOw==",
           "status": "superseded"
         },
         {
@@ -145,7 +171,7 @@
           "verifiedGameVersions": [
             "steam-build-24675677"
           ],
-          "signature": "C61fjoO3RdXS\u002Br9kr0cYzgtejuCrAjGwc8ZhJA8w6\u002BRcGiS\u002B6/y9FyxG7RRdShts7Q4dJlMoVTP\u002BCsjPiddEUg==",
+          "signature": "iKsr0Os33zENWyn87DONZssCg3dGA/9qmPto/UiXTRBgLVl7dNJAJ2vfT3GhNhQ36wKImXk/ZR7q7NmQG4zwVA==",
           "status": "superseded"
         },
         {
@@ -200,7 +226,7 @@
             "isProductVersionMeaningful": false,
             "fingerprintBuildId": null
           },
-          "signature": "zfcglcZc6ZolQkO85IbGDUQyZ282my6x\u002BePgCL1uqEItukCwOSHWW3oHNObZRaVJAJCle14dKCPwsbe\u002BeHFsaA==",
+          "signature": "gF6C3Lq6/ZqH0f1e7K9aWYlboz9GVgBgsiowBbL35IBBRY5dZA7oBGQjw\u002BLATQVyLTYIAC5EB1yhdx5cNCzfyg==",
           "status": "superseded"
         }
       ]
@@ -240,22 +266,25 @@
           },
           "assemblies": {
             "Game2.Client.dll": {
+              "fileVersion": "4.0.0.3169",
               "sha256": "91A11BCA109D4202DEA01704C38C292C7A009A51BADC27B620B90A0512EBB722",
-              "fileVersion": "4.0.0.3169"
+              "mvid": "1dcbe04e-5801-4ae9-a312-62daa83673e5"
             },
             "VRage.Core.dll": {
+              "fileVersion": "4.0.0.3169",
               "sha256": "B4C97C4EA6DD811B8CDD3C5551D4F4EDE98D8C9679A12B2EFFD9FAA891722AE4",
-              "fileVersion": "4.0.0.3169"
+              "mvid": "826de2bb-85f0-4b25-97bf-a551c5339792"
             },
             "VRage.Library.dll": {
+              "fileVersion": "4.0.0.3169",
               "sha256": "159F234FFE544386D0E4EE5940BB5A429E188863833A86A6C2413978FAAC01FF",
-              "fileVersion": "4.0.0.3169"
+              "mvid": "f731ea64-6dc3-4b8e-898c-1a6ce1d8f8e6"
             }
           },
           "verifiedGameVersions": [
             "4.0.0.3169"
           ],
-          "signature": "qIP6h9q\u002BjHpZ4/YmMIvvYBpNQx\u002BovWVpQHL2s7/jnhvAuD6gk8FH6dS0XCWyZAgQh8zz7aSKboP1ocRhsgC\u002BIA==",
+          "signature": "NdEN3RiopLq6PKJu3Qw1iSjZUV7/8qL3wyEAOEUONUZruWsP\u002BDbytrWKJ69iKTwnlNlpSWRnu5Nm\u002BtY2hBVbBQ==",
           "status": "current"
         },
         {
@@ -276,37 +305,38 @@
             "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers-2/0.4.2/kontrol-adapter-space-engineers-2-0.4.2-win-x64.zip",
             "architecture": "x64"
           },
-          "gameProductVersion": "4.0.0.3165",
+          "gameProductVersion": "4.0.0.3169",
           "gameBuildIdentity": {
             "platform": "steam",
             "platformAppId": "1133870",
-            "platformBuildId": "26163761",
-            "productVersion": "4.0.0.3165",
+            "platformBuildId": "26536832",
+            "productVersion": "4.0.0.3169",
             "isProductVersionMeaningful": true,
             "fingerprintBuildId": null
           },
           "assemblies": {
             "Game2.Client.dll": {
-              "fileVersion": "4.0.0.3165",
-              "sha256": "A0703A24EEE08D3259535A38A620C78253231210141D615A1F434284CD5ED9FD",
-              "mvid": "23a9090e-55e8-40df-ab54-b8db20ede5e7"
+              "fileVersion": "4.0.0.3169",
+              "sha256": "91A11BCA109D4202DEA01704C38C292C7A009A51BADC27B620B90A0512EBB722",
+              "mvid": "1dcbe04e-5801-4ae9-a312-62daa83673e5"
             },
             "VRage.Core.dll": {
-              "fileVersion": "4.0.0.3165",
-              "sha256": "7B9DD7A1F91A4B39507FC9728C6866FD2816D17EED344B2F9D528694982E0D8B",
-              "mvid": "67c23130-dcaf-412e-8238-5a0e27fe2c06"
+              "fileVersion": "4.0.0.3169",
+              "sha256": "B4C97C4EA6DD811B8CDD3C5551D4F4EDE98D8C9679A12B2EFFD9FAA891722AE4",
+              "mvid": "826de2bb-85f0-4b25-97bf-a551c5339792"
             },
             "VRage.Library.dll": {
-              "fileVersion": "4.0.0.3165",
-              "sha256": "8213CCBA9D641821155ED590E0815E303235E829814D11E90C6137D2114970FF",
-              "mvid": "a3cfc5c3-5362-41c8-9c90-8cff3b13e941"
+              "fileVersion": "4.0.0.3169",
+              "sha256": "159F234FFE544386D0E4EE5940BB5A429E188863833A86A6C2413978FAAC01FF",
+              "mvid": "f731ea64-6dc3-4b8e-898c-1a6ce1d8f8e6"
             }
           },
           "verifiedGameVersions": [
+            "4.0.0.3169",
             "4.0.0.3165",
             "4.0.0.3159"
           ],
-          "signature": "EDrJQWSqEoLEm5kxmaS82EZ7atsZjYPEsAXhnAspERBy/dRI8CfP31\u002BEcPovePsOFY/sQ9M0Rx/QvBIkJbWbBQ==",
+          "signature": "v8VKwsIEn8tPLhZzWx4W0S56ls8WUjZZysSWCAcwyG9M6oWrC4jRQ2j\u002BKWnVSm/aOH4OQejqcJ9g4PrZbgsDqA==",
           "status": "superseded"
         },
         {
@@ -356,7 +386,7 @@
           "verifiedGameVersions": [
             "2.4.0.95"
           ],
-          "signature": "BVvPunlXmRfP3KL7aJIcX2mnz2lhXbrxOsMJBXmuIkPMyxuA\u002B5poDSDZiUCckzix3/BjSWLDKEbkyjt24YhZtw==",
+          "signature": "UJG5uuBXv3U7lIg4i2gxjAOTyNnap90Hjf0Pm8YoEBYTSiwGilrUBy6xQd6U5d/AFiovhKYN/8vksfaIehCU4A==",
           "status": "superseded"
         },
         {
@@ -406,7 +436,7 @@
             "isProductVersionMeaningful": true,
             "fingerprintBuildId": null
           },
-          "signature": "49/G0YU/nh6qZq\u002BX4LnSaq6z61HJmpnHpSbO1BGJOfgcUqmWaReZxyQKAAda4yY87PJ9e4mfOZW72GVSNYLXNQ==",
+          "signature": "1J3\u002B0FKGIAqZgEfKxl/qHQyOij6Z93l5P1IxzzfkTsZx\u002BXjEHW5MMcyuHtFShy\u002BzsK9i2Da47A2Z4D4zh8b\u002Bgw==",
           "status": "superseded"
         },
         {
@@ -457,7 +487,7 @@
             "isProductVersionMeaningful": false,
             "fingerprintBuildId": null
           },
-          "signature": "Q1C6VMx11fSJRE4tddvziixEcMLlNozg2mwjFysksbchhTCyyCfVefELrs2foTFALVKdAqNt4JT3cXkxDbr8Gw==",
+          "signature": "Rcsvj4668IMXug81c7sM5Lwt2\u002BIMAE9mpiP8h6wgV8eg1K2jlNMrIR1hwSk9\u002BHpHt48438VLrR50bw9HaKf64A==",
           "status": "superseded"
         },
         {
@@ -508,7 +538,7 @@
             "isProductVersionMeaningful": false,
             "fingerprintBuildId": null
           },
-          "signature": "b/I\u002BevFAapsTgVDFHI1jicKo2SJWto9P33onGj/744piTOupWV3ZarrpnTYOfozUQ\u002BdJkZY8O0jgf/DFlpVWow==",
+          "signature": "WqTesZnoXu/pBlsQ7jNRlygCgchDWelkhQKivG4SOOGmAdY4iZ3baWCvXVcSay1uJoBYoKTYKMu5eGFBKM7kLA==",
           "status": "superseded"
         },
         {
@@ -561,7 +591,7 @@
             "isProductVersionMeaningful": false,
             "fingerprintBuildId": null
           },
-          "signature": "TJraZgjo\u002B1e3Q8gtkZrBJ8WkYKyk39I3HESSh1FUaipL6diPgJpGHfQYme057oRXSiFvyAWQ8CqtwKegMIC0zQ==",
+          "signature": "meBzajAQxf/OKh37kvs\u002Bi5kUaegxjPfzIPH7jFuOFns3ErG4QVzx9Fe4iz9kkoOmdWTae7liAF\u002BAEAscyFz5lg==",
           "status": "superseded"
         },
         {
@@ -601,11 +631,11 @@
             "2.4.0.77",
             "2.3.0.2798"
           ],
-          "signature": "p8bD0pK9uW0bbqeGjfA82tLHgA\u002BGB3KjkdDBtNNPFcdWJr9\u002BGFPvj2xiom8ipF\u002BlOc8xMu5hwi5XZbMmFzDV2Q==",
+          "signature": "DknZniNlukKQaUmIw5wZ61OsmLmNzb62BS41u1fMnmfPTkSQOnojIAhte2q4zFBXR2K31b\u002B7hfDggqbB8jhaJg==",
           "status": "superseded"
         }
       ]
     }
   ],
-  "signature": "NR32XyZLOeftnUFE\u002BDQ9f5zn6ZL1\u002BDVU9y795bFfyVFHUYJkChnvEWOxdSvfsYtmYuU7Me5nDKzczQq7faZkKA=="
+  "signature": "z6aufZX22DMNA1bWSeM7DbO0pO6\u002BbPAsdJSOJche8PCrmJEHygQWoYwoRl4/baOIqvOEFcZ8TZuMVnd9vC3wEQ=="
 }

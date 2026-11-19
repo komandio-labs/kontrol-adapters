@@ -16,14 +16,40 @@
     "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers/1.0.3/kontrol-adapter-space-engineers-1.0.3-win-x64.zip",
     "architecture": "x64"
   },
-  "gameProductVersion": "1.210.014",
+  "gameProductVersion": "1.211",
   "gameBuildIdentity": {
     "platform": "steam",
     "platformAppId": "244850",
-    "platformBuildId": "24675677",
-    "productVersion": "1.210.014",
+    "platformBuildId": "26329893",
+    "productVersion": "1.211",
     "isProductVersionMeaningful": true,
     "fingerprintBuildId": null
   },
-  "signature": "S7gJxbsMLKvqbZN87TLL9HV0t/VvSp7qBRVtxDQo0UEvD42c9y47tw\u002BKurYwvhjUunYdgU\u002BJ5aQZ3tG0GVD/FQ=="
+  "assemblies": {
+    "VRage.dll": {
+      "fileVersion": "1.0.0.0",
+      "sha256": "56B86CA4C3AED0689C2A0090E770F6087E7CC02BC47A45D7FF7F5902CD504AE3",
+      "mvid": "e21d70ba-0b6c-4180-ba72-c53f55b1a87a"
+    },
+    "VRage.Game.dll": {
+      "fileVersion": "1.0.0.0",
+      "sha256": "A82E5D31E001AAD9CD1D0C9A97A59831F6A6BCA113C9EA29F169AB19A8F6B90D",
+      "mvid": "e66d41fe-11d7-4448-be54-435613698732"
+    },
+    "VRage.Math.dll": {
+      "fileVersion": "1.0.0.0",
+      "sha256": "980215E712558A7B2C09971BB21460294E8E122F78FD022F30C3E32350E5A972",
+      "mvid": "bc5e2c0d-bd42-4ae8-950a-9257cc780556"
+    },
+    "Sandbox.Game.dll": {
+      "fileVersion": "0.1.1",
+      "sha256": "EA7B202437A3342645747E7E9E7BB1B3275DC8C45B839F51B0C6A8079BD332AD",
+      "mvid": "937e6208-cdbd-4a7d-a798-a01dbbeefd09"
+    }
+  },
+  "verifiedGameVersions": [
+    "1.211",
+    "1.210.014"
+  ],
+  "signature": "zXSl\u002BpL0tcDzMDBFEjRc/KMgMvpeMphsmaEk/FArgSoVS9tpCUVO8n3B9c9\u002BdcUhXsh\u002BXx3D\u002BOYC/Aq/H8jpZQ=="
 }

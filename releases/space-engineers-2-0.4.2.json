@@ -16,35 +16,36 @@
     "url": "https://komandio-labs.github.io/kontrol-adapters/packages/space-engineers-2/0.4.2/kontrol-adapter-space-engineers-2-0.4.2-win-x64.zip",
     "architecture": "x64"
   },
-  "gameProductVersion": "4.0.0.3165",
+  "gameProductVersion": "4.0.0.3169",
   "gameBuildIdentity": {
     "platform": "steam",
     "platformAppId": "1133870",
-    "platformBuildId": "26163761",
-    "productVersion": "4.0.0.3165",
+    "platformBuildId": "26536832",
+    "productVersion": "4.0.0.3169",
     "isProductVersionMeaningful": true,
     "fingerprintBuildId": null
   },
   "assemblies": {
     "Game2.Client.dll": {
-      "fileVersion": "4.0.0.3165",
-      "sha256": "A0703A24EEE08D3259535A38A620C78253231210141D615A1F434284CD5ED9FD",
-      "mvid": "23a9090e-55e8-40df-ab54-b8db20ede5e7"
+      "fileVersion": "4.0.0.3169",
+      "sha256": "91A11BCA109D4202DEA01704C38C292C7A009A51BADC27B620B90A0512EBB722",
+      "mvid": "1dcbe04e-5801-4ae9-a312-62daa83673e5"
     },
     "VRage.Core.dll": {
-      "fileVersion": "4.0.0.3165",
-      "sha256": "7B9DD7A1F91A4B39507FC9728C6866FD2816D17EED344B2F9D528694982E0D8B",
-      "mvid": "67c23130-dcaf-412e-8238-5a0e27fe2c06"
+      "fileVersion": "4.0.0.3169",
+      "sha256": "B4C97C4EA6DD811B8CDD3C5551D4F4EDE98D8C9679A12B2EFFD9FAA891722AE4",
+      "mvid": "826de2bb-85f0-4b25-97bf-a551c5339792"
     },
     "VRage.Library.dll": {
-      "fileVersion": "4.0.0.3165",
-      "sha256": "8213CCBA9D641821155ED590E0815E303235E829814D11E90C6137D2114970FF",
-      "mvid": "a3cfc5c3-5362-41c8-9c90-8cff3b13e941"
+      "fileVersion": "4.0.0.3169",
+      "sha256": "159F234FFE544386D0E4EE5940BB5A429E188863833A86A6C2413978FAAC01FF",
+      "mvid": "f731ea64-6dc3-4b8e-898c-1a6ce1d8f8e6"
     }
   },
   "verifiedGameVersions": [
+    "4.0.0.3169",
     "4.0.0.3165",
     "4.0.0.3159"
   ],
-  "signature": "EDrJQWSqEoLEm5kxmaS82EZ7atsZjYPEsAXhnAspERBy/dRI8CfP31\u002BEcPovePsOFY/sQ9M0Rx/QvBIkJbWbBQ=="
+  "signature": "v8VKwsIEn8tPLhZzWx4W0S56ls8WUjZZysSWCAcwyG9M6oWrC4jRQ2j\u002BKWnVSm/aOH4OQejqcJ9g4PrZbgsDqA=="
 }

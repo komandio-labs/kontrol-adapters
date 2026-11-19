@@ -27,20 +27,23 @@
   },
   "assemblies": {
     "Game2.Client.dll": {
+      "fileVersion": "4.0.0.3169",
       "sha256": "91A11BCA109D4202DEA01704C38C292C7A009A51BADC27B620B90A0512EBB722",
-      "fileVersion": "4.0.0.3169"
+      "mvid": "1dcbe04e-5801-4ae9-a312-62daa83673e5"
     },
     "VRage.Core.dll": {
+      "fileVersion": "4.0.0.3169",
       "sha256": "B4C97C4EA6DD811B8CDD3C5551D4F4EDE98D8C9679A12B2EFFD9FAA891722AE4",
-      "fileVersion": "4.0.0.3169"
+      "mvid": "826de2bb-85f0-4b25-97bf-a551c5339792"
     },
     "VRage.Library.dll": {
+      "fileVersion": "4.0.0.3169",
       "sha256": "159F234FFE544386D0E4EE5940BB5A429E188863833A86A6C2413978FAAC01FF",
-      "fileVersion": "4.0.0.3169"
+      "mvid": "f731ea64-6dc3-4b8e-898c-1a6ce1d8f8e6"
     }
   },
   "verifiedGameVersions": [
     "4.0.0.3169"
   ],
-  "signature": "qIP6h9q\u002BjHpZ4/YmMIvvYBpNQx\u002BovWVpQHL2s7/jnhvAuD6gk8FH6dS0XCWyZAgQh8zz7aSKboP1ocRhsgC\u002BIA=="
+  "signature": "NdEN3RiopLq6PKJu3Qw1iSjZUV7/8qL3wyEAOEUONUZruWsP\u002BDbytrWKJ69iKTwnlNlpSWRnu5Nm\u002BtY2hBVbBQ=="
 }
