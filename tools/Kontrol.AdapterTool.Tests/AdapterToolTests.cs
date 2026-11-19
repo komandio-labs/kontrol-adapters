@@ -485,6 +485,43 @@ public class AdapterToolTests
     }
 
     [Test]
+    public void UpdateDescriptors_RefreshesSpaceEngineersBuildIdentityProductVersion()
+    {
+        string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
+        string releasesDir = Path.Combine(Path.GetTempPath(), $"kontrol-releases-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(releasesDir);
+            var descriptor = Descriptor("1.0.3");
+            descriptor["slug"] = "space-engineers";
+            descriptor["adapterId"] = "space-engineers";
+            descriptor["gameProductVersion"] = "1.210.014";
+            descriptor["source"] = new JsonObject { ["tag"] = "adapters/space-engineers/v1.0.3", ["commit"] = new string('A', 40) };
+            descriptor["package"] = new JsonObject
+            {
+                ["fileName"] = "kontrol-adapter-space-engineers-1.0.3-win-x64.zip",
+                ["sha256"] = "D344D75FD48D690B486AD9C6D494E233FC7670794F4890E18595B385727D418E",
+                ["url"] = "https://example.invalid/download.zip",
+                ["architecture"] = "x64"
+            };
+            string descPath = Path.Combine(releasesDir, "space-engineers-1.0.3.json");
+            File.WriteAllText(descPath, descriptor.ToJsonString());
+
+            AdapterRelease.UpdateDescriptors(root, releasesDir);
+
+            var updated = JsonNode.Parse(File.ReadAllText(descPath))!.AsObject();
+            updated["verifiedGameVersions"]!.AsArray().Select(v => v!.GetValue<string>()).ShouldContain("1.211");
+            updated["gameProductVersion"]!.GetValue<string>().ShouldBe("1.211");
+            updated["gameBuildIdentity"]!["platformBuildId"]!.GetValue<string>().ShouldBe("26329893");
+            updated["package"]!["sha256"]!.GetValue<string>().ShouldBe("D344D75FD48D690B486AD9C6D494E233FC7670794F4890E18595B385727D418E");
+        }
+        finally
+        {
+            if (Directory.Exists(releasesDir)) Directory.Delete(releasesDir, recursive: true);
+        }
+    }
+
+    [Test]
     public void UpdateDescriptors_PreservesExplicitVersionWhenHistoricalRecordsShareLatestDate()
     {
         string root = AdapterRepository.FindRoot(TestContext.CurrentContext.TestDirectory);
