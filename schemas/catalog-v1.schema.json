@@ -18,6 +18,7 @@
           "adapterId": { "type": "string", "minLength": 1 },
           "slug": { "type": "string", "minLength": 1 },
           "displayName": { "type": "string", "minLength": 1 },
+          "imageBase64": { "type": "string", "contentEncoding": "base64" },
           "currentVersion": { "type": "string", "minLength": 1 },
           "releases": {
             "type": "array",

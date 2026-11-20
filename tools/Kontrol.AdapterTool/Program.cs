@@ -240,7 +240,9 @@ public sealed record AdapterManifest(
     IReadOnlyList<string>? RelevantAssemblies = null,
     GameBuildIdentity? GameBuildIdentity = null,
     string AdapterKind = "sandbox",
-    int ManifestVersion = 1);
+    int ManifestVersion = 1,
+    string? Image = null,
+    string? Banner = null);
 
 public enum CompatibilityClassification
 {
@@ -396,7 +398,7 @@ public static class AdapterRepository
             ? buildIdentity.Deserialize<GameBuildIdentity>()
             : null;
         var relevantAssemblies = document["relevantAssemblies"]?.AsArray().Select(node => node?.GetValue<string>() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToArray();
-        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include, gameProductVersion, relevantAssemblies, gameBuildIdentity, adapterKind, manifestVersion);
+        return new AdapterManifest(path, Required("adapterId"), Required("slug"), Required("displayName"), Required("adapterVersion"), Required("sdkVersion"), Required("entryAssembly"), document["inputSchemaVersion"]?.GetValue<int>() ?? 0, Required("targetFramework"), architectures, include, gameProductVersion, relevantAssemblies, gameBuildIdentity, adapterKind, manifestVersion, document["image"]?.GetValue<string>(), document["banner"]?.GetValue<string>());
     }
 
     private static void ValidateManifest(string root, AdapterManifest manifest)
@@ -416,11 +418,19 @@ public static class AdapterRepository
             if (Path.IsPathRooted(file) || file.Contains("..", StringComparison.Ordinal) || file.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0 || ForbiddenExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Manifest '{manifest.Path}' contains forbidden package file '{file}'.");
         }
-
         string propsPath = Path.Combine(AdapterRoot(manifest), "AdapterVersion.props");
         string projectPath = Directory.EnumerateFiles(AdapterRoot(manifest), "*.csproj", SearchOption.AllDirectories)
             .SingleOrDefault(path => File.ReadAllText(path).Contains($"<AssemblyName>{Path.GetFileNameWithoutExtension(manifest.EntryAssembly)}</AssemblyName>", StringComparison.Ordinal))
             ?? throw new InvalidOperationException($"Could not find the entry project for '{manifest.Slug}'.");
+        string projectDirectory = Path.GetDirectoryName(projectPath)!;
+        foreach ((string? artwork, bool isBanner) in new[] { (manifest.Image, false), (manifest.Banner, true) }.Where(item => !string.IsNullOrWhiteSpace(item.Item1)))
+        {
+            string extensionPattern = isBanner ? @"\.jpg$" : @"\.(jpg|jpeg|png)$";
+            if (!Regex.IsMatch(artwork!, $"^[A-Za-z0-9][A-Za-z0-9_.-]*{extensionPattern}", RegexOptions.IgnoreCase) ||
+                !manifest.PackageFiles.Contains(artwork!, StringComparer.OrdinalIgnoreCase) ||
+                !File.Exists(Path.Combine(projectDirectory, artwork!)))
+                throw new InvalidOperationException($"Manifest '{manifest.Path}' artwork '{artwork}' must be a packaged image present beside the adapter project.");
+        }
         string adapterVersion = XDocument.Load(propsPath).Descendants("AdapterVersion").SingleOrDefault()?.Value ?? throw new InvalidOperationException($"AdapterVersion.props is invalid for '{manifest.Slug}'.");
         if (!string.Equals(adapterVersion, manifest.AdapterVersion, StringComparison.Ordinal)) throw new InvalidOperationException($"Manifest version and AdapterVersion.props disagree for '{manifest.Slug}'.");
         string sdkVersion = XDocument.Load(Path.Combine(root, "src", "Kontrol.Sdk", "Versions.props")).Descendants("KontrolSdkVersion").SingleOrDefault()?.Value ?? throw new InvalidOperationException("src/Kontrol.Sdk/Versions.props is invalid.");
@@ -1100,20 +1110,30 @@ public static class AdapterCatalog
                 release["status"] = ReferenceEquals(ordered[index], current) ? "current" : "superseded";
                 releases.Add(release);
             }
-            adapters.Add(new JsonObject
+            var catalogAdapter = new JsonObject
             {
                 ["adapterId"] = manifest.AdapterId,
                 ["slug"] = manifest.Slug,
                 ["displayName"] = manifest.DisplayName,
                 ["currentVersion"] = current["adapterVersion"]!.GetValue<string>(),
                 ["releases"] = releases
-            });
+            };
+            string? logoBase64 = GetCatalogLogoBase64(manifest);
+            if (logoBase64 is not null) catalogAdapter["imageBase64"] = logoBase64;
+            adapters.Add(catalogAdapter);
         }
         var catalog = new JsonObject { ["catalogVersion"] = 1, ["generatedAtUtc"] = generatedAtUtc, ["adapters"] = adapters };
         string fullPath = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("Catalog output path is invalid."));
         File.WriteAllText(fullPath, catalog.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine, new UTF8Encoding(false));
         Validate(fullPath);
+    }
+
+    private static string? GetCatalogLogoBase64(AdapterManifest manifest)
+    {
+        if (string.IsNullOrWhiteSpace(manifest.Image)) return null;
+        byte[] bytes = File.ReadAllBytes(Path.Combine(AdapterRepository.AdapterRoot(manifest), manifest.Image));
+        return Convert.ToBase64String(bytes);
     }
 
     private static int PrereleaseNumber(JsonNode item)

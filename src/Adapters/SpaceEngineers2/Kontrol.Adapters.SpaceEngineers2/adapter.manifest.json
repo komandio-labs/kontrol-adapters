@@ -14,8 +14,9 @@
   "requiresCore": true,
   "supportedMethods": [ "NativePluginParameter", "BinPluginsFolder", "ProcessInjection" ],
   "defaultDeploymentMethod": "NativePluginParameter",
-  "image": "icon.png",
-  "version": "0.4.3",
+  "image": "logo.jpg",
+  "banner": "banner.jpg",
+  "version": "0.4.4",
   "gameProductVersion": "4.0.0.3169",
   "gameBuildIdentity": {
     "platform": "steam",

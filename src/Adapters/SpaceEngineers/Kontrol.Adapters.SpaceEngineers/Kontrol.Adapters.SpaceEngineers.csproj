@@ -14,6 +14,8 @@
     <Compile Include="..\ControlLayout.cs" Link="ControlLayout.cs" />
     <ProjectReference Include="..\..\..\Kontrol.Sdk\Kontrol.Sdk.csproj" />
     <None Include="adapter.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="logo.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="banner.jpg" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Kontrol.Adapters.SpaceEngineers.Plugin\Kontrol.Adapters.SpaceEngineers.Plugin.xml" Link="Kontrol.Adapters.SpaceEngineers.Plugin.xml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />

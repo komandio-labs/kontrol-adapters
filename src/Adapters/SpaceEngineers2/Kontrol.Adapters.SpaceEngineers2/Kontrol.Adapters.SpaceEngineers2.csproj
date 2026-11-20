@@ -34,6 +34,8 @@
   <ItemGroup>
     <ProjectReference Include="../../../Kontrol.Sdk/Kontrol.Sdk.csproj" />
     <None Include="adapter.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="logo.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="banner.jpg" CopyToOutputDirectory="PreserveNewest" />
     <None Include="adapter.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

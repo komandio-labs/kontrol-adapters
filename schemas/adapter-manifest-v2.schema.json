@@ -12,6 +12,8 @@
     "displayName": { "type": "string", "minLength": 1 },
     "adapterVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
     "sdkVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "image": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*\\.(?:[jJ][pP][gG]|[jJ][pP][eE][gG]|[pP][nN][gG])$" },
+    "banner": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*\\.jpg$" },
     "entryAssembly": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+\\.dll$" },
     "inputSchemaVersion": { "type": "integer", "minimum": 1 },
     "targetFramework": { "type": "string", "minLength": 1 },

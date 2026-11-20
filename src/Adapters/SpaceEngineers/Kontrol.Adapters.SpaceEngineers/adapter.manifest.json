@@ -10,12 +10,13 @@
   "requiresCore": false,
   "supportedMethods": [ "BinPluginsFolder" ],
   "defaultDeploymentMethod": "BinPluginsFolder",
-  "image": "",
+  "image": "logo.jpg",
+  "banner": "banner.jpg",
   "hostProcess": {
     "processName": "Legacy.exe",
     "commandLineTargetExecutable": "SpaceEngineers.exe"
   },
-  "version": "1.0.3",
+  "version": "1.0.4",
   "gameProductVersion": "1.210.014",
   "gameBuildIdentity": {
     "platform": "steam",
